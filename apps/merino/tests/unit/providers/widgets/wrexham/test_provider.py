@@ -9,6 +9,7 @@ from time import monotonic
 from typing import Any
 
 import pytest
+from freezegun import freeze_time
 from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
 
@@ -494,3 +495,72 @@ async def test_open_circuit_breaker_is_reported_by_governance(
     await governance.governing.cron()
 
     metrics_client.gauge.assert_any_call("governance.circuits.wrexham", value=FAILURE_THRESHOLD)
+
+
+# Two hours after kickoff: a normal match has just finished.
+FULL_TIME_CHECK = KICKOFF + timedelta(hours=2)
+
+
+@pytest.mark.parametrize(
+    ("kickoff", "updated_at", "group"),
+    [
+        (KICKOFF, FULL_TIME_CHECK - timedelta(minutes=2), "current"),
+        (KICKOFF, FULL_TIME_CHECK - timedelta(minutes=5), "current"),
+        (KICKOFF, FULL_TIME_CHECK - timedelta(minutes=6), "previous"),
+        (KICKOFF - timedelta(hours=4), FULL_TIME_CHECK - timedelta(minutes=1), "previous"),
+        (KICKOFF - timedelta(days=1), FULL_TIME_CHECK - timedelta(minutes=1), "previous"),
+        (FULL_TIME_CHECK + timedelta(days=7), FULL_TIME_CHECK, "previous"),
+    ],
+    ids=[
+        "just-finished",
+        "end-of-grace-period",
+        "after-grace-period",
+        "updated-hours-after-kickoff",
+        "updated-the-next-day",
+        "future-awarded-match",
+    ],
+)
+@pytest.mark.asyncio
+@freeze_time(FULL_TIME_CHECK)
+async def test_finished_matches_stay_current_during_the_grace_period(
+    provider: WrexhamProvider,
+    store: WrexhamStore,
+    make_match: MakeMatch,
+    kickoff: datetime,
+    updated_at: datetime,
+    group: str,
+) -> None:
+    """A match that just finished stays in current for 5 minutes. Later updates to a match
+    that finished long ago, or a final result for a future match, don't move it back.
+    """
+    await store.write_fixtures(
+        CHAMPIONSHIP_ID,
+        [make_match(1, MatchStatus.Final, kickoff=kickoff, updated_at=updated_at)],
+    )
+
+    matches = await provider.get_matches(limit=5)
+
+    expected: tuple[list[int], list[int], list[int]] = (
+        ([], [1], []) if group == "current" else ([1], [], [])
+    )
+    assert _ids(matches) == expected
+
+
+@pytest.mark.asyncio
+@freeze_time(FULL_TIME_CHECK)
+async def test_just_finished_matches_dont_count_towards_the_previous_limit(
+    provider: WrexhamProvider, store: WrexhamStore, make_match: MakeMatch
+) -> None:
+    """The limit applies to the older finished matches, not the one still in current."""
+    await store.write_fixtures(
+        CHAMPIONSHIP_ID,
+        [
+            make_match(1, MatchStatus.Final, kickoff=KICKOFF, updated_at=FULL_TIME_CHECK),
+            make_match(2, MatchStatus.Final, kickoff=KICKOFF - timedelta(days=7)),
+            make_match(3, MatchStatus.Final, kickoff=KICKOFF - timedelta(days=14)),
+        ],
+    )
+
+    matches = await provider.get_matches(limit=1)
+
+    assert _ids(matches) == ([2], [1], [])

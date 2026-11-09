@@ -1,11 +1,12 @@
 """Provider for the Wrexham widget endpoints."""
 
 import logging
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 import aiodogstatsd
 from circuitbreaker import CircuitBreakerError
 
+from merino.configs import settings
 from merino.exceptions import CacheAdapterError
 from merino.providers.widgets.wrexham.circuitbreaker import WrexhamCircuitBreaker, guarded_by
 from merino.providers.widgets.wrexham.mock_data import build_mock_matches, build_mock_standings
@@ -27,6 +28,15 @@ CURRENT_STATUSES = frozenset(
     {MatchStatus.InProgress, MatchStatus.Break, MatchStatus.Delayed, MatchStatus.Suspended}
 )
 UPCOMING_STATUSES = frozenset({MatchStatus.Scheduled, MatchStatus.Postponed})
+
+FINISHED_MATCH_GRACE_PERIOD = timedelta(
+    seconds=settings.widgets.providers.wrexham.finished_match_grace_period_sec
+)
+# SportsDataIO keeps updating matches for hours after they finish (3.8 hours or more after
+# kickoff in past data), so a recent update only means a match just finished if it kicked off
+# within this time. It's longer than the longest match (about 2h45 with extra time and
+# penalties), with room for a late kickoff.
+MAX_MATCH_LENGTH = timedelta(hours=3, minutes=30)
 
 circuit_breaker = WrexhamCircuitBreaker(name="wrexham")
 
@@ -71,7 +81,7 @@ class WrexhamProvider:
             )
 
         matches = await self._read_matches()
-        return group_matches(matches, limit)
+        return group_matches(matches, limit, now=datetime.now(UTC))
 
     async def get_standings(self) -> StandingsResponse:
         """Return the EFL Championship table, ordered by league position.
@@ -163,16 +173,34 @@ class WrexhamProvider:
         return list(matches_by_id.values())
 
 
-def group_matches(matches: list[Match], limit: int) -> MatchesResponse:
+def just_finished(match: Match, now: datetime) -> bool:
+    """Return whether `match` finished within the grace period, so it stays in `current`."""
+    return (
+        match.status == MatchStatus.Final
+        and now - match.updated_at <= FINISHED_MATCH_GRACE_PERIOD
+        and timedelta(0) <= now - match.kickoff <= MAX_MATCH_LENGTH
+    )
+
+
+def group_matches(matches: list[Match], limit: int, now: datetime) -> MatchesResponse:
     """Group matches by status.
 
     Previous matches are newest first; current and upcoming matches are earliest first.
-    `limit` caps previous and upcoming matches.
+    `limit` caps previous and upcoming matches. A match that just finished stays in `current`
+    for a short grace period.
     """
     by_kickoff = sorted(matches, key=lambda match: match.kickoff)
 
-    previous = [match for match in reversed(by_kickoff) if match.status in PREVIOUS_STATUSES]
-    current = [match for match in by_kickoff if match.status in CURRENT_STATUSES]
+    previous = [
+        match
+        for match in reversed(by_kickoff)
+        if match.status in PREVIOUS_STATUSES and not just_finished(match, now)
+    ]
+    current = [
+        match
+        for match in by_kickoff
+        if match.status in CURRENT_STATUSES or just_finished(match, now)
+    ]
     upcoming = [match for match in by_kickoff if match.status in UPCOMING_STATUSES]
 
     return MatchesResponse(previous=previous[:limit], current=current, upcoming=upcoming[:limit])
