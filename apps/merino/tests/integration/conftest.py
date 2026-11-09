@@ -12,6 +12,8 @@ from testcontainers.community.elasticsearch import ElasticSearchContainer
 from testcontainers.core.network import Network
 from elasticsearch import AsyncElasticsearch
 
+from tests.utils.polling import eventually
+
 ES_IMAGE = os.environ.get("ES_IMAGE", "merino-elasticsearch:local")
 
 ES_PROP = {
@@ -177,15 +179,6 @@ def es_url():
     return ES_PROP["base_url"]
 
 
-def _wait_until(check, message: str, timeout: float = 30) -> None:
-    """Poll check until it returns something truthy, raising message on timeout."""
-    deadline = time.time() + timeout
-    while not check():
-        if time.time() >= deadline:
-            raise RuntimeError(message)
-        time.sleep(0.5)
-
-
 def _put(url: str, json: dict) -> None:
     """PUT json to url, raising with Elasticsearch's explanation on failure."""
     response = requests.put(url, json=json, timeout=10)
@@ -211,9 +204,9 @@ def ccr_clusters() -> tuple[str, str]:
     # The trial license is installed a few seconds after the cluster turns green, and
     # CCR refuses to start until both clusters have one.
     for url in (leader, follower):
-        _wait_until(
+        eventually(
             lambda url=url: requests.get(f"{url}/_license", timeout=5).json().get("license"),
-            f"No license on {url}",
+            message=f"No license on {url}",
         )
 
     _put(
@@ -222,9 +215,9 @@ def ccr_clusters() -> tuple[str, str]:
     )
     # The remote connection, over which the leader's license is checked, is opened
     # asynchronously.
-    _wait_until(
+    eventually(
         lambda: requests.get(f"{follower}/_remote/info", timeout=5).json()["leader"]["connected"],
-        "Follower did not connect to the leader cluster",
+        message="Follower did not connect to the leader cluster",
     )
     _put(
         f"{follower}/_ccr/auto_follow/wikipedia",

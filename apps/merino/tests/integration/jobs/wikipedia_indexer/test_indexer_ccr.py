@@ -7,9 +7,7 @@ The indexer only talks to the leader. A second cluster auto-follows it (see the
 import datetime
 import json
 import logging
-import time
-from collections.abc import Callable, Iterator
-from typing import Any
+from collections.abc import Iterator
 from unittest.mock import MagicMock
 
 import pytest
@@ -18,6 +16,7 @@ from elasticsearch import Elasticsearch
 from merino.jobs.wikipedia_indexer.filemanager import Snapshot
 from merino.jobs.wikipedia_indexer.indexer import Indexer
 from merino.search.elastic import ElasticSearchAdapter
+from tests.utils.polling import eventually
 
 DOCS = 500
 ALIAS = "enwiki-ccr-{version}"
@@ -30,16 +29,6 @@ def _export(docs: int) -> Iterator[str]:
         yield json.dumps(
             {"title": f"Article {i}", "page_id": i, "incoming_links": 1, "popularity_score": 0.1}
         )
-
-
-def _eventually(check: Callable[[], Any], timeout: float = 30) -> Any:
-    """Return the first truthy result of check, polling until timeout."""
-    deadline = time.monotonic() + timeout
-    while not (result := check()):
-        if time.monotonic() >= deadline:
-            raise AssertionError(f"Condition not met within {timeout}s")
-        time.sleep(0.5)
-    return result
 
 
 @pytest.fixture
@@ -111,5 +100,5 @@ def test_followers_start_with_the_finished_index_before_the_alias_flips(
     assert follower.count(index=index)["count"] == DOCS
 
     # The alias flip on the leader reaches the follower.
-    _eventually(lambda: follower.indices.exists_alias(name="enwiki-ccr-v1"))
+    eventually(lambda: follower.indices.exists_alias(name="enwiki-ccr-v1"))
     assert list(follower.indices.get_alias(name="enwiki-ccr-v1")) == [index]
