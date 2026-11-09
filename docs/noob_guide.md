@@ -58,6 +58,8 @@ The local declaration in `/dev/local_setup/elasticsearch/indices` should be kept
 
 Remember, when running locally, you will have admin rights to your Elasticsearch instance. This will NOT be the case in production.
 
+The local cluster runs on Elastic's free basic license. The multi-cluster setup for testing cross-cluster replication (CCR), `make docker-compose-up-ccr`, moves both clusters onto a 30-day trial license. For details on the CCR setup, and on resetting the trial once it expires, see [Elasticsearch in Dependencies](dev/dependencies.md#elasticsearch).
+
 **_NOTE_**: Only the AirFlow job has WRITE access to ElasticSearch. The Merino `suggest` client has only READ access. All modification or alteration operations MUST be performed by the AirFlow job.
 
 The indexes that your jobs will have WRITE access to are defined in the elasticsearch teraform `main.tf` file (see the webservices-infra repo).

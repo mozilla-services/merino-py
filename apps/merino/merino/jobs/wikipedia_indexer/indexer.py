@@ -301,8 +301,8 @@ class Indexer:
     def _wait_for_followers(self, index_name: str, cloned_at: float | None = None) -> None:
         """Block until every CCR follower of `index_name` has replicated all of it.
 
-        Followers are discovered from the retention leases they hold on the leader's
-        primary shards, so only the leader cluster is queried. Auto-follow only creates
+        Thi runs on the leader cluster. Followers are discovered from the retention 
+        leases they hold on the leader's primary shard. Auto-follow only creates
         a follower after noticing the new index, so leases are collected for at least
         `follower_discovery_period` before concluding which followers exist. A
         follower has caught up on a shard once its lease retains nothing at or below
@@ -313,7 +313,10 @@ class Indexer:
         Each follower is logged when first discovered, with the seconds since
         `cloned_at` (a `time.monotonic()` reading, defaulting to the start of the wait).
         That is how long auto-follow took to pick up the index, to within one poll
-        interval, and informs the choice of `follower_discovery_period`.
+        interval, which can be used to tune the `follower_discovery_period`.
+
+        If no followers are configured, this method will proceed after the
+        `folower_discovery_period` has elapsed.
 
         Raises:
             TimeoutError: If followers have not caught up within `follower_sync_timeout`.
