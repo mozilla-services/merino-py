@@ -23,7 +23,6 @@ from merino.providers.widgets.wrexham.protocol import (
     Standing,
     Team,
 )
-from merino.providers.widgets.wrexham.provider import WrexhamProvider
 from merino.providers.widgets.wrexham.store import WrexhamStore
 from merino.web import api_v1_widgets
 
@@ -71,6 +70,20 @@ def _match(match_id: int, status: MatchStatus, kickoff: datetime) -> Match:
     )
 
 
+@pytest.fixture(name="stored_data")
+def fixture_stored_data(store: WrexhamStore) -> None:
+    """Store six previous, one current and six upcoming matches, and a 24-team table."""
+    previous = [_match(i, MatchStatus.Final, KICKOFF - timedelta(days=i)) for i in range(1, 7)]
+    current = [_match(7, MatchStatus.InProgress, KICKOFF)]
+    upcoming = [
+        _match(7 + i, MatchStatus.Scheduled, KICKOFF + timedelta(days=i)) for i in range(1, 7)
+    ]
+    asyncio.run(store.write_fixtures(CHAMPIONSHIP_ID, previous + current + upcoming))
+    asyncio.run(store.write_fixtures(FA_CUP_ID, []))
+    asyncio.run(store.write_standings([_standing(position) for position in range(1, 25)]))
+
+
+@pytest.mark.usefixtures("stored_data")
 def test_matches_returns_the_expected_shape(client: TestClient) -> None:
     """Returns previous, current and upcoming groups with the expected match fields."""
     response = client.get(MATCHES_URL)
@@ -87,6 +100,7 @@ def test_matches_returns_the_expected_shape(client: TestClient) -> None:
     assert live_match["updated_at"].endswith("Z")
 
 
+@pytest.mark.usefixtures("stored_data")
 def test_matches_defaults_to_five_previous_and_upcoming(client: TestClient) -> None:
     """Returns up to five previous and upcoming matches by default."""
     body = client.get(MATCHES_URL).json()
@@ -95,6 +109,7 @@ def test_matches_defaults_to_five_previous_and_upcoming(client: TestClient) -> N
     assert len(body["upcoming"]) == 5
 
 
+@pytest.mark.usefixtures("stored_data")
 def test_matches_applies_the_limit(client: TestClient) -> None:
     """Applies `limit` to previous and upcoming matches."""
     body = client.get(MATCHES_URL, params={"limit": 2}).json()
@@ -112,6 +127,7 @@ def test_matches_rejects_an_invalid_limit(client: TestClient, limit: str) -> Non
     assert response.status_code == 400
 
 
+@pytest.mark.usefixtures("stored_data")
 def test_standings_returns_the_expected_shape(client: TestClient) -> None:
     """Returns the Championship table with the expected standing fields."""
     response = client.get(STANDINGS_URL)
@@ -135,6 +151,7 @@ def _standing(position: int) -> Standing:
     return Standing(position=position, team=team, played=14, goal_difference=0, points=20)
 
 
+@pytest.mark.usefixtures("stored_data")
 def test_matches_sets_cache_control_header(client: TestClient) -> None:
     """Sets a Cache-Control header so Fastly can cache the response."""
     response = client.get(MATCHES_URL)
@@ -143,10 +160,9 @@ def test_matches_sets_cache_control_header(client: TestClient) -> None:
 
 
 def test_matches_returns_grouped_matches_from_redis(
-    client: TestClient, wrexham_provider: WrexhamProvider, store: WrexhamStore
+    client: TestClient, store: WrexhamStore
 ) -> None:
     """Returns stored matches grouped by status, with live data replacing fixture data."""
-    wrexham_provider.mock_data_enabled = False
     asyncio.run(
         store.write_fixtures(
             CHAMPIONSHIP_ID,
@@ -173,10 +189,9 @@ def test_matches_returns_grouped_matches_from_redis(
 
 @freeze_time(KICKOFF + timedelta(hours=2))
 def test_matches_keep_a_just_finished_match_in_current(
-    client: TestClient, wrexham_provider: WrexhamProvider, store: WrexhamStore
+    client: TestClient, store: WrexhamStore
 ) -> None:
     """A match that finished in the last few minutes is still returned in current."""
-    wrexham_provider.mock_data_enabled = False
     finished = _match(1, MatchStatus.Final, KICKOFF).model_copy(
         update={"updated_at": KICKOFF + timedelta(hours=1, minutes=58)}
     )
@@ -190,12 +205,8 @@ def test_matches_keep_a_just_finished_match_in_current(
     assert body["previous"] == []
 
 
-def test_matches_returns_503_when_no_fixtures_are_stored(
-    client: TestClient, wrexham_provider: WrexhamProvider
-) -> None:
+def test_matches_returns_503_when_no_fixtures_are_stored(client: TestClient) -> None:
     """Returns the 503 error response, without caching, when no fixtures are stored."""
-    wrexham_provider.mock_data_enabled = False
-
     response = client.get(MATCHES_URL)
 
     assert response.status_code == 503
@@ -213,14 +224,12 @@ def test_matches_returns_503_when_no_fixtures_are_stored(
 )
 def test_endpoints_return_503_without_reading_redis_once_the_breaker_opens(
     client: TestClient,
-    wrexham_provider: WrexhamProvider,
     store: WrexhamStore,
     mocker: MockerFixture,
     url: str,
     store_method: str,
 ) -> None:
     """After repeated Redis errors, the endpoint keeps returning 503 without reading Redis."""
-    wrexham_provider.mock_data_enabled = False
     read = mocker.patch.object(store, store_method, side_effect=CacheAdapterError("Redis is down"))
     threshold = settings.widgets.providers.wrexham.circuit_breaker_failure_threshold
 
@@ -241,6 +250,7 @@ def test_endpoints_document_the_503_response(path: str) -> None:
     assert set(schema["properties"]) == {"statusCode", "message"}
 
 
+@pytest.mark.usefixtures("stored_data")
 def test_standings_sets_cache_control_header(client: TestClient) -> None:
     """Sets a Cache-Control header so Fastly can cache the response."""
     response = client.get(STANDINGS_URL)
@@ -249,10 +259,9 @@ def test_standings_sets_cache_control_header(client: TestClient) -> None:
 
 
 def test_standings_returns_the_stored_table_from_redis(
-    client: TestClient, wrexham_provider: WrexhamProvider, store: WrexhamStore
+    client: TestClient, store: WrexhamStore
 ) -> None:
     """Returns the stored table, ordered by position, with a Cache-Control header."""
-    wrexham_provider.mock_data_enabled = False
     asyncio.run(store.write_standings([_standing(2), _standing(1)]))
 
     response = client.get(STANDINGS_URL)
@@ -264,11 +273,8 @@ def test_standings_returns_the_stored_table_from_redis(
     assert response.headers["Cache-Control"] == "public, max-age=60, s-maxage=60"
 
 
-def test_standings_returns_an_empty_stored_table(
-    client: TestClient, wrexham_provider: WrexhamProvider, store: WrexhamStore
-) -> None:
+def test_standings_returns_an_empty_stored_table(client: TestClient, store: WrexhamStore) -> None:
     """Returns 200 with an empty table when the stored table is empty."""
-    wrexham_provider.mock_data_enabled = False
     asyncio.run(store.write_standings([]))
 
     response = client.get(STANDINGS_URL)
@@ -280,12 +286,8 @@ def test_standings_returns_an_empty_stored_table(
     }
 
 
-def test_standings_returns_503_when_no_standings_are_stored(
-    client: TestClient, wrexham_provider: WrexhamProvider
-) -> None:
+def test_standings_returns_503_when_no_standings_are_stored(client: TestClient) -> None:
     """Returns the 503 error response, without caching, when no standings are stored."""
-    wrexham_provider.mock_data_enabled = False
-
     response = client.get(STANDINGS_URL)
 
     assert response.status_code == 503

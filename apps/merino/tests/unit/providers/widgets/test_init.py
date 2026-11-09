@@ -22,18 +22,6 @@ from merino.providers.widgets.iframed.provider import Provider as IframedWidgetP
 
 
 @pytest.mark.asyncio
-async def test_init_providers_uses_mock_data_setting() -> None:
-    """Initializes the Wrexham provider with the configured mock data flag."""
-    with patch("merino.providers.widgets._wrexham_mock_data_enabled", False):
-        await init_providers()
-
-    wrexham_provider = widgets._wrexham_provider
-
-    assert isinstance(wrexham_provider, WrexhamProvider)
-    assert wrexham_provider.mock_data_enabled is False
-
-
-@pytest.mark.asyncio
 async def test_init_providers_creates_a_store_with_the_configured_expiry_times() -> None:
     """Gives the provider a store using the configured Redis expiry times."""
     await init_providers()

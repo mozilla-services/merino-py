@@ -46,25 +46,7 @@ def _ids(matches: MatchesResponse) -> tuple[list[int], list[int], list[int]]:
 @pytest.fixture(name="provider")
 def fixture_provider(store: WrexhamStore, statsd_mock: Any) -> WrexhamProvider:
     """Return a provider that reads from the store."""
-    return WrexhamProvider(store=store, metrics_client=statsd_mock, mock_data_enabled=False)
-
-
-@pytest.fixture(name="mock_provider")
-def fixture_mock_provider(store: WrexhamStore, statsd_mock: Any) -> WrexhamProvider:
-    """Return a provider that serves mock data."""
-    return WrexhamProvider(store=store, metrics_client=statsd_mock, mock_data_enabled=True)
-
-
-@pytest.mark.asyncio
-async def test_mock_matches_apply_limit_to_previous_and_upcoming(
-    mock_provider: WrexhamProvider,
-) -> None:
-    """`limit` caps previous and upcoming mock matches but not current ones."""
-    matches = await mock_provider.get_matches(limit=2)
-
-    assert len(matches.previous) == 2
-    assert len(matches.upcoming) == 2
-    assert len(matches.current) == 1
+    return WrexhamProvider(store=store, metrics_client=statsd_mock)
 
 
 @pytest.mark.asyncio
@@ -280,7 +262,7 @@ async def test_raises_logs_and_counts_redis_errors(
 ) -> None:
     """A Redis read failure is logged, counted and raised as WrexhamDataUnavailableError."""
     mocker.patch.object(store, "read_fixtures", side_effect=CacheAdapterError("Redis is down"))
-    provider = WrexhamProvider(store=store, metrics_client=statsd_mock, mock_data_enabled=False)
+    provider = WrexhamProvider(store=store, metrics_client=statsd_mock)
 
     with pytest.raises(WrexhamDataUnavailableError):
         await provider.get_matches(limit=5)
@@ -290,14 +272,6 @@ async def test_raises_logs_and_counts_redis_errors(
     )
     records = filter_caplog(caplog.records, "merino.providers.widgets.wrexham.provider")
     assert [record.message for record in records] == ["Could not read Wrexham matches from Redis"]
-
-
-@pytest.mark.asyncio
-async def test_get_standings_returns_the_mock_table(mock_provider: WrexhamProvider) -> None:
-    """Returns the full mock Championship table when mock data is enabled."""
-    standings = await mock_provider.get_standings()
-
-    assert len(standings.standings) == 24
 
 
 @pytest.mark.asyncio
@@ -349,7 +323,7 @@ async def test_get_standings_raises_logs_and_counts_redis_errors(
 ) -> None:
     """A Redis read failure is logged, counted and raised as WrexhamDataUnavailableError."""
     mocker.patch.object(store, "read_standings", side_effect=CacheAdapterError("Redis is down"))
-    provider = WrexhamProvider(store=store, metrics_client=statsd_mock, mock_data_enabled=False)
+    provider = WrexhamProvider(store=store, metrics_client=statsd_mock)
 
     with pytest.raises(WrexhamDataUnavailableError):
         await provider.get_standings()
@@ -387,7 +361,7 @@ async def test_circuit_breaker_opens_and_stays_open_after_redis_errors(
     read_fixtures = mocker.patch.object(
         store, "read_fixtures", side_effect=CacheAdapterError("Redis is down")
     )
-    provider = WrexhamProvider(store=store, metrics_client=statsd_mock, mock_data_enabled=False)
+    provider = WrexhamProvider(store=store, metrics_client=statsd_mock)
 
     for _ in range(FAILURE_THRESHOLD):
         with pytest.raises(WrexhamDataUnavailableError):
@@ -412,7 +386,7 @@ async def test_circuit_breaker_recovers_once_redis_works_again(
     read_fixtures = mocker.patch.object(
         store, "read_fixtures", side_effect=CacheAdapterError("Redis is down")
     )
-    provider = WrexhamProvider(store=store, metrics_client=statsd_mock, mock_data_enabled=False)
+    provider = WrexhamProvider(store=store, metrics_client=statsd_mock)
     for _ in range(FAILURE_THRESHOLD):
         with pytest.raises(WrexhamDataUnavailableError):
             await provider.get_matches(limit=5)
@@ -448,7 +422,7 @@ async def test_standings_redis_errors_open_the_circuit_breaker(
     read_standings = mocker.patch.object(
         store, "read_standings", side_effect=CacheAdapterError("Redis is down")
     )
-    provider = WrexhamProvider(store=store, metrics_client=statsd_mock, mock_data_enabled=False)
+    provider = WrexhamProvider(store=store, metrics_client=statsd_mock)
 
     for _ in range(FAILURE_THRESHOLD + 3):
         with pytest.raises(WrexhamDataUnavailableError):
@@ -467,7 +441,7 @@ async def test_open_circuit_breaker_blocks_both_endpoints(
 ) -> None:
     """Both endpoints share the breaker, so once it opens, standings aren't read either."""
     mocker.patch.object(store, "read_fixtures", side_effect=CacheAdapterError("Redis is down"))
-    provider = WrexhamProvider(store=store, metrics_client=statsd_mock, mock_data_enabled=False)
+    provider = WrexhamProvider(store=store, metrics_client=statsd_mock)
     for _ in range(FAILURE_THRESHOLD):
         with pytest.raises(WrexhamDataUnavailableError):
             await provider.get_matches(limit=5)
@@ -486,7 +460,7 @@ async def test_open_circuit_breaker_is_reported_by_governance(
 ) -> None:
     """An open breaker shows up in the governance daemon's circuit breaker metrics."""
     mocker.patch.object(store, "read_fixtures", side_effect=CacheAdapterError("Redis is down"))
-    provider = WrexhamProvider(store=store, metrics_client=statsd_mock, mock_data_enabled=False)
+    provider = WrexhamProvider(store=store, metrics_client=statsd_mock)
     for _ in range(FAILURE_THRESHOLD):
         with pytest.raises(WrexhamDataUnavailableError):
             await provider.get_matches(limit=5)

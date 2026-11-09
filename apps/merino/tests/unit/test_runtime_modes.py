@@ -1,6 +1,7 @@
 """Tests for Merino runtime modes."""
 
 from collections.abc import Callable
+from datetime import UTC, datetime
 import os
 from pathlib import Path
 
@@ -213,11 +214,10 @@ def test_widget_mode_serves_only_widgets(mocker: MockerFixture) -> None:
         pass
 
     def get_fake_wrexham_provider() -> WrexhamProvider:
-        return WrexhamProvider(
-            store=mocker.Mock(spec=WrexhamStore),
-            metrics_client=mocker.Mock(),
-            mock_data_enabled=True,
-        )
+        store = mocker.AsyncMock(spec=WrexhamStore)
+        store.read_fixtures.return_value = ([], datetime.now(UTC))
+        store.read_live_matches.return_value = None
+        return WrexhamProvider(store=store, metrics_client=mocker.Mock())
 
     mocker.patch.object(main, "configure_logging")
     mocker.patch.object(main, "configure_sentry")

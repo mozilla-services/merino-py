@@ -9,7 +9,6 @@ from circuitbreaker import CircuitBreakerError
 from merino.configs import settings
 from merino.exceptions import CacheAdapterError
 from merino.providers.widgets.wrexham.circuitbreaker import WrexhamCircuitBreaker, guarded_by
-from merino.providers.widgets.wrexham.mock_data import build_mock_matches, build_mock_standings
 from merino.providers.widgets.wrexham.protocol import (
     CHAMPIONSHIP,
     FA_CUP,
@@ -52,17 +51,10 @@ class WrexhamProvider:
 
     store: WrexhamStore
     metrics_client: aiodogstatsd.Client
-    mock_data_enabled: bool
 
-    def __init__(
-        self,
-        store: WrexhamStore,
-        metrics_client: aiodogstatsd.Client,
-        mock_data_enabled: bool,
-    ) -> None:
+    def __init__(self, store: WrexhamStore, metrics_client: aiodogstatsd.Client) -> None:
         self.store = store
         self.metrics_client = metrics_client
-        self.mock_data_enabled = mock_data_enabled
 
     async def get_matches(self, limit: int) -> MatchesResponse:
         """Return previous, current and upcoming matches.
@@ -72,14 +64,6 @@ class WrexhamProvider:
         Raises:
             - `WrexhamDataUnavailableError` if the matches can't be read from Redis.
         """
-        if self.mock_data_enabled:
-            mock_matches = build_mock_matches(datetime.now(UTC).replace(microsecond=0))
-            return MatchesResponse(
-                previous=mock_matches.previous[:limit],
-                current=mock_matches.current,
-                upcoming=mock_matches.upcoming[:limit],
-            )
-
         matches = await self._read_matches()
         return group_matches(matches, limit, now=datetime.now(UTC))
 
@@ -91,9 +75,6 @@ class WrexhamProvider:
         Raises:
             - `WrexhamDataUnavailableError` if the standings can't be read from Redis.
         """
-        if self.mock_data_enabled:
-            return build_mock_standings()
-
         try:
             stored = await self._read_stored_standings()
         except CircuitBreakerError as ex:
