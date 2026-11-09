@@ -10,7 +10,6 @@ from merino.providers.widgets.wrexham.store import WrexhamStore
 from merino.utils.metrics import get_metrics_client
 
 _wrexham_provider: WrexhamProvider | None = None
-_wrexham_mock_data_enabled = settings.widgets.providers.wrexham.mock_data_enabled
 _wrexham_cache_ttls = settings.widgets.providers.wrexham.cache_ttls
 
 _iframed_widgets_provider: IframedWidgetsProvider | None = None
@@ -44,7 +43,6 @@ def init_wrexham_provider() -> None:
     _wrexham_provider = WrexhamProvider(
         store=store,
         metrics_client=get_metrics_client(),
-        mock_data_enabled=_wrexham_mock_data_enabled,
     )
 
 
