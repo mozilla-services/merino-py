@@ -1,22 +1,32 @@
 """Initialize widget providers."""
 
+import logging
+
 from datetime import timedelta
 
 from merino.cache.redis import RedisAdapter, create_redis_clients
 from merino.configs import settings
-from merino.providers.widgets.iframed.provider import Provider as IframedWidgetsProvider
 from merino.providers.widgets.travel.kayak.backends.kayak import KayakBackend
 from merino.providers.widgets.travel.kayak.provider import Provider as TravelProvider
+from merino.providers.widgets.iframed.provider import Provider as FramedWidgetsProvider
+from merino.providers.widgets.iframed.backends.framed import FramedWidgetsBackend
 from merino.providers.widgets.wrexham.provider import WrexhamProvider
 from merino.providers.widgets.wrexham.store import WrexhamStore
+from merino.utils.gcs import initialize_storage_client
 from merino.utils.metrics import get_metrics_client
 from merino_common.utils.http_client import create_http_client
 
 _wrexham_provider: WrexhamProvider | None = None
 _wrexham_cache_ttls = settings.widgets.providers.wrexham.cache_ttls
 
-_iframed_widgets_provider: IframedWidgetsProvider | None = None
-_iframed_widgets_provider_enabled = settings.widget_providers.iframed.enabled
+_framed_widgets_gcp_project = settings.widgets.providers.framed.gcp_project
+_framed_widgets_provider: FramedWidgetsProvider | None = None
+_framed_widgets_provider_cron_enabled = settings.widgets.providers.framed.cron_enabled
+_framed_widgets_provider_enabled = settings.widgets.providers.framed.enabled
+_framed_widgets_provider_cron_interval_sec = settings.widgets.providers.framed.cron_interval_sec
+_framed_widgets_provider_resync_interval_sec = (
+    settings.widgets.providers.framed.resync_interval_sec
+)
 
 _travel_provider: TravelProvider | None = None
 _travel_enabled = settings.widgets.providers.travel.kayak.enabled
@@ -26,11 +36,14 @@ _kayak_url_base = settings.kayak.url_base
 _kayak_url_autocomplete_path = settings.kayak.url_autocomplete_path
 
 
+logger = logging.getLogger(__name__)
+
+
 async def init_providers() -> None:
     """Initialize widget providers."""
-    init_wrexham_provider()
-    init_widget_provider()
     init_travel_provider()
+    init_wrexham_provider()
+    await init_framed_widget_provider()
 
 
 def init_wrexham_provider() -> None:
@@ -54,22 +67,6 @@ def init_wrexham_provider() -> None:
     _wrexham_provider = WrexhamProvider(store=store)
 
 
-async def shutdown_providers() -> None:
-    """Shut down widget providers.
-
-    This should only be called once at the shutdown of the application.
-    """
-    global _wrexham_provider, _travel_provider
-
-    if _wrexham_provider is not None:
-        await _wrexham_provider.shutdown()
-        _wrexham_provider = None
-
-    if _travel_provider is not None:
-        await _travel_provider.shutdown()
-        _travel_provider = None
-
-
 def get_wrexham_provider() -> WrexhamProvider:
     """Return the Wrexham widget provider."""
     if _wrexham_provider is None:
@@ -78,23 +75,49 @@ def get_wrexham_provider() -> WrexhamProvider:
     return _wrexham_provider
 
 
-def init_widget_provider() -> None:
-    """Initialize the iframed widgets provider."""
-    global _iframed_widgets_provider
+async def init_framed_widget_provider() -> None:
+    """Initialize the framed widgets provider."""
+    global _framed_widgets_provider
 
-    _iframed_widgets_provider = IframedWidgetsProvider(
+    backend: FramedWidgetsBackend | None = None
+    cron_enabled = _framed_widgets_provider_cron_enabled
+
+    if cron_enabled:
+        try:
+            backend = FramedWidgetsBackend(
+                metrics_client=get_metrics_client(),
+                gcs_client=initialize_storage_client(
+                    destination_gcp_project=_framed_widgets_gcp_project
+                ),
+            )
+        except Exception as e:
+            logger.warning(
+                "Failed to create GCS client for framed widgets, disabling cron.",
+                extra={"error_message": str(e)},
+            )
+
+            # disable the cron if GCS isn't available
+            cron_enabled = False
+
+    _framed_widgets_provider = FramedWidgetsProvider(
+        backend=backend,
+        cron_enabled=cron_enabled,
+        cron_interval_sec=_framed_widgets_provider_cron_interval_sec,
+        enabled=_framed_widgets_provider_enabled,
         metrics_client=get_metrics_client(),
         name="iframed Widgets Provider",
-        enabled=_iframed_widgets_provider_enabled,
+        resync_interval_sec=_framed_widgets_provider_resync_interval_sec,
     )
 
+    await _framed_widgets_provider.initialize()
 
-def get_iframed_widgets_provider() -> IframedWidgetsProvider:
-    """Return the iframed widgets provider"""
-    if _iframed_widgets_provider is None:
+
+def get_framed_widgets_provider() -> FramedWidgetsProvider:
+    """Return the framed widgets provider"""
+    if _framed_widgets_provider is None:
         raise ValueError("iframed widgets provider has not been initialized.")
 
-    return _iframed_widgets_provider
+    return _framed_widgets_provider
 
 
 def init_travel_provider() -> None:
@@ -123,3 +146,23 @@ def get_travel_provider() -> TravelProvider:
         raise ValueError("Travel provider has not been initialized.")
 
     return _travel_provider
+
+
+async def shutdown_providers() -> None:
+    """Shut down widget providers.
+
+    This should only be called once at the shutdown of the application.
+    """
+    global _framed_widgets_provider, _wrexham_provider, _travel_provider
+
+    if _wrexham_provider is not None:
+        await _wrexham_provider.shutdown()
+        _wrexham_provider = None
+
+    if _travel_provider is not None:
+        await _travel_provider.shutdown()
+        _travel_provider = None
+
+    if _framed_widgets_provider is not None:
+        _framed_widgets_provider.shutdown()
+        _framed_widgets_provider = None

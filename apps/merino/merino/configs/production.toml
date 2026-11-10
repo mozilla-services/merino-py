@@ -209,3 +209,23 @@ type = "kayak"
 # MERINO_WIDGETS__PROVIDERS__TRAVEL__KAYAK__ENABLED
 # Whether this provider is enabled. Disabled by default and enabled per environment.
 enabled = true
+
+[production.widgets.providers.framed]
+# MERINO_WIDGETS__PROVIDERS__FRAMED__BUCKET_NAME_KAYAK_TRAVEL
+bucket_name_kayak_travel = "merino-widgets-kayak-travel-public-prod"
+# MERINO_WIDGETS__PROVIDERS__FRAMED__BUCKET_NAME_WREXHAMAFC
+bucket_name_wrexhamafc = "merino-widgets-wrexhamafc-public-prod"
+# MERINO_WIDGETS__PROVIDERS__FRAMED__BUCKET_NAME_YAHOO_HOROSCOPE
+bucket_name_yahoo_horoscope = "merino-widgets-yahoo-horoscope-public-prod"
+# MERINO_WIDGETS__PROVIDERS__FRAMED__BUCKET_NAME_YAHOO_SOLITAIRE
+bucket_name_yahoo_solitaire = "merino-widgets-yahoo-solitaire-public-prod"
+# MERINO_WIDGETS__PROVIDERS__FRAMED__CDN_HOSTNAME_KAYAK_TRAVEL
+cdn_hostname_kayak_travel = "prod-widgets-kayak-travel.merino.prod.webservices.mozgcp.net"
+# MERINO_WIDGETS__PROVIDERS__FRAMED__CDN_HOSTNAME_WREXHAMAFC
+cdn_hostname_wrexhamafc = "prod-widgets-wrexhamafc.merino.prod.webservices.mozgcp.net"
+# MERINO_WIDGETS__PROVIDERS__FRAMED__CDN_HOSTNAME_YAHOO_HOROSCOPE
+cdn_hostname_yahoo_horoscope = "prod-widgets-yahoo-horoscope.merino.prod.webservices.mozgcp.net"
+# MERINO_WIDGETS__PROVIDERS__FRAMED__CDN_HOSTNAME_YAHOO_SOLITAIRE
+cdn_hostname_yahoo_solitaire = "prod-widgets-yahoo-solitaire.merino.prod.webservices.mozgcp.net"
+# GCP project name where the GCS buckets live.
+gcp_project = "moz-fx-merino-prod-5de4"

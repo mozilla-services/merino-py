@@ -9,10 +9,13 @@ from typing import Any
 
 import pytest
 
+from pytest_mock import MockerFixture
+
 from merino.cache.none import NoCacheAdapter
 from merino.main import app
-from merino.providers.widgets import get_iframed_widgets_provider, get_wrexham_provider
-from merino.providers.widgets.iframed.provider import Provider as IframedWidgetsProvider
+from merino.providers.widgets import get_framed_widgets_provider, get_wrexham_provider
+from merino.providers.widgets.iframed.provider import Provider as FramedWidgetsProvider
+from merino.providers.widgets.iframed.backends.framed import FramedWidgetsBackend
 from merino.providers.widgets.wrexham.provider import (
     WrexhamProvider,
     circuit_breaker,
@@ -72,23 +75,34 @@ def fixture_inject_wrexham_provider(wrexham_provider: WrexhamProvider):
     del app.dependency_overrides[get_wrexham_provider]
 
 
-@pytest.fixture(name="iframed_widgets_provider")
-def fixture_iframed_widgets_provider(statsd_mock: Any) -> IframedWidgetsProvider:
+@pytest.fixture(name="framed_widgets_backend_mock")
+def fixture_backend_mock(mocker: MockerFixture) -> Any:
+    """Create a FramedWidgetsBackend mock object for test."""
+    return mocker.AsyncMock(spec=FramedWidgetsBackend)
+
+
+@pytest.fixture(name="framed_widgets_provider")
+def fixture_framed_widgets_provider(
+    framed_widgets_backend_mock: Any, statsd_mock: Any
+) -> FramedWidgetsProvider:
     """Create an iframed widgets provider."""
-    return IframedWidgetsProvider(
+    return FramedWidgetsProvider(
+        backend=framed_widgets_backend_mock,
+        cron_interval_sec=60,
+        enabled=True,
         metrics_client=statsd_mock,
         name="test_iframed_widgets",
-        enabled=True,
+        resync_interval_sec=600,
     )
 
 
-@pytest.fixture(name="inject_iframed_widgets_provider", autouse=True)
-def fixture_inject_iframed_widgets_provider(iframed_widgets_provider: IframedWidgetsProvider):
+@pytest.fixture(name="inject_framed_widgets_provider", autouse=True)
+def fixture_inject_framed_widgets_provider(framed_widgets_provider: FramedWidgetsProvider):
     """Inject the iframed widgets provider into the app for testing."""
 
-    def get_test_iframed_widgets_provider() -> IframedWidgetsProvider:
-        return iframed_widgets_provider
+    def get_test_framed_widgets_provider() -> FramedWidgetsProvider:
+        return framed_widgets_provider
 
-    app.dependency_overrides[get_iframed_widgets_provider] = get_test_iframed_widgets_provider
+    app.dependency_overrides[get_framed_widgets_provider] = get_test_framed_widgets_provider
     yield
-    del app.dependency_overrides[get_iframed_widgets_provider]
+    del app.dependency_overrides[get_framed_widgets_provider]

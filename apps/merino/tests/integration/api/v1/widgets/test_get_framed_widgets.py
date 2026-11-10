@@ -6,14 +6,12 @@
 
 from fastapi.testclient import TestClient
 
-from merino.providers.widgets.iframed.provider import Provider as IframedWidgetsProvider
+from merino.providers.widgets.iframed.provider import Provider as FramedWidgetsProvider
 
 WIDGETS_URL = "/api/v1/widgets/framed"
 
 
-def test_returns_widgets(
-    client: TestClient, iframed_widgets_provider: IframedWidgetsProvider
-) -> None:
+def test_returns_widgets(client: TestClient) -> None:
     """Serves the hard-coded widgets response, passing through the default locale."""
     response = client.get(WIDGETS_URL)
 
@@ -27,10 +25,10 @@ def test_returns_widgets(
 
 
 def test_returns_empty_list_of_widgets_when_provider_disabled(
-    client: TestClient, iframed_widgets_provider: IframedWidgetsProvider
+    client: TestClient, framed_widgets_provider: FramedWidgetsProvider
 ) -> None:
     """Returns an empty list of widgets when the provider is disabled."""
-    iframed_widgets_provider._enabled = False
+    framed_widgets_provider._enabled = False
 
     response = client.get(WIDGETS_URL)
 

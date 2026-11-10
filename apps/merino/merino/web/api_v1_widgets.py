@@ -11,12 +11,12 @@ from starlette.requests import Request
 from merino.configs import settings
 from merino.middleware import ScopeKey
 from merino.providers.widgets import (
-    get_iframed_widgets_provider,
+    get_framed_widgets_provider,
     get_travel_provider,
     get_wrexham_provider,
 )
-from merino.providers.widgets.iframed.backends.protocol import IframedWidgetsResponse
-from merino.providers.widgets.iframed.provider import Provider as IframedWidgetProvider
+from merino.providers.widgets.iframed.backends.protocol import FramedWidgetsApiResponse
+from merino.providers.widgets.iframed.provider import Provider as FramedWidgetProvider
 from merino.providers.widgets.wrexham.protocol import (
     ErrorResponse,
     MatchesResponse,
@@ -135,14 +135,14 @@ async def get_wrexham_standings(
     "/widgets/framed",
     tags=["widgets"],
     summary="All enabled widgets intended to be displayed in iframes",
-    response_model=IframedWidgetsResponse,
+    response_model=FramedWidgetsApiResponse,
 )
 async def get_iframed_widgets(
     request: Request,
     locale: Annotated[str, Query(max_length=16)] = "en-US",
-    provider: IframedWidgetProvider = Depends(get_iframed_widgets_provider),
+    provider: FramedWidgetProvider = Depends(get_framed_widgets_provider),
 ) -> Response:
-    """Query merino for iframed widgets.
+    """Query merino for framed widgets.
 
     **Args**:
     - locale: optionally provided by the caller, defaults to en-US (future-proofing design)
@@ -150,7 +150,7 @@ async def get_iframed_widgets(
     """
     metrics_client: Client = request.scope[ScopeKey.METRICS_CLIENT]
 
-    with metrics_client.timeit("widgets.iframed.request.timing"):
+    with metrics_client.timeit("widgets.framed.request.timing"):
         widgets_response = await provider.get_widgets(locale=locale)
 
     return JSONResponse(content=jsonable_encoder(widgets_response))

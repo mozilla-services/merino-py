@@ -1477,10 +1477,43 @@ live_matches_ttl_sec = 300 # 5 minutes
 standings_ttl_sec = 3600 # 1 hour
 
 
-[default.widget_providers.iframed]
-# MERINO_WIDGET_PROVIDERS__IFRAMED__ENABLED
+[default.widgets.providers.framed]
+# MERINO_WIDGETS__PROVIDERS__FRAMED__ENABLED
 # Whether this provider is enabled. Enabled by default.
 enabled = true
+
+# MERINO_WIDGETS__PROVIDERS__FRAMED__CRON_ENABLED
+# Whether or not the cron to monitor GCS buckets is enabled. Disabed by default.
+cron_enabled = false
+
+# MERINO_WIDGETS__PROVIDERS__FRAMED__CRON_INTERVAL_SEC
+# How often to the cron runs to potentially check for new framed widget
+# releases. Runs more frequently than the resync_interval_sec to account for
+# errors during GCS inspection.
+cron_interval_sec = 60 # 1 minutes
+
+# MERINO_WIDGETS__PROVIDERS__FRAMED__RESYNC_INTERVAL_SEC
+# How often to check for new releases of framed widgets.
+resync_interval_sec = 900 # 15 minutes
+
+# MERINO_WIDGETS__PROVIDERS__FRAMED__BUCKET_NAME_KAYAK_TRAVEL
+bucket_name_kayak_travel = ""
+# MERINO_WIDGETS__PROVIDERS__FRAMED__BUCKET_NAME_WREXHAMAFC
+bucket_name_wrexhamafc = ""
+# MERINO_WIDGETS__PROVIDERS__FRAMED__BUCKET_NAME_YAHOO_HOROSCOPE
+bucket_name_yahoo_horoscope = ""
+# MERINO_WIDGETS__PROVIDERS__FRAMED__BUCKET_NAME_YAHOO_SOLITAIRE
+bucket_name_yahoo_solitaire = ""
+# MERINO_WIDGETS__PROVIDERS__FRAMED__CDN_HOSTNAME_KAYAK_TRAVEL
+cdn_hostname_kayak_travel = ""
+# MERINO_WIDGETS__PROVIDERS__FRAMED__CDN_HOSTNAME_WREXHAMAFC
+cdn_hostname_wrexhamafc = ""
+# MERINO_WIDGETS__PROVIDERS__FRAMED__CDN_HOSTNAME_YAHOO_HOROSCOPE
+cdn_hostname_yahoo_horoscope = ""
+# MERINO_WIDGETS__PROVIDERS__FRAMED__CDN_HOSTNAME_YAHOO_SOLITAIRE
+cdn_hostname_yahoo_solitaire = ""
+# GCP project name where the GCS buckets live.
+gcp_project = ""
 
 
 [default.curated_recommendations.gcs]
