@@ -226,7 +226,7 @@ def test_widget_mode_serves_only_widgets(mocker: MockerFixture) -> None:
         store = mocker.AsyncMock(spec=WrexhamStore)
         store.read_fixtures.return_value = ([], datetime.now(UTC))
         store.read_live_matches.return_value = None
-        return WrexhamProvider(store=store, metrics_client=mocker.Mock())
+        return WrexhamProvider(store=store)
 
     mocker.patch.object(main, "configure_logging")
     mocker.patch.object(main, "configure_sentry")

@@ -8,6 +8,7 @@ import asyncio
 import logging
 from datetime import UTC, datetime, timedelta
 from typing import Any
+from unittest.mock import call
 
 import pytest
 from pydantic import HttpUrl
@@ -15,6 +16,7 @@ from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
 
 from merino.jobs.widgets.wrexham import TEAM_SHORT_NAMES, WrexhamIngester, use_short_names
+from merino.providers.widgets.wrexham import metrics
 from merino.providers.widgets.wrexham.protocol import (
     CHAMPIONSHIP,
     FA_CUP,
@@ -159,12 +161,88 @@ async def test_failures_are_isolated(
     store.write_standings.assert_not_awaited()
     store.write_fixtures.assert_awaited_once_with(FA_CUP.id, [match(1, FA_CUP, 12)])
     records = filter_caplog(caplog.records, "merino.jobs.widgets.wrexham")
+    # The failed competition is logged, then the fixtures refresh as a whole.
     assert sorted(r.__dict__["refresh"] for r in records) == [
         "fixtures",
         "fixtures",
         "live_matches",
         "standings",
     ]
+
+
+@pytest.fixture(name="job_metrics")
+def fixture_job_metrics(mocker: MockerFixture) -> Any:
+    """Patch the job's OpenTelemetry instruments with mocks."""
+    return mocker.Mock(
+        count=mocker.patch.object(metrics, "job_refresh_count"),
+        duration=mocker.patch.object(metrics, "job_refresh_duration"),
+        last_synced_at=mocker.patch.object(metrics, "job_last_synced_at"),
+    )
+
+
+@pytest.mark.asyncio
+async def test_successful_refreshes_record_metrics(
+    ingester: WrexhamIngester, job_metrics: Any, mocker: MockerFixture
+) -> None:
+    """Each successful refresh counts a success, records its duration and its sync time."""
+    mocker.patch("merino.jobs.widgets.wrexham.perf_counter", side_effect=[0.0, 1.5] * 3)
+
+    await ingester.run_once()
+
+    data_types = ["live_matches", "fixtures", "standings"]
+    assert job_metrics.count.add.call_args_list == [
+        call(1, {"data_type": data_type, "result": "success"}) for data_type in data_types
+    ]
+    assert job_metrics.duration.record.call_args_list == [
+        call(1.5, {"data_type": data_type}) for data_type in data_types
+    ]
+    synced = job_metrics.last_synced_at.set.call_args_list
+    assert [c.args[1] for c in synced] == [{"data_type": data_type} for data_type in data_types]
+    now = datetime.now(UTC).timestamp()
+    assert all(now - 60 < c.args[0] <= now for c in synced)
+
+
+@pytest.mark.asyncio
+async def test_failed_refreshes_record_metrics(
+    ingester: WrexhamIngester, backend: Any, job_metrics: Any
+) -> None:
+    """A failed refresh, including one competition's fixtures, counts a failure and records
+    its duration, but not a sync time.
+    """
+    error = SportsDataBackendError("boom")
+    backend.fetch_live_matches.side_effect = error
+    backend.fetch_schedule.side_effect = [error, [match(1, FA_CUP, 12)]]
+
+    await ingester.run_once()
+
+    assert job_metrics.count.add.call_args_list == [
+        call(1, {"data_type": "live_matches", "result": "failure"}),
+        call(1, {"data_type": "fixtures", "result": "failure"}),
+        call(1, {"data_type": "standings", "result": "success"}),
+    ]
+    assert job_metrics.duration.record.call_count == 3
+    job_metrics.last_synced_at.set.assert_called_once()
+    assert job_metrics.last_synced_at.set.call_args.args[1] == {"data_type": "standings"}
+
+
+@pytest.mark.asyncio
+async def test_canceled_refresh_records_metrics_and_propagates(
+    ingester: WrexhamIngester, backend: Any, job_metrics: Any
+) -> None:
+    """A canceled refresh is counted as canceled with its duration, isn't recorded as synced,
+    and the cancellation propagates.
+    """
+    backend.fetch_live_matches.side_effect = asyncio.CancelledError
+
+    with pytest.raises(asyncio.CancelledError):
+        await ingester.run_once()
+
+    job_metrics.count.add.assert_called_once_with(
+        1, {"data_type": "live_matches", "result": "canceled"}
+    )
+    job_metrics.duration.record.assert_called_once()
+    assert job_metrics.duration.record.call_args.args[1] == {"data_type": "live_matches"}
+    job_metrics.last_synced_at.set.assert_not_called()
 
 
 @pytest.mark.asyncio

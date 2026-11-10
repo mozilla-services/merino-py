@@ -534,16 +534,92 @@ providers/travel/kayak:
     alert_policy: []
 
 providers/widgets/wrexham:
-  widgets.wrexham.redis.error:
+  merino.wrexham.api.redis_errors.count:
     description: |
-      A counter for failed reads of Wrexham widget data from Redis.
+      An OpenTelemetry counter of failed reads of Wrexham widget data from Redis.
     type: counter
     labels:
-      - name: data
+      - name: endpoint
         description: |
-          The data that couldn't be read: "matches" or "standings".
+          The endpoint whose data couldn't be read: "matches" or "standings".
     scope: |
       The "api/v1/widgets/wrexham/*" API endpoints.
+    alert_policy: []
+
+  merino.wrexham.api.circuit_breaker.open:
+    description: |
+      An OpenTelemetry observable gauge of the Wrexham circuit breaker's state, read by each
+      API process whenever metrics are exported: 1 while the breaker is open and the
+      endpoints return 503s without reading Redis, 0 while it's closed or half-open. Both
+      endpoints share the breaker, so it isn't tagged by endpoint.
+    type: gauge
+    labels: [] # no labels
+    scope: |
+      The "api/v1/widgets/wrexham/*" API endpoints.
+    alert_policy: []
+
+  merino.wrexham.api.data_age:
+    description: |
+      An OpenTelemetry histogram of the age of the Wrexham data served, in seconds
+      (now - the time the job fetched it). The matches endpoint records one value per
+      stored data type it serves: the fixtures for each competition, and the live data.
+    type: histogram
+    labels:
+      - name: endpoint
+        description: |
+          The endpoint serving the data: "matches" or "standings".
+      - name: data_type
+        description: |
+          The stored data: "fixtures", "live_matches" or "standings".
+      - name: competition
+        description: |
+          The competition the fixtures belong to: "EFL Championship" or "FA Cup". Only set
+          for "fixtures".
+    scope: |
+      The "api/v1/widgets/wrexham/*" API endpoints.
+    alert_policy: []
+
+jobs/widgets/wrexham:
+  merino.wrexham.job.refresh.count:
+    description: |
+      An OpenTelemetry counter of Wrexham data refreshes from SportsDataIO. A fixtures
+      refresh fails if any competition fails, even though the others are still written.
+    type: counter
+    labels:
+      - name: data_type
+        description: |
+          The data refreshed: "fixtures", "live_matches" or "standings".
+      - name: result
+        description: |
+          Whether the refresh succeeded ("success"), failed ("failure"), or was canceled ("canceled").
+    scope: |
+      The Wrexham ingestion job (`merino-jobs wrexham run-loop`).
+    alert_policy: []
+
+  merino.wrexham.job.refresh.duration:
+    description: |
+      An OpenTelemetry histogram of the time taken by each Wrexham data refresh, in
+      seconds, whether it succeeded or failed.
+    type: histogram
+    labels:
+      - name: data_type
+        description: |
+          The data refreshed: "fixtures", "live_matches" or "standings".
+    scope: |
+      The Wrexham ingestion job (`merino-jobs wrexham run-loop`).
+    alert_policy: []
+
+  merino.wrexham.job.last_synced_at:
+    description: |
+      An OpenTelemetry gauge of the Unix timestamp, in seconds, when each type of Wrexham
+      data was last refreshed successfully; used to measure staleness.
+    type: gauge
+    labels:
+      - name: data_type
+        description: |
+          The data refreshed: "fixtures", "live_matches" or "standings".
+    scope: |
+      The Wrexham ingestion job (`merino-jobs wrexham run-loop`).
     alert_policy: []
 
 utils/icon_processor:

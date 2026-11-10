@@ -51,10 +51,7 @@ def init_wrexham_provider() -> None:
         live_matches_ttl=timedelta(seconds=_wrexham_cache_ttls.live_matches_ttl_sec),
         standings_ttl=timedelta(seconds=_wrexham_cache_ttls.standings_ttl_sec),
     )
-    _wrexham_provider = WrexhamProvider(
-        store=store,
-        metrics_client=get_metrics_client(),
-    )
+    _wrexham_provider = WrexhamProvider(store=store)
 
 
 async def shutdown_providers() -> None:

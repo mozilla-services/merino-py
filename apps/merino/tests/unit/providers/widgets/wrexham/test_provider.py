@@ -16,6 +16,7 @@ from pytest_mock import MockerFixture
 from merino import governance
 from merino.configs import settings
 from merino.exceptions import CacheAdapterError
+from merino.providers.widgets.wrexham import metrics
 from merino.providers.widgets.wrexham.protocol import MatchesResponse, MatchStatus
 from merino.providers.widgets.wrexham.provider import (
     CURRENT_STATUSES,
@@ -43,10 +44,19 @@ def _ids(matches: MatchesResponse) -> tuple[list[int], list[int], list[int]]:
     )
 
 
+@pytest.fixture(name="api_metrics")
+def fixture_api_metrics(mocker: MockerFixture) -> Any:
+    """Patch the API's OpenTelemetry instruments with mocks."""
+    return mocker.Mock(
+        redis_errors=mocker.patch.object(metrics, "api_redis_error_count"),
+        data_age=mocker.patch.object(metrics, "api_data_age"),
+    )
+
+
 @pytest.fixture(name="provider")
-def fixture_provider(store: WrexhamStore, statsd_mock: Any) -> WrexhamProvider:
+def fixture_provider(store: WrexhamStore) -> WrexhamProvider:
     """Return a provider that reads from the store."""
-    return WrexhamProvider(store=store, metrics_client=statsd_mock)
+    return WrexhamProvider(store=store)
 
 
 @pytest.mark.asyncio
@@ -255,21 +265,19 @@ async def test_raises_when_no_fixtures_are_stored(
 @pytest.mark.asyncio
 async def test_raises_logs_and_counts_redis_errors(
     store: WrexhamStore,
-    statsd_mock: Any,
+    api_metrics: Any,
     mocker: MockerFixture,
     caplog: LogCaptureFixture,
     filter_caplog: FilterCaplogFixture,
 ) -> None:
     """A Redis read failure is logged, counted and raised as WrexhamDataUnavailableError."""
     mocker.patch.object(store, "read_fixtures", side_effect=CacheAdapterError("Redis is down"))
-    provider = WrexhamProvider(store=store, metrics_client=statsd_mock)
+    provider = WrexhamProvider(store=store)
 
     with pytest.raises(WrexhamDataUnavailableError):
         await provider.get_matches(limit=5)
 
-    statsd_mock.increment.assert_called_once_with(
-        "widgets.wrexham.redis.error", tags={"data": "matches"}
-    )
+    api_metrics.redis_errors.add.assert_called_once_with(1, {"endpoint": "matches"})
     records = filter_caplog(caplog.records, "merino.providers.widgets.wrexham.provider")
     assert [record.message for record in records] == ["Could not read Wrexham matches from Redis"]
 
@@ -316,21 +324,19 @@ async def test_get_standings_raises_when_no_standings_are_stored(
 @pytest.mark.asyncio
 async def test_get_standings_raises_logs_and_counts_redis_errors(
     store: WrexhamStore,
-    statsd_mock: Any,
+    api_metrics: Any,
     mocker: MockerFixture,
     caplog: LogCaptureFixture,
     filter_caplog: FilterCaplogFixture,
 ) -> None:
     """A Redis read failure is logged, counted and raised as WrexhamDataUnavailableError."""
     mocker.patch.object(store, "read_standings", side_effect=CacheAdapterError("Redis is down"))
-    provider = WrexhamProvider(store=store, metrics_client=statsd_mock)
+    provider = WrexhamProvider(store=store)
 
     with pytest.raises(WrexhamDataUnavailableError):
         await provider.get_standings()
 
-    statsd_mock.increment.assert_called_once_with(
-        "widgets.wrexham.redis.error", tags={"data": "standings"}
-    )
+    api_metrics.redis_errors.add.assert_called_once_with(1, {"endpoint": "standings"})
     records = filter_caplog(caplog.records, "merino.providers.widgets.wrexham.provider")
     assert [record.message for record in records] == [
         "Could not read Wrexham standings from Redis"
@@ -355,13 +361,15 @@ RECOVERY_TIMEOUT = settings.widgets.providers.wrexham.circuit_breaker_recover_ti
 
 @pytest.mark.asyncio
 async def test_circuit_breaker_opens_and_stays_open_after_redis_errors(
-    store: WrexhamStore, statsd_mock: Any, mocker: MockerFixture
+    store: WrexhamStore, api_metrics: Any, mocker: MockerFixture
 ) -> None:
-    """After repeated Redis errors, matches return unavailable without calling Redis."""
+    """After repeated Redis errors, matches return unavailable without calling Redis. Each
+    Redis error is counted, and the breaker gauge reports it as open.
+    """
     read_fixtures = mocker.patch.object(
         store, "read_fixtures", side_effect=CacheAdapterError("Redis is down")
     )
-    provider = WrexhamProvider(store=store, metrics_client=statsd_mock)
+    provider = WrexhamProvider(store=store)
 
     for _ in range(FAILURE_THRESHOLD):
         with pytest.raises(WrexhamDataUnavailableError):
@@ -375,18 +383,19 @@ async def test_circuit_breaker_opens_and_stays_open_after_redis_errors(
             await provider.get_matches(limit=5)
 
     assert read_fixtures.await_count == FAILURE_THRESHOLD
-    assert statsd_mock.increment.call_count == FAILURE_THRESHOLD
+    assert api_metrics.redis_errors.add.call_count == FAILURE_THRESHOLD
+    assert metrics.circuit_breaker_open_value(circuit_breaker) == 1
 
 
 @pytest.mark.asyncio
 async def test_circuit_breaker_recovers_once_redis_works_again(
-    store: WrexhamStore, statsd_mock: Any, mocker: MockerFixture, make_match: MakeMatch
+    store: WrexhamStore, mocker: MockerFixture, make_match: MakeMatch
 ) -> None:
     """After the recovery timeout, a successful Redis read closes the breaker."""
     read_fixtures = mocker.patch.object(
         store, "read_fixtures", side_effect=CacheAdapterError("Redis is down")
     )
-    provider = WrexhamProvider(store=store, metrics_client=statsd_mock)
+    provider = WrexhamProvider(store=store)
     for _ in range(FAILURE_THRESHOLD):
         with pytest.raises(WrexhamDataUnavailableError):
             await provider.get_matches(limit=5)
@@ -403,6 +412,97 @@ async def test_circuit_breaker_recovers_once_redis_works_again(
 
 
 @pytest.mark.asyncio
+async def test_circuit_breaker_gauge_follows_the_breaker_state(
+    store: WrexhamStore, mocker: MockerFixture
+) -> None:
+    """The gauge is 0 while closed, 1 while open, 0 again while half-open, and 1 once a
+    failed read reopens the breaker.
+    """
+    mocker.patch.object(store, "read_fixtures", side_effect=CacheAdapterError("Redis is down"))
+    provider = WrexhamProvider(store=store)
+    assert metrics.circuit_breaker_open_value(circuit_breaker) == 0
+
+    for _ in range(FAILURE_THRESHOLD):
+        with pytest.raises(WrexhamDataUnavailableError):
+            await provider.get_matches(limit=5)
+    assert metrics.circuit_breaker_open_value(circuit_breaker) == 1
+
+    mocker.patch("circuitbreaker.monotonic", return_value=monotonic() + RECOVERY_TIMEOUT + 1)
+    assert metrics.circuit_breaker_open_value(circuit_breaker) == 0  # Half-open.
+
+    with pytest.raises(WrexhamDataUnavailableError):
+        await provider.get_matches(limit=5)
+    assert metrics.circuit_breaker_open_value(circuit_breaker) == 1
+
+
+def test_observe_circuit_breaker_reports_the_breaker_state(mocker: MockerFixture) -> None:
+    """The observable gauge's callback reports whether the breaker is open."""
+    create_gauge = mocker.patch.object(metrics._meter, "create_observable_gauge")
+    breaker = mocker.Mock(opened=True)
+
+    metrics.observe_circuit_breaker(breaker)
+
+    create_gauge.assert_called_once()
+    assert create_gauge.call_args.kwargs["name"] == "merino.wrexham.api.circuit_breaker.open"
+    [callback] = create_gauge.call_args.kwargs["callbacks"]
+    assert [observation.value for observation in callback(mocker.Mock())] == [1]
+    breaker.opened = False
+    assert [observation.value for observation in callback(mocker.Mock())] == [0]
+
+
+@pytest.mark.asyncio
+@freeze_time(KICKOFF)
+async def test_matches_record_the_age_of_each_stored_data_type(
+    provider: WrexhamProvider,
+    store: WrexhamStore,
+    api_metrics: Any,
+    mocker: MockerFixture,
+    make_match: MakeMatch,
+) -> None:
+    """The age of the fixtures for each competition, and of the live data, is recorded."""
+    fetched_at = {
+        CHAMPIONSHIP_ID: KICKOFF - timedelta(minutes=30),
+        FA_CUP_ID: KICKOFF - timedelta(hours=1),
+    }
+    mocker.patch.object(
+        store,
+        "read_fixtures",
+        side_effect=lambda competition_id: ([make_match(1)], fetched_at[competition_id]),
+    )
+    mocker.patch.object(
+        store, "read_live_matches", return_value=([], KICKOFF - timedelta(seconds=45))
+    )
+
+    await provider.get_matches(limit=5)
+
+    assert api_metrics.data_age.record.call_args_list == [
+        mocker.call(
+            1800.0,
+            {"endpoint": "matches", "data_type": "fixtures", "competition": "EFL Championship"},
+        ),
+        mocker.call(
+            3600.0, {"endpoint": "matches", "data_type": "fixtures", "competition": "FA Cup"}
+        ),
+        mocker.call(45.0, {"endpoint": "matches", "data_type": "live_matches"}),
+    ]
+
+
+@pytest.mark.asyncio
+@freeze_time(KICKOFF)
+async def test_standings_record_the_age_of_the_stored_table(
+    provider: WrexhamProvider, store: WrexhamStore, api_metrics: Any, mocker: MockerFixture
+) -> None:
+    """The age of the stored standings is recorded."""
+    mocker.patch.object(store, "read_standings", return_value=([], KICKOFF - timedelta(hours=2)))
+
+    await provider.get_standings()
+
+    api_metrics.data_age.record.assert_called_once_with(
+        7200.0, {"endpoint": "standings", "data_type": "standings"}
+    )
+
+
+@pytest.mark.asyncio
 async def test_missing_data_does_not_trip_the_circuit_breaker(
     provider: WrexhamProvider,
 ) -> None:
@@ -416,13 +516,13 @@ async def test_missing_data_does_not_trip_the_circuit_breaker(
 
 @pytest.mark.asyncio
 async def test_standings_redis_errors_open_the_circuit_breaker(
-    store: WrexhamStore, statsd_mock: Any, mocker: MockerFixture
+    store: WrexhamStore, api_metrics: Any, mocker: MockerFixture
 ) -> None:
     """Repeated Redis errors reading standings open the breaker too."""
     read_standings = mocker.patch.object(
         store, "read_standings", side_effect=CacheAdapterError("Redis is down")
     )
-    provider = WrexhamProvider(store=store, metrics_client=statsd_mock)
+    provider = WrexhamProvider(store=store)
 
     for _ in range(FAILURE_THRESHOLD + 3):
         with pytest.raises(WrexhamDataUnavailableError):
@@ -430,18 +530,18 @@ async def test_standings_redis_errors_open_the_circuit_breaker(
 
     assert circuit_breaker.opened
     assert read_standings.await_count == FAILURE_THRESHOLD
+    assert api_metrics.redis_errors.add.call_count == FAILURE_THRESHOLD
 
 
 @pytest.mark.asyncio
 async def test_open_circuit_breaker_blocks_both_endpoints(
     store: WrexhamStore,
-    statsd_mock: Any,
     mocker: MockerFixture,
     make_standing: MakeStanding,
 ) -> None:
     """Both endpoints share the breaker, so once it opens, standings aren't read either."""
     mocker.patch.object(store, "read_fixtures", side_effect=CacheAdapterError("Redis is down"))
-    provider = WrexhamProvider(store=store, metrics_client=statsd_mock)
+    provider = WrexhamProvider(store=store)
     for _ in range(FAILURE_THRESHOLD):
         with pytest.raises(WrexhamDataUnavailableError):
             await provider.get_matches(limit=5)
@@ -456,11 +556,11 @@ async def test_open_circuit_breaker_blocks_both_endpoints(
 
 @pytest.mark.asyncio
 async def test_open_circuit_breaker_is_reported_by_governance(
-    store: WrexhamStore, statsd_mock: Any, mocker: MockerFixture
+    store: WrexhamStore, mocker: MockerFixture
 ) -> None:
-    """An open breaker shows up in the governance daemon's circuit breaker metrics."""
+    """An open breaker shows up in the governance circuit breaker metrics."""
     mocker.patch.object(store, "read_fixtures", side_effect=CacheAdapterError("Redis is down"))
-    provider = WrexhamProvider(store=store, metrics_client=statsd_mock)
+    provider = WrexhamProvider(store=store)
     for _ in range(FAILURE_THRESHOLD):
         with pytest.raises(WrexhamDataUnavailableError):
             await provider.get_matches(limit=5)

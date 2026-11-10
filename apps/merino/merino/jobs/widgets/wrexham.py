@@ -8,14 +8,15 @@ import asyncio
 import logging
 import signal
 from collections.abc import Awaitable, Callable
-from datetime import timedelta
-from time import monotonic
+from datetime import UTC, datetime, timedelta
+from time import monotonic, perf_counter
 
 import typer
 from pydantic import HttpUrl
 
 from merino.cache.redis import RedisAdapter, create_redis_clients
 from merino.configs import settings
+from merino.providers.widgets.wrexham import metrics
 from merino.providers.widgets.wrexham.protocol import CHAMPIONSHIP, FA_CUP, Match, Team
 from merino.providers.widgets.wrexham.sportsdata import SportsDataBackend
 from merino.providers.widgets.wrexham.store import WrexhamStore
@@ -79,6 +80,10 @@ def use_short_names(matches: list[Match], short_names: dict[int, str]) -> list[M
     ]
 
 
+class WrexhamRefreshError(Exception):
+    """Raised when a refresh fails for some, but not necessarily all, of its data."""
+
+
 class WrexhamIngester:
     """Refreshes Wrexham data from SportsDataIO into the store.
 
@@ -119,7 +124,10 @@ class WrexhamIngester:
         """Write the season's Wrexham fixtures for each competition.
 
         Each competition is written independently: a failure in one doesn't stop the others.
-        Raises after all competitions are tried if any of them failed, so the refresh is retried.
+
+        Raises:
+            - `WrexhamRefreshError` after trying every competition, if any of them failed,
+            so the refresh is retried.
         """
         failed_ids: list[int] = []
         for competition in COMPETITIONS:
@@ -136,6 +144,7 @@ class WrexhamIngester:
                     },
                 )
             except Exception as ex:
+                failed_ids.append(competition.id)
                 logger.error(
                     "Failed to refresh Wrexham fixtures",
                     extra={
@@ -144,9 +153,8 @@ class WrexhamIngester:
                         "error": str(ex),
                     },
                 )
-                failed_ids.append(competition.id)
         if failed_ids:
-            raise RuntimeError(f"Failed to refresh fixtures for competitions {failed_ids}")
+            raise WrexhamRefreshError(f"Failed to refresh fixtures for competitions {failed_ids}")
 
     async def refresh_live_matches(self) -> None:
         """Write today's Wrexham matches across all competitions, earliest kickoff first.
@@ -186,6 +194,9 @@ class WrexhamIngester:
         """Run the refreshes that are due. A failed refresh is logged and doesn't stop the
         others. Fixtures and standings are next due an interval after they succeed, or on the
         next run if they fail.
+
+        Each refresh records its result, duration and, on success, sync time, tagged by data
+        type ("live_matches", "fixtures" or "standings").
         """
         now = monotonic()
 
@@ -203,14 +214,33 @@ class WrexhamIngester:
         if now >= self._standings_due_at:
             refreshes.append(("standings", self.refresh_standings, set_standings_due))
 
-        for name, refresh, on_success in refreshes:
-            try:
-                await refresh()
-            except Exception as ex:
-                logger.error("Wrexham refresh failed", extra={"refresh": name, "error": str(ex)})
-            else:
-                if on_success is not None:
-                    on_success()
+        for data_type, refresh, on_success in refreshes:
+            await self._run_refresh(data_type, refresh, on_success)
+
+    @staticmethod
+    async def _run_refresh(
+        data_type: str,
+        refresh: Callable[[], Awaitable[None]],
+        on_success: Callable[[], None] | None,
+    ) -> None:
+        """Run a refresh, log a failure and record its metrics."""
+        attributes = {"data_type": data_type}
+        start = perf_counter()
+        # Kept if refresh() raises a BaseException, e.g. CancelledError or KeyboardInterrupt
+        result = "canceled"
+        try:
+            await refresh()
+        except Exception as ex:
+            result = "failure"
+            logger.error("Wrexham refresh failed", extra={"refresh": data_type, "error": str(ex)})
+        else:
+            result = "success"
+            metrics.job_last_synced_at.set(datetime.now(UTC).timestamp(), attributes)
+            if on_success is not None:
+                on_success()
+        finally:
+            metrics.job_refresh_duration.record(perf_counter() - start, attributes)
+            metrics.job_refresh_count.add(1, {**attributes, "result": result})
 
     async def run_loop(self, interval_sec: float, stop_event: asyncio.Event) -> None:
         """Run the refreshes every `interval_sec` until `stop_event` is set."""
