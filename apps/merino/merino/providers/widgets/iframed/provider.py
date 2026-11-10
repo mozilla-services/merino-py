@@ -54,7 +54,7 @@ class Provider:
                     vendor="yahoo",
                     enabled=True,
                     url=HttpUrl(
-                        "https://prod-widgets-yahoo-horoscope.merino.prod.webservices.mozgcp.net/1.3.20261102170638/index.html"
+                        "https://prod-widgets-yahoo-horoscope.merino.prod.webservices.mozgcp.net/1.3.20261110170613/index.html"
                     ),
                 ),
                 IframedWidget(
@@ -62,7 +62,7 @@ class Provider:
                     vendor="yahoo",
                     enabled=True,
                     url=HttpUrl(
-                        "https://prod-widgets-yahoo-solitaire.merino.prod.webservices.mozgcp.net/1.0.20261030214548/index.html"
+                        "https://prod-widgets-yahoo-solitaire.merino.prod.webservices.mozgcp.net/1.2.20261106203853/index.html"
                     ),
                 ),
                 IframedWidget(
@@ -70,7 +70,7 @@ class Provider:
                     vendor="mozilla",
                     enabled=True,
                     url=HttpUrl(
-                        "https://prod-widgets-kayak-travel.merino.prod.webservices.mozgcp.net/1.3.202611061554/index.html"
+                        "https://prod-widgets-kayak-travel.merino.prod.webservices.mozgcp.net/1.4.202611101753/index.html"
                     ),
                 ),
                 IframedWidget(
@@ -97,7 +97,7 @@ class Provider:
                     vendor="yahoo",
                     enabled=True,
                     url=HttpUrl(
-                        "https://stage-widgets-yahoo-horoscope.merino.nonprod.webservices.mozgcp.net/1.3.20261102170636/index.html"
+                        "https://stage-widgets-yahoo-horoscope.merino.nonprod.webservices.mozgcp.net/1.3.20261110170615/index.html"
                     ),
                 ),
                 IframedWidget(
@@ -105,7 +105,7 @@ class Provider:
                     vendor="yahoo",
                     enabled=True,
                     url=HttpUrl(
-                        "https://stage-widgets-yahoo-solitaire.merino.nonprod.webservices.mozgcp.net/1.0.20261030212942/index.html"
+                        "https://stage-widgets-yahoo-solitaire.merino.nonprod.webservices.mozgcp.net/1.2.20261106200134/index.html"
                     ),
                 ),
                 IframedWidget(
@@ -113,7 +113,7 @@ class Provider:
                     vendor="mozilla",
                     enabled=True,
                     url=HttpUrl(
-                        "https://stage-widgets-kayak-travel.merino.nonprod.webservices.mozgcp.net/1.3.202611061554/index.html"
+                        "https://stage-widgets-kayak-travel.merino.nonprod.webservices.mozgcp.net/1.4.202611101753/index.html"
                     ),
                 ),
                 IframedWidget(

@@ -72,8 +72,8 @@ enabled = true
 # The URL pointing to the game hosted in GCP (GCS)
 game_url = "https://stage-games-particle.merino.nonprod.webservices.mozgcp.net/index.html"
 
-[stage.travel_providers.kayak]
-# MERINO_TRAVEL_PROVIDERS__KAYAK__ENABLED
+[stage.widgets.providers.travel.kayak]
+# MERINO_WIDGETS__PROVIDERS__TRAVEL__KAYAK__ENABLED
 # Whether this provider is enabled.
 enabled = true
 

@@ -103,11 +103,20 @@ def test_configured_runtime_mode_passes_startup_validation(mode: RuntimeMode) ->
         (
             RuntimeMode.REGULAR,
             {"/__heartbeat__", "/api/v1/suggest"},
-            {"/api/v1/widgets/wrexham/matches", "/api/v1/widgets/framed"},
+            {
+                "/api/v1/widgets/wrexham/matches",
+                "/api/v1/widgets/framed",
+                "/api/v1/widgets/travel",
+            },
         ),
         (
             RuntimeMode.WIDGET,
-            {"/__heartbeat__", "/api/v1/widgets/wrexham/matches", "/api/v1/widgets/framed"},
+            {
+                "/__heartbeat__",
+                "/api/v1/widgets/wrexham/matches",
+                "/api/v1/widgets/framed",
+                "/api/v1/widgets/travel",
+            },
             {"/api/v1/suggest"},
         ),
     ],
