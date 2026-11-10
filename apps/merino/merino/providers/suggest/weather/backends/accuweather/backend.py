@@ -140,6 +140,39 @@ LUA_SCRIPT_CACHE_FETCH_HOURLY_FORECAST: str = """
 SCRIPT_HOURLY_FORECAST_ID = "fetch_hourly_forecast"
 
 
+# The Lua script to fetch the location and hourly forecast, and the hourly forecast TTL for
+# a given country/region/city.
+#
+# Note:
+#   - The script expects a JSON serialized string as the value of the location key,
+#     the location key can be accessed via the `key` property.
+#   - The cache key for the country/region/city should be provided through `KEYS[1]`
+#   - The cache key template for hourly forecasts should be provided through `ARGV[1]`
+#   - The placeholder for location key (i.e. `self.url_location_key_placeholder`)
+#     is passed via `ARGV[2]`
+#   - If the location key is present in the cache, it uses the key to fetch the hourly
+#     forecast for that key in the cache. It returns a 3-element array
+#     `[location, hourly_forecast, ttl]`. The `hourly_forecast` is `nil` if it is not present
+#     in the cache, and `ttl` is the raw Redis TTL (-2 if the key does not exist)
+#   - If the location key is missing, it will return an empty array
+LUA_SCRIPT_CACHE_FETCH_LOCATION_AND_HOURLY_FORECAST: str = """
+    local location = redis.call("GET", KEYS[1])
+
+    if not location then
+        return {}
+    end
+
+    local key = cjson.decode(location)["key"]
+    local hourly_forecast_key = string.gsub(ARGV[1], ARGV[2], key)
+
+    local hourly_forecast = redis.call("GET", hourly_forecast_key)
+    local ttl = redis.call("TTL", hourly_forecast_key)
+
+    return {location, hourly_forecast, ttl}
+"""
+SCRIPT_ID_FETCH_HOURLY_FORECAST_VIA_GEOLOCATION = "fetch_hourly_forecast_by_geolocation"
+
+
 # LOCATION_SENTINEL constant below is prepended to the list returned by the above
 # bulk_fetch_by_location_key script. This is to accommodate parse_cached_data method which
 # expects 4 list elements to be returned from the cache but this script only returns 3.
@@ -286,6 +319,10 @@ class AccuweatherBackend:
         )
         self.cache.register_script(
             SCRIPT_HOURLY_FORECAST_ID, LUA_SCRIPT_CACHE_FETCH_HOURLY_FORECAST
+        )
+        self.cache.register_script(
+            SCRIPT_ID_FETCH_HOURLY_FORECAST_VIA_GEOLOCATION,
+            LUA_SCRIPT_CACHE_FETCH_LOCATION_AND_HOURLY_FORECAST,
         )
         self.cached_location_key_ttl_sec = cached_location_key_ttl_sec
         self.cached_current_condition_ttl_sec = cached_current_condition_ttl_sec
@@ -627,31 +664,35 @@ class AccuweatherBackend:
         cached_report = self.parse_cached_data(cached_data)
         return await self.make_weather_report(cached_report, weather_context)
 
-    async def _fetch_from_cache(
-        self,
-        weather_context: WeatherContext,
-    ) -> list[bytes | None] | None:
-        """Fetch weather data from cache."""
-        geolocation = weather_context.geolocation
-        country = geolocation.country
+    def _location_cache_key(self, weather_context: WeatherContext) -> str | None:
+        """Get the cache key of the location for the selected country/region/city, or None if
+        the country or the selected city is missing.
+        """
+        country = weather_context.geolocation.country
         city = weather_context.selected_city
-        language = get_language(weather_context.languages)
         region = weather_context.selected_region
 
         if country is None or city is None:
             return None
 
-        cache_key: str
         if region is not None:
-            cache_key = self.cache_key_for_accuweather_request(
-                self.url_cities_admin_path.format(country_code=country, admin_code=region),
-                query_params=self.get_location_key_query_params(city),
-            )
+            url_path = self.url_cities_admin_path.format(country_code=country, admin_code=region)
         else:
-            cache_key = self.cache_key_for_accuweather_request(
-                self.url_cities_path.format(country_code=country),
-                query_params=self.get_location_key_query_params(city),
-            )
+            url_path = self.url_cities_path.format(country_code=country)
+
+        return self.cache_key_for_accuweather_request(
+            url_path, query_params=self.get_location_key_query_params(city)
+        )
+
+    async def _fetch_from_cache(
+        self,
+        weather_context: WeatherContext,
+    ) -> list[bytes | None] | None:
+        """Fetch weather data from cache."""
+        language = get_language(weather_context.languages)
+
+        if (cache_key := self._location_cache_key(weather_context)) is None:
+            return None
 
         with self.metrics_client.timeit(
             "accuweather.cache.fetch", sample_rate=self.metrics_sample_rate
@@ -992,7 +1033,12 @@ class AccuweatherBackend:
             ) from exc
 
         hourly_forecasts_cached, ttl_cached = cached_data
+        return self._parse_cached_hourly_forecasts(hourly_forecasts_cached, ttl_cached)
 
+    def _parse_cached_hourly_forecasts(
+        self, hourly_forecasts_cached: bytes | None, ttl_cached: bytes | int | None
+    ) -> HourlyForecastsWithTTL | None:
+        """Build hourly forecasts from cached data, or return None on cache miss/expiry."""
         if not hourly_forecasts_cached or ttl_cached == REDIS_EXPIRED_KEY_TTL:
             return None
 
@@ -1050,12 +1096,45 @@ class AccuweatherBackend:
             hourly_forecasts=hourly_forecasts, ttl=processed_response["cached_request_ttl"]
         )
 
+    async def _fetch_location_and_hourly_forecast_from_cache(
+        self, weather_context: WeatherContext
+    ) -> list[bytes | None] | None:
+        """Fetch the location and hourly forecast from cache for the selected
+        country/region/city. Returns None if the location is not cached.
+
+        Raises:
+            CacheAdapterError: Cache read failed.
+        """
+        if (cache_key := self._location_cache_key(weather_context)) is None:
+            return None
+
+        language = get_language(weather_context.languages)
+        cached_data: list[bytes | None] = await self.cache.run_script(
+            sid=SCRIPT_ID_FETCH_HOURLY_FORECAST_VIA_GEOLOCATION,
+            keys=[cache_key],
+            # The order matters below.
+            # See `LUA_SCRIPT_CACHE_FETCH_LOCATION_AND_HOURLY_FORECAST` for details.
+            args=[
+                self.cache_key_template(WeatherDataType.HOURLY_FORECAST, language),
+                self.url_location_key_placeholder,
+            ],
+            readonly=True,
+        )
+        return cached_data if cached_data else None
+
     async def get_hourly_forecasts(
         self,
         weather_context: WeatherContext,
     ) -> HourlyForecastsWithTTL | None:
         """Fetch hourly forecasts for the location in weather_context.
-        Checks the Redis cache before making an upstream request.
+
+        Look up the Redis cache for both the location key and the hourly forecasts in a single round trip.
+        If the location is cached, only the hourly forecasts are requested from AccuWeather when they are
+        missing from the cache. Otherwise, it falls back to requesting the location from AccuWeather before looking up the hourly forecasts.
+
+        Note:
+            - To avoid making excessive API requests to Accuweather in the event of
+              "Cache Avalanche", it will *not* call AccuWeather upon any cache read errors.
 
         Raises:
             MissingLocationKeyError: Location key not found for the given geolocation.
@@ -1064,6 +1143,56 @@ class AccuweatherBackend:
             https://developer.accuweather.com/accuweather-forecast-api/apis/get/forecasts/v1/hourly/12hour/{locationKey}
         """
         language = get_language(weather_context.languages)
+
+        try:
+            cached_data, is_skipped = await pathfinder.explore(
+                weather_context, self._fetch_location_and_hourly_forecast_from_cache
+            )
+        except CacheAdapterError as exc:
+            self.metrics_client.increment("accuweather.cache.hourly_forecast.read.error")
+            raise AccuweatherError(
+                AccuweatherErrorMessages.CACHE_READ_HOURLY_FORECAST_ERROR, exception=exc
+            ) from exc
+
+        if is_skipped:
+            raise MissingLocationKeyError(weather_context.geolocation)
+
+        if cached_data is not None:
+            location_cached, hourly_forecasts_cached, ttl_cached = cached_data
+            cached_location: AccuweatherLocation | None = None
+            try:
+                cached_location = AccuweatherLocation.model_validate(
+                    # the Lua script guarantees the location is present on a cache hit.
+                    orjson.loads(cast(bytes, location_cached))
+                )
+            except ValidationError, orjson.JSONDecodeError:
+                logger.warning(
+                    "Failed to load location data from Redis",
+                    exc_info=True,
+                    extra={"error_type": "cache_data_error"},
+                )
+                self.metrics_client.increment("accuweather.cache.data.error")
+
+            # location key cache hit scenario.
+            if cached_location is not None:
+                self.metrics_client.increment(
+                    "accuweather.cache.hit.locations", sample_rate=self.metrics_sample_rate
+                )
+                if cached := self._parse_cached_hourly_forecasts(
+                    hourly_forecasts_cached, ttl_cached
+                ):
+                    # found both, location and hourly forecasts in cache.
+                    return cached
+
+                # if the cache has no hourly forecasts, use the location cache key to fetch from upstream.
+                return await self._fetch_hourly_forecasts_from_upstream(
+                    cached_location.key, language
+                )
+
+        # location key cache miss scenario.
+        self.metrics_client.increment(
+            "accuweather.cache.fetch.miss.locations", sample_rate=self.metrics_sample_rate
+        )
 
         try:
             accuweather_location, _ = await pathfinder.explore(

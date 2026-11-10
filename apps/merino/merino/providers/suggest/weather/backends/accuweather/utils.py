@@ -95,7 +95,7 @@ def process_location_response(
     """Process the API response for location keys.
 
     Note that if you change the return format, ensure you update `LUA_SCRIPT_CACHE_BULK_FETCH`
-    to reflect the change(s) here.
+    and `LUA_SCRIPT_CACHE_FETCH_LOCATION_AND_HOURLY_FORECAST` to reflect the change(s) here.
     """
     match response:
         case [
