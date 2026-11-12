@@ -792,6 +792,40 @@ weather/hourly_forecasts:
       The "api/v1/weather" API endpoint.
     alert_policy: []
 
+  accuweather_cache_hit_locations:
+    description: |
+      A counter for AccuWeather location key cache hits. Sampled at
+      `accuweather.metrics_sampling_rate` (75% by default).
+    type: counter
+    labels: []
+    scope: |
+      The "api/v1/weather/hourly-forecasts" API endpoint. Also emitted by the
+      weather report lookup for the "api/v1/suggest" API endpoint.
+    alert_policy: []
+
+  accuweather_cache_fetch_miss_locations:
+    description: |
+      A counter for AccuWeather location key cache misses, which trigger an
+      upstream location lookup. Sampled at `accuweather.metrics_sampling_rate`
+      (75% by default).
+    type: counter
+    labels: []
+    scope: |
+      The "api/v1/weather/hourly-forecasts" API endpoint. Also emitted by the
+      weather report lookup for the "api/v1/suggest" API endpoint.
+    alert_policy: []
+
+  accuweather_cache_data_error:
+    description: |
+      A counter for cached AccuWeather data (e.g. a location) that failed to
+      parse. For hourly forecasts, the location is then looked up upstream.
+    type: counter
+    labels: []
+    scope: |
+      The "api/v1/weather/hourly-forecasts" API endpoint. Also emitted by the
+      weather report lookup for the "api/v1/suggest" API endpoint.
+    alert_policy: []
+
 curated_recommendations/spindle:
   recommendation.spindle.text.timing:
     description: |
