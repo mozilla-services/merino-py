@@ -71,6 +71,9 @@ logger = logging.getLogger(__name__)
 #     `[location_key, current_condition, forecast, ttl]`. The `current_condition` and `forecast` are `nil`
 #     if they are not present in the cache
 #   - If the location key is missing, it will return an empty array
+#   - If the cache keys can't be derived from the cached location (e.g. invalid JSON or a
+#     null/missing `key`), it returns `[location_key, false, false, false]`.The app code then
+#     fails to validate the location and falls back to requesting it from AccuWeather
 #   - If the current_conditions and forecast TTLs are a non-positive value (-1 or -2),
 #     it will return ttl as false, which is translated to None type in app code.
 LUA_SCRIPT_CACHE_BULK_FETCH: str = """
@@ -80,9 +83,13 @@ LUA_SCRIPT_CACHE_BULK_FETCH: str = """
         return {}
     end
 
-    local key = cjson.decode(location_key)["key"]
-    local condition_key = string.gsub(ARGV[1], ARGV[3], key)
-    local forecast_key = string.gsub(ARGV[2], ARGV[3], key)
+    local ok, condition_key, forecast_key = pcall(function()
+        local key = cjson.decode(location_key)["key"]
+        return (string.gsub(ARGV[1], ARGV[3], key)), (string.gsub(ARGV[2], ARGV[3], key))
+    end)
+    if not ok then
+        return {location_key, false, false, false}
+    end
 
     local current_conditions = redis.call("GET", condition_key)
     local forecast = redis.call("GET", forecast_key)
@@ -155,6 +162,9 @@ SCRIPT_HOURLY_FORECAST_ID = "fetch_hourly_forecast"
 #     `[location, hourly_forecast, ttl]`. The `hourly_forecast` is `nil` if it is not present
 #     in the cache, and `ttl` is the raw Redis TTL (-2 if the key does not exist)
 #   - If the location key is missing, it will return an empty array
+#   - If the forecast key can't be derived from the cached location (e.g. invalid JSON or a
+#     null/missing `key`), it returns `[location, false, -2]`. The app code then fails to
+#     validate the location and falls back to requesting it from AccuWeather
 LUA_SCRIPT_CACHE_FETCH_LOCATION_AND_HOURLY_FORECAST: str = """
     local location = redis.call("GET", KEYS[1])
 
@@ -162,8 +172,12 @@ LUA_SCRIPT_CACHE_FETCH_LOCATION_AND_HOURLY_FORECAST: str = """
         return {}
     end
 
-    local key = cjson.decode(location)["key"]
-    local hourly_forecast_key = string.gsub(ARGV[1], ARGV[2], key)
+    local ok, hourly_forecast_key = pcall(function()
+        return (string.gsub(ARGV[1], ARGV[2], cjson.decode(location)["key"]))
+    end)
+    if not ok then
+        return {location, false, -2}
+    end
 
     local hourly_forecast = redis.call("GET", hourly_forecast_key)
     local ttl = redis.call("TTL", hourly_forecast_key)
@@ -546,7 +560,7 @@ class AccuweatherBackend:
                 # the value returned from the cache since it's received as bytes as the method
                 # argument. This satisfies the type checker.
                 ttl = cast(int, ttl_cached)
-        except ValidationError:
+        except ValidationError, orjson.JSONDecodeError:
             logger.warning(
                 "Failed to load weather report data from Redis",
                 exc_info=True,

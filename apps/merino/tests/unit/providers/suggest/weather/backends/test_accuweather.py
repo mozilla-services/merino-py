@@ -32,6 +32,7 @@ from merino.providers.suggest.weather.backends.accuweather import (
     AccuweatherLocation,
     CurrentConditionsWithTTL,
     ForecastWithTTL,
+    WeatherData,
     WeatherDataType,
 )
 from merino.providers.suggest.weather.backends.accuweather.errors import (
@@ -48,6 +49,7 @@ from merino.providers.suggest.weather.backends.accuweather.utils import (
     add_partner_code,
     get_language,
     process_hourly_forecast_response,
+    process_location_response,
     update_weather_url_with_suggest_partner_code,
 )
 from merino.providers.suggest.weather.backends.protocol import (
@@ -2395,6 +2397,55 @@ def test_parse_cached_data_error(
     assert records[0].message == "Failed to load weather report data from Redis"
     assert records[0].levelname == "WARNING"
     assert records[0].exc_info is not None
+
+
+@pytest.mark.parametrize(
+    "location_cached",
+    [
+        b"not json",
+        orjson.dumps(
+            {
+                "key": None,
+                "localized_name": "SF",
+                "administrative_area_id": "CA",
+                "country_name": "US",
+            }
+        ),
+    ],
+    ids=["invalid_json", "null_key"],
+)
+def test_parse_cached_data_invalid_location(
+    accuweather: AccuweatherBackend,
+    location_cached: bytes,
+    statsd_mock: Any,
+) -> None:
+    """Test that an invalid cached location is parsed as a location cache miss."""
+    res = accuweather.parse_cached_data([location_cached, None, None, None])
+
+    assert res == WeatherData()
+    metrics_called = [call_arg[0][0] for call_arg in statsd_mock.increment.call_args_list]
+    assert metrics_called == ["accuweather.cache.data.error"]
+
+
+@pytest.mark.parametrize(
+    "key",
+    [None, "", 39376],
+    ids=["null_key", "empty_key", "numeric_key"],
+)
+def test_process_location_response_invalid_key(key: Any) -> None:
+    """Test that a location response without a non-empty string key is rejected, so it is
+    never cached.
+    """
+    response = [
+        {
+            "Key": key,
+            "LocalizedName": "San Francisco",
+            "AdministrativeArea": {"ID": "CA"},
+            "Country": {"LocalizedName": "United States"},
+        }
+    ]
+
+    assert process_location_response(response) is None
 
 
 @pytest.mark.asyncio
