@@ -3,15 +3,16 @@
 import logging
 from datetime import UTC, datetime, timedelta
 
-import aiodogstatsd
 from circuitbreaker import CircuitBreakerError
 
 from merino.configs import settings
 from merino.exceptions import CacheAdapterError
+from merino.providers.widgets.wrexham import metrics
 from merino.providers.widgets.wrexham.circuitbreaker import WrexhamCircuitBreaker, guarded_by
 from merino.providers.widgets.wrexham.protocol import (
     CHAMPIONSHIP,
     FA_CUP,
+    Competition,
     Match,
     MatchesResponse,
     MatchStatus,
@@ -38,6 +39,10 @@ FINISHED_MATCH_GRACE_PERIOD = timedelta(
 MAX_MATCH_LENGTH = timedelta(hours=3, minutes=30)
 
 circuit_breaker = WrexhamCircuitBreaker(name="wrexham")
+metrics.observe_circuit_breaker(circuit_breaker)
+
+# The competitions whose fixtures the matches endpoint serves, in the order they're read.
+FIXTURE_COMPETITIONS = (CHAMPIONSHIP, FA_CUP)
 
 StoredMatches = tuple[list[Match], datetime]
 
@@ -50,11 +55,9 @@ class WrexhamProvider:
     """Serves Wrexham matches and EFL Championship standings to the widget."""
 
     store: WrexhamStore
-    metrics_client: aiodogstatsd.Client
 
-    def __init__(self, store: WrexhamStore, metrics_client: aiodogstatsd.Client) -> None:
+    def __init__(self, store: WrexhamStore) -> None:
         self.store = store
-        self.metrics_client = metrics_client
 
     async def get_matches(self, limit: int) -> MatchesResponse:
         """Return previous, current and upcoming matches.
@@ -64,8 +67,9 @@ class WrexhamProvider:
         Raises:
             - `WrexhamDataUnavailableError` if the matches can't be read from Redis.
         """
-        matches = await self._read_matches()
-        return group_matches(matches, limit, now=datetime.now(UTC))
+        now = datetime.now(UTC)
+        matches = await self._read_matches(now)
+        return group_matches(matches, limit, now=now)
 
     async def get_standings(self) -> StandingsResponse:
         """Return the EFL Championship table, ordered by league position.
@@ -80,14 +84,15 @@ class WrexhamProvider:
         except CircuitBreakerError as ex:
             raise WrexhamDataUnavailableError("Wrexham circuit breaker is open.") from ex
         except CacheAdapterError as ex:
-            self._record_redis_error("standings", ex)
+            _record_redis_error("standings", ex)
             raise WrexhamDataUnavailableError("Could not read Wrexham standings.") from ex
 
         if stored is None:
             logger.warning("No Wrexham standings are stored in Redis")
             raise WrexhamDataUnavailableError("No Wrexham standings are stored.")
 
-        standings, _ = stored
+        standings, fetched_at = stored
+        _record_data_age("standings", "standings", fetched_at, datetime.now(UTC))
         return StandingsResponse(
             competition=CHAMPIONSHIP,
             standings=sorted(standings, key=lambda standing: standing.position),
@@ -106,8 +111,7 @@ class WrexhamProvider:
         Redis errors are raised, so the circuit breaker can count them.
         """
         fixtures = [
-            await self.store.read_fixtures(competition.id)
-            for competition in (CHAMPIONSHIP, FA_CUP)
+            await self.store.read_fixtures(competition.id) for competition in FIXTURE_COMPETITIONS
         ]
         return fixtures, await self.store.read_live_matches()
 
@@ -119,19 +123,14 @@ class WrexhamProvider:
         """
         return await self.store.read_standings()
 
-    def _record_redis_error(self, data: str, ex: CacheAdapterError) -> None:
-        """Log and count a failed Redis read of `data` (e.g. "matches")."""
-        logger.error(f"Could not read Wrexham {data} from Redis", extra={"error": str(ex)})
-        self.metrics_client.increment("widgets.wrexham.redis.error", tags={"data": data})
-
-    async def _read_matches(self) -> list[Match]:
+    async def _read_matches(self, now: datetime) -> list[Match]:
         """Read Wrexham's fixtures for both competitions and apply the live match data."""
         try:
             stored_fixtures, stored_live = await self._read_stored_matches()
         except CircuitBreakerError as ex:
             raise WrexhamDataUnavailableError("Wrexham circuit breaker is open.") from ex
         except CacheAdapterError as ex:
-            self._record_redis_error("matches", ex)
+            _record_redis_error("matches", ex)
             raise WrexhamDataUnavailableError("Could not read Wrexham matches.") from ex
 
         if all(stored is None for stored in stored_fixtures):
@@ -139,19 +138,44 @@ class WrexhamProvider:
             raise WrexhamDataUnavailableError("No Wrexham fixtures are stored.")
 
         matches_by_id: dict[int, Match] = {}
-        for stored in stored_fixtures:
+        for competition, stored in zip(FIXTURE_COMPETITIONS, stored_fixtures, strict=True):
             if stored is not None:
-                fixtures, _ = stored
+                fixtures, fetched_at = stored
+                _record_data_age("matches", "fixtures", fetched_at, now, competition)
                 matches_by_id.update((match.id, match) for match in fixtures)
 
         if stored_live is not None:
-            live_matches, _ = stored_live
+            live_matches, fetched_at = stored_live
+            _record_data_age("matches", "live_matches", fetched_at, now)
             for match in live_matches:
                 existing = matches_by_id.get(match.id)
                 if existing is None or match.updated_at >= existing.updated_at:
                     matches_by_id[match.id] = match
 
         return list(matches_by_id.values())
+
+
+def _record_redis_error(endpoint: str, ex: CacheAdapterError) -> None:
+    """Log and count a failed Redis read for `endpoint` ("matches" or "standings")."""
+    logger.error(f"Could not read Wrexham {endpoint} from Redis", extra={"error": str(ex)})
+    metrics.api_redis_error_count.add(1, {"endpoint": endpoint})
+
+
+def _record_data_age(
+    endpoint: str,
+    data_type: str,
+    fetched_at: datetime,
+    now: datetime,
+    competition: Competition | None = None,
+) -> None:
+    """Record the age of the `data_type` data served by `endpoint` as a histogram, tagged by
+    `competition` for data that belongs to one competition (fixtures).
+    """
+    age = (now - fetched_at).total_seconds()
+    attributes = {"endpoint": endpoint, "data_type": data_type}
+    if competition is not None:
+        attributes["competition"] = competition.name
+    metrics.api_data_age.record(age, attributes)
 
 
 def just_finished(match: Match, now: datetime) -> bool:

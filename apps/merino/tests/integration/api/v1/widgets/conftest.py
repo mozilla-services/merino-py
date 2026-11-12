@@ -55,9 +55,9 @@ def fixture_store() -> WrexhamStore:
 
 
 @pytest.fixture(name="wrexham_provider")
-def fixture_wrexham_provider(store: WrexhamStore, statsd_mock: Any) -> WrexhamProvider:
+def fixture_wrexham_provider(store: WrexhamStore) -> WrexhamProvider:
     """Create a Wrexham provider that reads from the in-memory store."""
-    return WrexhamProvider(store=store, metrics_client=statsd_mock)
+    return WrexhamProvider(store=store)
 
 
 @pytest.fixture(name="inject_wrexham_provider", autouse=True)
