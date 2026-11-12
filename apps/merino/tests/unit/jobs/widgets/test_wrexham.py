@@ -161,9 +161,34 @@ async def test_failures_are_isolated(
     records = filter_caplog(caplog.records, "merino.jobs.widgets.wrexham")
     assert sorted(r.__dict__["refresh"] for r in records) == [
         "fixtures",
+        "fixtures",
         "live_matches",
         "standings",
     ]
+
+
+@pytest.mark.asyncio
+async def test_failed_refreshes_retry_on_the_next_run(
+    ingester: WrexhamIngester, backend: Any, mocker: MockerFixture
+) -> None:
+    """Retry failed fixtures and standings on the next run, then wait for their interval once
+    they succeed.
+    """
+    clock = mocker.patch("merino.jobs.widgets.wrexham.monotonic", return_value=1000.0)
+    error = SportsDataBackendError("boom")
+    backend.fetch_standings.side_effect = [error, []]
+    backend.fetch_schedule.side_effect = [error, [], [], []]
+    await ingester.run_once()
+
+    clock.return_value = 1001.0
+    await ingester.run_once()
+    assert backend.fetch_standings.await_count == 2
+    assert backend.fetch_schedule.await_count == 4  # Two runs, two competitions.
+
+    clock.return_value = 1002.0
+    await ingester.run_once()
+    assert backend.fetch_standings.await_count == 2
+    assert backend.fetch_schedule.await_count == 4
 
 
 @pytest.mark.asyncio
