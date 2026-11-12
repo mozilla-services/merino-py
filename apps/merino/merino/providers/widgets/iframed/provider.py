@@ -54,7 +54,7 @@ class Provider:
                     vendor="yahoo",
                     enabled=True,
                     url=HttpUrl(
-                        "https://prod-widgets-yahoo-horoscope.merino.prod.webservices.mozgcp.net/1.3.20261110170613/index.html"
+                        "https://prod-widgets-yahoo-horoscope.merino.prod.webservices.mozgcp.net/1.3.20261112170617/index.html"
                     ),
                 ),
                 IframedWidget(
@@ -62,7 +62,7 @@ class Provider:
                     vendor="yahoo",
                     enabled=True,
                     url=HttpUrl(
-                        "https://prod-widgets-yahoo-solitaire.merino.prod.webservices.mozgcp.net/1.2.20261106203853/index.html"
+                        "https://prod-widgets-yahoo-solitaire.merino.prod.webservices.mozgcp.net/1.3.20261112182920/index.html"
                     ),
                 ),
                 IframedWidget(
@@ -97,7 +97,7 @@ class Provider:
                     vendor="yahoo",
                     enabled=True,
                     url=HttpUrl(
-                        "https://stage-widgets-yahoo-horoscope.merino.nonprod.webservices.mozgcp.net/1.3.20261110170615/index.html"
+                        "https://stage-widgets-yahoo-horoscope.merino.nonprod.webservices.mozgcp.net/1.3.20261112170623/index.html"
                     ),
                 ),
                 IframedWidget(
@@ -105,7 +105,7 @@ class Provider:
                     vendor="yahoo",
                     enabled=True,
                     url=HttpUrl(
-                        "https://stage-widgets-yahoo-solitaire.merino.nonprod.webservices.mozgcp.net/1.2.20261106200134/index.html"
+                        "https://stage-widgets-yahoo-solitaire.merino.nonprod.webservices.mozgcp.net/1.3.20261112181700/index.html"
                     ),
                 ),
                 IframedWidget(
