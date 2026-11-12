@@ -1231,9 +1231,10 @@ INVALID_CACHED_LOCATIONS = pytest.mark.parametrize(
     "location_cached",
     [
         json.dumps({"key": None, **LOCATION_WITHOUT_KEY}).encode(),
+        json.dumps({"key": "", **LOCATION_WITHOUT_KEY}).encode(),
         b"not json",
     ],
-    ids=["null_key", "invalid_json"],
+    ids=["null_key", "empty_key", "invalid_json"],
 )
 
 

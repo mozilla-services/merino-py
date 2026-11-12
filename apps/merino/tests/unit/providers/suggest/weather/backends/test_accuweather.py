@@ -2411,8 +2411,16 @@ def test_parse_cached_data_error(
                 "country_name": "US",
             }
         ),
+        orjson.dumps(
+            {
+                "key": "",
+                "localized_name": "SF",
+                "administrative_area_id": "CA",
+                "country_name": "US",
+            }
+        ),
     ],
-    ids=["invalid_json", "null_key"],
+    ids=["invalid_json", "null_key", "empty_key"],
 )
 def test_parse_cached_data_invalid_location(
     accuweather: AccuweatherBackend,

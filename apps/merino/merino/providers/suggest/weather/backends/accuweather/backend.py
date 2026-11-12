@@ -12,7 +12,7 @@ from typing import Any, Callable, NamedTuple, cast
 import aiodogstatsd
 from dateutil import parser
 from httpx import AsyncClient, HTTPError, Response
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, Field, ValidationError
 
 from merino.cache.protocol import CacheAdapter
 from merino.exceptions import CacheAdapterError
@@ -214,7 +214,7 @@ class AccuweatherLocation(BaseModel):
     """Location model for response data from AccuWeather endpoints."""
 
     # Location key.
-    key: str
+    key: str = Field(min_length=1)
 
     # Display name in local dialect set with language code in URL.
     # Default is US English (en-us).
