@@ -83,8 +83,8 @@ class WrexhamIngester:
     """Refreshes Wrexham data from SportsDataIO into the store.
 
     Live matches are refreshed on every run. Fixtures and standings are refreshed only when
-    their interval has passed since their last attempt, failed or not, so an outage doesn't
-    turn into a large request every run.
+    their interval has passed since their last successful refresh. A failed refresh is retried
+    on the next run.
     """
 
     backend: SportsDataBackend
@@ -119,7 +119,9 @@ class WrexhamIngester:
         """Write the season's Wrexham fixtures for each competition.
 
         Each competition is written independently: a failure in one doesn't stop the others.
+        Raises after all competitions are tried if any of them failed, so the refresh is retried.
         """
+        failed_ids: list[int] = []
         for competition in COMPETITIONS:
             try:
                 matches = await self.backend.fetch_schedule(competition, self.season)
@@ -142,6 +144,9 @@ class WrexhamIngester:
                         "error": str(ex),
                     },
                 )
+                failed_ids.append(competition.id)
+        if failed_ids:
+            raise RuntimeError(f"Failed to refresh fixtures for competitions {failed_ids}")
 
     async def refresh_live_matches(self) -> None:
         """Write today's Wrexham matches across all competitions, earliest kickoff first.
@@ -179,24 +184,33 @@ class WrexhamIngester:
 
     async def run_once(self) -> None:
         """Run the refreshes that are due. A failed refresh is logged and doesn't stop the
-        others.
+        others. Fixtures and standings are next due an interval after they succeed, or on the
+        next run if they fail.
         """
         now = monotonic()
-        refreshes: list[tuple[str, Callable[[], Awaitable[None]]]] = [
-            ("live_matches", self.refresh_live_matches)
+
+        def set_fixtures_due() -> None:
+            self._fixtures_due_at = now + self.fixtures_interval.total_seconds()
+
+        def set_standings_due() -> None:
+            self._standings_due_at = now + self.standings_interval.total_seconds()
+
+        refreshes: list[tuple[str, Callable[[], Awaitable[None]], Callable[[], None] | None]] = [
+            ("live_matches", self.refresh_live_matches, None)
         ]
         if now >= self._fixtures_due_at:
-            self._fixtures_due_at = now + self.fixtures_interval.total_seconds()
-            refreshes.append(("fixtures", self.refresh_fixtures))
+            refreshes.append(("fixtures", self.refresh_fixtures, set_fixtures_due))
         if now >= self._standings_due_at:
-            self._standings_due_at = now + self.standings_interval.total_seconds()
-            refreshes.append(("standings", self.refresh_standings))
+            refreshes.append(("standings", self.refresh_standings, set_standings_due))
 
-        for name, refresh in refreshes:
+        for name, refresh, on_success in refreshes:
             try:
                 await refresh()
             except Exception as ex:
                 logger.error("Wrexham refresh failed", extra={"refresh": name, "error": str(ex)})
+            else:
+                if on_success is not None:
+                    on_success()
 
     async def run_loop(self, interval_sec: float, stop_event: asyncio.Event) -> None:
         """Run the refreshes every `interval_sec` until `stop_event` is set."""
