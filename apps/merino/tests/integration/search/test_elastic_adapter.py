@@ -87,3 +87,19 @@ def test_clone_index_clears_the_inherited_write_block(adapter: ElasticSearchAdap
     client.index(index=CLONE, id="new", document={"title": "new"})
     with pytest.raises(AuthorizationException, match="index write"):
         client.index(index=SOURCE, id="new", document={"title": "new"})
+
+
+def test_wait_for_health_returns_once_the_index_is_green(adapter: ElasticSearchAdapter) -> None:
+    """Verify a fully allocated index satisfies a green wait."""
+    adapter.wait_for_health(index=SOURCE, status="green", timeout=10)
+
+
+def test_wait_for_health_times_out_on_a_yellow_index(adapter: ElasticSearchAdapter) -> None:
+    """Verify an index with a replica that a single node cannot assign stays yellow,
+    and that the server-side timeout surfaces as TimeoutError rather than an API error.
+    """
+    adapter.create_index(index=CLONE, settings={"number_of_shards": 1, "number_of_replicas": 1})
+
+    adapter.wait_for_health(index=CLONE, status="yellow", timeout=10)
+    with pytest.raises(TimeoutError, match="status: yellow"):
+        adapter.wait_for_health(index=CLONE, status="green", timeout=1)

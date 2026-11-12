@@ -52,6 +52,8 @@ Note that objects from the previous single-file layout
 
 Auto-follow patterns must be configured for wikipedia indices on follower clusters. Auto-follow should _ignore_ any indices with the "temp-" prefix, as temporary indices are used to perform operations on leader indices which don't replicate to followers (e.g. refresh, force-merge segments). Index lifecycle management rules are not cloned, so all follower clusters must be set up with appropriate ILM rules.
 
+Every production cluster, leader and followers alike, must run at least 2 nodes. Wikipedia indices use `index.auto_expand_replicas: 0-all`, which keeps one copy of the index on every node. On a single-node cluster that means no replicas at all, so there is no redundancy. This is acceptable for local development and CI, where it also lets indices reach green health, but not in production. With 2 or more nodes, `0-all` behaves the same as `1-all`. The difference is that a cluster that temporarily drops to a single node reports green rather than yellow, so monitor node count directly rather than relying on index health to flag a lost node.
+
 ### Indexing Wikipedia
 
 Creating indices with new data dumps proceeds as follows:
@@ -59,8 +61,9 @@ Creating indices with new data dumps proceeds as follows:
 1. **Build under a temporary name.** Documents are indexed into `temp-<index>`, which is
    then refreshed and force merged to a single segment. Followers must be configured to ignore this index. Refreshes and force merges on the leader don't replicate to followers, so perform these operations on the temporary index before cloning
    to an index that _is_ replicated.
-2. **Clone to the real name.** The build index is write-blocked and cloned to `<index>`,
-   and the write block is lifted on the clone. Auto-follow picks up the clone, and
+2. **Clone to the real name.** The build index is write-blocked, and once it reaches green
+   health (which cloning requires; the job waits up to 10 minutes) it is cloned to
+   `<index>`, and the write block is lifted on the clone. Auto-follow picks up the clone, and
    each follower bootstraps by copying its finished, searchable segments.
 3. **Wait for followers.** Before the alias is flipped, the job polls the leader for
    the CCR retention leases on `<index>`. Each follower holds one lease per primary
@@ -79,9 +82,20 @@ Creating indices with new data dumps proceeds as follows:
 4. **Flip the alias.** Alias changes replicate separately from the data, so the alias
    only moves once the followers hold the full index.
 
-If followers haven't caught up within `follower_sync_timeout`, the job fails and deletes
-the new index, and the alias keeps pointing at the previous one. The `temp-` build index
-is always deleted, whether the run succeeds or fails.
+If followers haven't caught up within `follower_sync_timeout`, the job fails and the alias
+keeps pointing at the previous index. The `temp-` build index is always deleted, whether
+the run succeeds or fails. It is also created with the backup policy, so if the job is
+killed before it can clean up, ILM expires the build index too.
+
+The new index is not deleted when a run fails. Deleting it on the leader wouldn't delete
+the followers' copies, and the job has no access to followers to clean them up. Instead,
+the clone is created with the expiring `<language>wiki_backup_policy`, which replicates to
+followers, so ILM on the leader and on each follower expires an index that was never
+published, the same way it expires superseded ones. The never-delete
+`<language>wiki_policy` is only attached once followers have caught up, just before the
+alias flip. If the run fails between those two steps, the job switches the index back to
+the backup policy, and because the index is still followed, that change reaches the
+followers too.
 
 If running on a cluster that has no followers, the job will wait out the full `follower_discovery_period` (see [configuration](#configuration) below) but
 otherwise should proceed successfully.

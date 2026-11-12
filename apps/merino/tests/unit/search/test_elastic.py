@@ -373,3 +373,37 @@ def test_update_aliases_calls_indices_update_aliases(
 
     adapter.update_aliases(actions=actions)
     client.indices.update_aliases.assert_called_once_with(actions=actions)
+
+
+def test_wait_for_health_waits_server_side(
+    adapter: ElasticSearchAdapter, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Verify the wait is delegated to cluster health, with a request timeout that
+    outlasts it and a 408 timeout response accepted rather than raised.
+    """
+    client = _mock_client()
+    scoped_client = _mock_client()
+    client.options.return_value = scoped_client
+    scoped_client.cluster.health.return_value = {"timed_out": False, "status": "green"}
+    monkeypatch.setattr(adapter, "get_client", MagicMock(return_value=client))
+
+    adapter.wait_for_health(index="my-index", status="green", timeout=1.5)
+
+    client.options.assert_called_once_with(
+        request_timeout=1.5 + REQUEST_TIMEOUT, ignore_status=408
+    )
+    scoped_client.cluster.health.assert_called_once_with(
+        index="my-index", wait_for_status="green", timeout="1500ms"
+    )
+
+
+def test_wait_for_health_raises_when_timed_out(
+    adapter: ElasticSearchAdapter, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Verify a wait that times out raises TimeoutError with the current status."""
+    client = _mock_client()
+    client.cluster.health.return_value = {"timed_out": True, "status": "yellow"}
+    monkeypatch.setattr(adapter, "get_client", MagicMock(return_value=client))
+
+    with pytest.raises(TimeoutError, match="my-index did not reach green .*yellow"):
+        adapter.wait_for_health(index="my-index", status="green", timeout=1)

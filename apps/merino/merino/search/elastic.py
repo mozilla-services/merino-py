@@ -1,6 +1,6 @@
 """Elasticsearch service utilities."""
 
-from typing import Any, Mapping, Sequence, cast
+from typing import Any, Literal, Mapping, Sequence, cast
 
 from elasticsearch import Elasticsearch
 
@@ -172,6 +172,33 @@ class ElasticSearchAdapter:
     def block_writes(self, *, index: str) -> None:
         """Add a write block to an index, e.g. before cloning it."""
         self.get_client().indices.add_block(index=index, block="write")
+
+    def wait_for_health(
+        self, *, index: str, status: Literal["green", "yellow"], timeout: float
+    ) -> None:
+        """Block until `index` reaches `status` health or better.
+
+        Raises:
+            TimeoutError: If `index` has not reached `status` within `timeout` seconds.
+        """
+        res = cast(
+            dict[str, Any],
+            self.get_client()
+            .options(
+                # The wait happens server side, so the request must outlast it.
+                request_timeout=timeout + self._request_timeout,
+                # A wait that times out is answered with a 408 and the current health.
+                ignore_status=408,
+            )
+            .cluster.health(
+                index=index, wait_for_status=status, timeout=f"{int(timeout * 1000)}ms"
+            ),
+        )
+        if res["timed_out"]:
+            raise TimeoutError(
+                f"{index} did not reach {status} health within {timeout}s "
+                f"(status: {res['status']})"
+            )
 
     def clone_index(
         self,

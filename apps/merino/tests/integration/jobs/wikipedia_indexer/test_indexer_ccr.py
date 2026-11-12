@@ -12,6 +12,7 @@ from unittest.mock import MagicMock
 
 import pytest
 from elasticsearch import Elasticsearch
+from pytest_mock import MockerFixture
 
 from merino.jobs.wikipedia_indexer.filemanager import Snapshot
 from merino.jobs.wikipedia_indexer.indexer import Indexer
@@ -49,13 +50,8 @@ def clients(ccr_clusters: tuple[str, str]) -> Iterator[tuple[Elasticsearch, Elas
     follower.close()
 
 
-def test_followers_start_with_the_finished_index_before_the_alias_flips(
-    clients: tuple[Elasticsearch, Elasticsearch], caplog: pytest.LogCaptureFixture
-) -> None:
-    """Verify followers never see the build, and hold the complete, force merged,
-    searchable index by the time the alias, which replicates to them, flips.
-    """
-    leader, follower = clients
+def _indexer(leader: Elasticsearch) -> Indexer:
+    """Return an indexer that builds a small export on `leader`."""
     file_manager = MagicMock(language="en")
     file_manager.get_latest_gcs.return_value = Snapshot(
         name="enwiki-20260101-cirrussearch-content",
@@ -69,7 +65,7 @@ def test_followers_start_with_the_finished_index_before_the_alias_flips(
         request_timeout=60,
         create_index_timeout=60,
     )
-    indexer = Indexer(
+    return Indexer(
         "v1",
         set(),
         set(),
@@ -80,11 +76,30 @@ def test_followers_start_with_the_finished_index_before_the_alias_flips(
         follower_discovery_period=10,
     )
 
+
+def _lifecycle_policy(client: Elasticsearch, index: str) -> str | None:
+    """Return the ILM policy name set on `index`."""
+    res = client.indices.get_settings(index=index, name="index.lifecycle.name")
+    policy = res[index]["settings"].get("index", {}).get("lifecycle", {}).get("name")
+    return str(policy) if policy is not None else None
+
+
+def test_followers_start_with_the_finished_index_before_the_alias_flips(
+    clients: tuple[Elasticsearch, Elasticsearch], caplog: pytest.LogCaptureFixture
+) -> None:
+    """Verify followers never see the build, and hold the complete, force merged,
+    searchable index by the time the alias, which replicates to them, flips.
+    """
+    leader, follower = clients
+    indexer = _indexer(leader)
+
     with caplog.at_level(logging.INFO, logger="merino.jobs.wikipedia_indexer.indexer"):
         indexer.index_from_export(DOCS, ALIAS)
 
     [index] = leader.indices.get_alias(name="enwiki-ccr-v1")
     assert not leader.indices.exists(index=f"temp-{index}")
+    # Single-node clusters get no replica, so the index is fully allocated (green).
+    assert leader.cluster.health(index=index)["status"] == "green"
 
     # The indexer found the follower through its retention lease on the leader.
     [discovered] = [r.__dict__ for r in caplog.records if r.message == "Discovered follower"]
@@ -102,3 +117,48 @@ def test_followers_start_with_the_finished_index_before_the_alias_flips(
     # The alias flip on the leader reaches the follower.
     eventually(lambda: follower.indices.exists_alias(name="enwiki-ccr-v1"))
     assert list(follower.indices.get_alias(name="enwiki-ccr-v1")) == [index]
+
+    # The switch to the never-delete policy replicates while the follow is running.
+    eventually(lambda: _lifecycle_policy(follower, index) == "enwiki_policy")
+
+
+def test_unpublished_index_keeps_the_expiring_policy_when_the_wait_fails(
+    clients: tuple[Elasticsearch, Elasticsearch], mocker: MockerFixture
+) -> None:
+    """Verify a run failing after followers caught up, but before the never-delete
+    policy is attached (e.g. a follower wait timeout), leaves the index in place on
+    the backup policy, on the leader and followers alike, for ILM to expire.
+    """
+    leader, follower = clients
+    indexer = _indexer(leader)
+    mocker.patch.object(
+        indexer, "_apply_active_lifecycle_policy", side_effect=RuntimeError("boom")
+    )
+
+    with pytest.raises(RuntimeError, match="boom"):
+        indexer.index_from_export(DOCS, ALIAS)
+
+    [index] = leader.indices.get(index="*wiki-*,temp-*")
+    assert not index.startswith("temp-")
+    assert _lifecycle_policy(leader, index) == "enwiki_backup_policy"
+    assert list(follower.indices.get(index="*wiki-*")) == [index]
+    assert _lifecycle_policy(follower, index) == "enwiki_backup_policy"
+
+
+def test_unpublished_index_reverts_to_the_expiring_policy_when_the_flip_fails(
+    clients: tuple[Elasticsearch, Elasticsearch], mocker: MockerFixture
+) -> None:
+    """Verify a run failing after the never-delete policy is attached, but before the
+    alias flips, switches the index back to the backup policy, and that the revert
+    reaches the followers, since the index is left in place and still followed.
+    """
+    leader, follower = clients
+    indexer = _indexer(leader)
+    mocker.patch.object(indexer.elasticsearch, "update_aliases", side_effect=RuntimeError("boom"))
+
+    with pytest.raises(RuntimeError, match="boom"):
+        indexer.index_from_export(DOCS, ALIAS)
+
+    [index] = leader.indices.get(index="*wiki-*,temp-*")
+    assert _lifecycle_policy(leader, index) == "enwiki_backup_policy"
+    eventually(lambda: _lifecycle_policy(follower, index) == "enwiki_backup_policy")

@@ -9,6 +9,7 @@ import freezegun
 import pytest
 from merino.jobs.wikipedia_indexer.filemanager import Snapshot
 from merino.jobs.wikipedia_indexer.indexer import Indexer
+from merino.jobs.wikipedia_indexer.settings.v1 import get_suggest_settings
 from merino.search.elastic import ElasticSearchAdapter
 
 FROZEN_TIME = "2020-01-01"
@@ -619,16 +620,17 @@ def _ready_to_index(file_manager, es_adapter, docs=1):
         "refresh_index",
         "forcemerge",
         "block_writes",
+        "wait_for_health",
         "clone_index",
         "set_index_lifecycle_policy",
         "update_aliases",
     ],
 )
-def test_index_from_export_discards_the_index_when_the_build_fails(
+def test_index_from_export_deletes_only_the_build_index_when_the_build_fails(
     indexer, file_manager, es_adapter, failing_call
 ):
-    """Verify the build index and its clone, neither of which reached the alias, are
-    deleted on any failure.
+    """Verify the build index is deleted on any failure, and the clone, which followers
+    may already hold, is left for ILM to expire.
     """
     _ready_to_index(file_manager, es_adapter)
     getattr(es_adapter, failing_call).side_effect = RuntimeError("boom")
@@ -637,10 +639,62 @@ def test_index_from_export_discards_the_index_when_the_build_fails(
         indexer.index_from_export(1, "enwiki-{version}")
 
     build_index = es_adapter.create_index.call_args.kwargs["index"]
-    assert es_adapter.delete_index.call_args_list == [
-        mocker_call(index=build_index.removeprefix("temp-"), ignore_missing=True),
-        mocker_call(index=build_index, ignore_missing=True),
+    es_adapter.delete_index.assert_called_once_with(index=build_index, ignore_missing=True)
+
+
+@pytest.mark.parametrize("language", ["en", "fr", "de", "it", "pl"])
+def test_build_index_is_created_with_the_backup_policy(
+    file_manager, es_adapter, category_blocklist, title_blocklist, language
+):
+    """Verify the build index uses the published index settings, except for the
+    expiring policy, so it expires via ILM if a killed run never deletes it.
+    """
+    file_manager.language = language
+    es_adapter.index_exists.return_value = False
+    indexer = Indexer("v1", category_blocklist, title_blocklist, file_manager, es_adapter)
+
+    indexer._create_index("temp-index")
+
+    settings = es_adapter.create_index.call_args.kwargs["settings"]
+    assert settings["index.lifecycle.name"] == f"{language}wiki_backup_policy"
+    assert settings == {
+        **get_suggest_settings(language),
+        "index.lifecycle.name": f"{language}wiki_backup_policy",
+    }
+
+
+def test_index_from_export_reverts_to_backup_policy_when_the_flip_fails(
+    indexer, file_manager, es_adapter, mocker
+):
+    """Verify an unpublished index that already carries the never-delete policy is
+    switched back to the backup policy, so it expires on the leader and followers.
+    """
+    _ready_to_index(file_manager, es_adapter)
+    es_adapter.update_aliases.side_effect = RuntimeError("boom")
+
+    with pytest.raises(RuntimeError, match="boom"):
+        indexer.index_from_export(1, "enwiki-{version}")
+
+    index_name = es_adapter.create_index.call_args.kwargs["index"].removeprefix("temp-")
+    assert es_adapter.set_index_lifecycle_policy.call_args_list == [
+        mocker_call(index=index_name, policy="enwiki_policy"),
+        mocker_call(index=index_name, policy="enwiki_backup_policy"),
     ]
+
+
+def test_index_from_export_reports_the_original_error_when_the_policy_revert_fails(
+    indexer, file_manager, es_adapter, caplog
+):
+    """Verify a failed revert is logged, and does not mask the original error."""
+    _ready_to_index(file_manager, es_adapter)
+    es_adapter.update_aliases.side_effect = RuntimeError("boom")
+    # The active policy attach succeeds, the revert fails.
+    es_adapter.set_index_lifecycle_policy.side_effect = [None, RuntimeError("revert")]
+
+    with pytest.raises(RuntimeError, match="boom"):
+        indexer.index_from_export(1, "enwiki-{version}")
+
+    assert "Failed to revert unpublished index to backup lifecycle policy" in caplog.text
 
 
 def test_index_from_export_discards_the_index_when_the_export_is_unreadable(
@@ -966,11 +1020,11 @@ def test_init_rejects_a_sync_timeout_shorter_than_the_discovery_period(
 
 
 @freezegun.freeze_time(FROZEN_TIME)
-def test_index_from_export_discards_index_when_followers_time_out(
+def test_index_from_export_keeps_the_unpublished_index_when_followers_time_out(
     file_manager, es_adapter, category_blocklist, title_blocklist
 ):
-    """Test that the alias is left alone and the new index discarded when followers
-    never catch up.
+    """Test that the alias is left alone when followers never catch up, and the new
+    index stays on the backup policy for ILM to expire rather than being deleted.
     """
     file_manager.get_latest_gcs.return_value = SNAPSHOT
     es_adapter.bulk.return_value = {"acknowledged": True, "errors": False, "items": [{"id": 1000}]}
@@ -997,10 +1051,11 @@ def test_index_from_export_discards_index_when_followers_time_out(
         indexer.index_from_export(1, "enwiki-{version}")
 
     es_adapter.update_aliases.assert_not_called()
-    assert es_adapter.delete_index.call_args_list == [
-        mocker_call(index=f"enwiki-20220101-v1-{EPOCH_FROZEN_TIME}", ignore_missing=True),
-        mocker_call(index=f"temp-enwiki-20220101-v1-{EPOCH_FROZEN_TIME}", ignore_missing=True),
-    ]
+    # The never-delete policy is never attached, so the clone keeps the backup policy.
+    es_adapter.set_index_lifecycle_policy.assert_not_called()
+    es_adapter.delete_index.assert_called_once_with(
+        index=f"temp-enwiki-20220101-v1-{EPOCH_FROZEN_TIME}", ignore_missing=True
+    )
 
 
 def test_wait_for_followers_waits_out_the_discovery_period_without_followers(
@@ -1079,9 +1134,11 @@ def test_index_from_export_builds_under_temp_name_and_clones(
     for name in [
         "forcemerge",
         "block_writes",
+        "wait_for_health",
         "clone_index",
         "get_number_of_shards",
         "get_shard_stats",
+        "set_index_lifecycle_policy",
         "update_aliases",
         "delete_index",
     ]:
@@ -1098,18 +1155,27 @@ def test_index_from_export_builds_under_temp_name_and_clones(
     assert [call[0] for call in calls.mock_calls] == [
         "forcemerge",
         "block_writes",
+        "wait_for_health",
         "clone_index",
         "get_number_of_shards",
         "get_shard_stats",
+        # The never-delete policy is only attached once followers have caught up.
+        "set_index_lifecycle_policy",
         "update_aliases",
         "delete_index",
     ]
     assert es_adapter.create_index.call_args.kwargs["index"] == build_index
     assert bulk_indices == [build_index]
     assert es_adapter.forcemerge.call_args.kwargs["index"] == build_index
-    # The clone would otherwise inherit the build's write block.
+    # The clone would otherwise inherit the build's write block, and starts on the
+    # expiring policy so that unpublished copies on followers are cleaned up.
     es_adapter.clone_index.assert_called_once_with(
-        source=build_index, target=index_name, settings={"index.blocks.write": None}
+        source=build_index,
+        target=index_name,
+        settings={"index.blocks.write": None, "index.lifecycle.name": "enwiki_backup_policy"},
+    )
+    es_adapter.wait_for_health.assert_called_once_with(
+        index=build_index, status="green", timeout=600
     )
     es_adapter.get_shard_stats.assert_called_with(index=index_name)
     es_adapter.update_aliases.assert_called_once_with(

@@ -40,6 +40,9 @@ CCR_RETENTION_LEASE_SOURCE = "ccr"
 # CCR auto-follow patterns exclude `temp-*`, so followers never see a partial build.
 BUILD_INDEX_PREFIX = "temp-"
 
+# Seconds to wait for the build index to reach green health, which cloning requires.
+CLONE_HEALTH_TIMEOUT_SEC = 600
+
 
 class Indexer:
     """Index documents from wikimedia search exports into Elasticsearch"""
@@ -103,6 +106,7 @@ class Indexer:
         logger.info("Ensuring index exists", extra={"index": build_index})
 
         if self._create_index(build_index):
+            active_policy_applied = False
             try:
                 logger.info("Start indexing", extra={"index": build_index})
                 reporter = ProgressReporter(
@@ -153,18 +157,24 @@ class Indexer:
                 self._clone_build_index(build_index, index_name)
                 cloned_at = time.monotonic()
 
-                # Attach the never-delete policy before the swap so the index is never
-                # eligible for deletion while it is the one serving the alias.
-                self._apply_active_lifecycle_policy(index_name)
-
                 # Alias changes replicate to CCR followers independently of the data,
                 # so wait for followers to catch up before the alias goes live there.
                 self._wait_for_followers(index_name, cloned_at)
 
+                # Attach the never-delete policy before the swap so the index is never
+                # eligible for deletion while it is the one serving the alias. This
+                # comes after the wait so that a run failing before the swap never
+                # leaves a never-delete copy on the followers (see _clone_build_index).
+                self._apply_active_lifecycle_policy(index_name)
+                active_policy_applied = True
+
                 # Flip the alias pointer to the new index and remove the previous index
                 alias = self._flip_alias_to_latest(index_name, elasticsearch_alias)
             except Exception:
-                self._discard_index(index_name)
+                # The clone, if created, is left in place for ILM to expire rather than
+                # deleted (see _clone_build_index).
+                if active_policy_applied:
+                    self._revert_to_backup_lifecycle_policy(index_name)
                 raise
             else:
                 logger.info(
@@ -183,16 +193,60 @@ class Indexer:
     def _clone_build_index(self, build_index: str, index_name: str) -> None:
         """Clone the finished `build_index` to `index_name`.
 
-        Cloning requires a write block on the source. The clone would inherit it, so
-        it is lifted on the target to leave `index_name` as a regular index.
+        Cloning requires a write block on the source and green source health. The clone
+        would inherit the write block, so it is lifted on the target to leave
+        `index_name` as a regular index.
+
+        Raises:
+            TimeoutError: If `build_index` does not reach green within
+                `CLONE_HEALTH_TIMEOUT_SEC`.
+
+        The clone is created with the expiring backup ILM policy, which replicates to
+        followers. The job cannot reach the followers, and deleting the leader index
+        would not delete their copies, so if the run fails after cloning the index is
+        left in place rather than deleted. ILM on the leader and on each follower
+        then expires it like any superseded index. On success, the published index is
+        switched to the active policy, which retains indefinitely, and that change
+        replicates to the followers too.
         """
         self.elasticsearch.block_writes(index=build_index)
+        # Cloning requires a green source, i.e. every primary and replica assigned.
+        self.elasticsearch.wait_for_health(
+            index=build_index, status="green", timeout=CLONE_HEALTH_TIMEOUT_SEC
+        )
         self.elasticsearch.clone_index(
             source=build_index,
             target=index_name,
-            settings={"index.blocks.write": None},
+            settings={
+                "index.blocks.write": None,
+                "index.lifecycle.name": BACKUP_ILM_POLICY.format(
+                    language=self.file_manager.language
+                ),
+            },
         )
         logger.info("Cloned index", extra={"source": build_index, "index": index_name})
+
+    def _revert_to_backup_lifecycle_policy(self, index_name: str) -> None:
+        """Switch an unpublished index back to the expiring policy.
+
+        Called when a run fails after the active policy was attached but before the
+        alias flip, so that the index, which is left in place and still followed,
+        expires on the leader and followers instead of being kept forever. Errors are
+        logged, not raised, so the original failure still surfaces. If the revert
+        fails, the next successful run's backup sweep demotes the index anyway.
+        """
+        policy = BACKUP_ILM_POLICY.format(language=self.file_manager.language)
+        try:
+            self.elasticsearch.set_index_lifecycle_policy(index=index_name, policy=policy)
+            logger.info(
+                "Reverted unpublished index to backup lifecycle policy",
+                extra={"index": index_name, "policy": policy},
+            )
+        except Exception:
+            logger.exception(
+                "Failed to revert unpublished index to backup lifecycle policy",
+                extra={"index": index_name, "policy": policy},
+            )
 
     def _discard_index(self, index_name: str) -> None:
         """Delete an index this run built but never published."""
@@ -265,7 +319,7 @@ class Indexer:
             return self.elasticsearch.create_index(
                 index=index_name,
                 mappings=get_suggest_mapping(language),
-                settings=get_suggest_settings(language),
+                settings=get_suggest_settings(language, index_type="temp"),
             )
 
         return False
