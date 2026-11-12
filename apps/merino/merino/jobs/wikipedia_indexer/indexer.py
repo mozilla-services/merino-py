@@ -436,6 +436,25 @@ class Indexer:
     ) -> tuple[set[str], set[str]]:
         """Return the CCR follower lease IDs on `index_name` and the subset still behind.
 
+        Progress is read from two values in the leader's shard stats, both sequence
+        numbers. Every operation on a shard (index, update, delete) gets the next
+        sequence number, so they count operations, not documents.
+
+        - The primary's `global_checkpoint` is the highest sequence number that every
+          in-sync copy of the shard has processed. It is the most the leader can
+          guarantee a follower could have read.
+        - A CCR follower holds a retention lease on each leader shard it follows, so the
+          leader keeps the operation history the follower still needs. The lease's
+          `retaining_seq_no` is the first sequence number the follower still needs,
+          i.e. the follower's own global checkpoint + 1, renewed periodically.
+
+        A follower is lagging on a shard while `retaining_seq_no <= global_checkpoint`,
+        because it still needs an operation the leader already has. Once
+        `retaining_seq_no > global_checkpoint`, it has everything.
+
+        See https://www.elastic.co/docs/reference/elasticsearch/index-settings/history-retention
+        for how retention leases work.
+
         Shard stats only list started copies, so a primary can be briefly missing, for
         example while a replica is promoted after a node restart, and a shard with no
         started copies is missing entirely. Progress on such a shard is then unknown,
