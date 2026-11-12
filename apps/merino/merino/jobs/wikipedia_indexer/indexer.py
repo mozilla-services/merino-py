@@ -371,11 +371,11 @@ class Indexer:
         """Block until every CCR follower of `index_name` has replicated all of it.
 
         This runs on the leader cluster. Followers are discovered from the retention
-        leases they hold on the leader's primary shard. Auto-follow only creates
+        leases they hold on the leader's primary shards. Auto-follow only creates
         a follower after noticing the new index, so leases are collected for at least
         `follower_discovery_period` before concluding which followers exist. A
-        follower has caught up on a shard once its lease retains nothing at or below
-        the leader's global checkpoint. Leases are renewed periodically (every 30s by
+        follower has caught up once, on every shard, it holds a lease that retains
+        nothing at or below the leader's global checkpoint. Leases are renewed periodically (every 30s by
         default), so they may trail the follower's actual progress but never run
         ahead of it.
 
@@ -455,6 +455,10 @@ class Indexer:
         See https://www.elastic.co/docs/reference/elasticsearch/index-settings/history-retention
         for how retention leases work.
 
+        A follower is identified by the same lease ID on every shard. One that holds a
+        lease on some shards but not yet on others is still bootstrapping, so it is
+        reported as lagging until it holds a caught-up lease on every shard.
+
         Shard stats only list started copies, so a primary can be briefly missing, for
         example while a replica is promoted after a node restart, and a shard with no
         started copies is missing entirely. Progress on such a shard is then unknown,
@@ -462,6 +466,8 @@ class Indexer:
         """
         followers: set[str] = set()
         lagging: set[str] = set()
+        # CCR follower lease IDs held on each shard whose primary is started.
+        leases_by_shard: dict[str, set[str]] = {}
         stats = self.elasticsearch.get_shard_stats(index=index_name)
         for missing in {str(n) for n in range(number_of_shards)} - stats.keys():
             lagging.add(f"shard {missing} (no started copies)")
@@ -471,12 +477,18 @@ class Indexer:
                 lagging.add(f"shard {shard} (no started primary)")
                 continue
             global_checkpoint = primary["seq_no"]["global_checkpoint"]
+            held = leases_by_shard.setdefault(shard, set())
             for lease in primary["retention_leases"]["leases"]:
                 if lease["source"] != CCR_RETENTION_LEASE_SOURCE:
                     continue
-                followers.add(lease["id"])
+                held.add(lease["id"])
                 if lease["retaining_seq_no"] <= global_checkpoint:
                     lagging.add(lease["id"])
+            followers |= held
+        # A follower acquires a lease on each shard as it starts following it, so one
+        # seen on some shards but not yet on another hasn't caught up on that shard.
+        for held in leases_by_shard.values():
+            lagging |= followers - held
         return followers, lagging
 
     def _flip_alias_to_latest(self, current_index: str, alias: str) -> str:

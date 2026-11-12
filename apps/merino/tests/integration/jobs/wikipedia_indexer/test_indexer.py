@@ -901,6 +901,61 @@ def test_wait_for_followers_polls_until_every_shard_catches_up(
     assert clock.now == 14
 
 
+def test_wait_for_followers_waits_for_a_lease_on_every_shard(
+    file_manager, es_adapter, category_blocklist, title_blocklist, clock
+):
+    """Test that a follower holding a caught-up lease on one shard, but no lease yet on
+    another, is still waited on, rather than judged only where it holds a lease.
+    """
+    es_adapter.get_shard_stats.side_effect = [
+        # follower-1 is caught up on shard 0 but has not started following shard 1.
+        {"0": [_shard(99, 100, 100)], "1": [_shard(42, 43)]},
+        # It now holds a lease on shard 1 too, and is caught up there.
+        {"0": [_shard(99, 100, 100)], "1": [_shard(42, 43, 43)]},
+    ]
+    es_adapter.get_number_of_shards.return_value = 2
+    indexer = Indexer(
+        "v1",
+        category_blocklist,
+        title_blocklist,
+        file_manager,
+        es_adapter,
+        follower_sync_poll_interval=7,
+        follower_discovery_period=0,
+    )
+
+    indexer._wait_for_followers("enwiki-1")
+
+    assert es_adapter.get_shard_stats.call_count == 2
+    assert clock.now == 7
+
+
+def test_wait_for_followers_names_followers_missing_a_shard_lease_on_timeout(
+    file_manager, es_adapter, category_blocklist, title_blocklist, clock
+):
+    """Test that a follower which never acquires a lease on a shard fails the wait,
+    and is named as lagging.
+    """
+    es_adapter.get_shard_stats.return_value = {
+        "0": [_shard(99, 100, 100)],
+        "1": [_shard(42, 43)],
+    }
+    es_adapter.get_number_of_shards.return_value = 2
+    indexer = Indexer(
+        "v1",
+        category_blocklist,
+        title_blocklist,
+        file_manager,
+        es_adapter,
+        follower_sync_timeout=30,
+        follower_sync_poll_interval=15,
+        follower_discovery_period=0,
+    )
+
+    with pytest.raises(TimeoutError, match=r"\['follower-1'\]"):
+        indexer._wait_for_followers("enwiki-1")
+
+
 def test_wait_for_followers_times_out(
     file_manager, es_adapter, category_blocklist, title_blocklist, clock
 ):
