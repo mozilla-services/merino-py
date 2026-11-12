@@ -40,8 +40,8 @@ CCR_RETENTION_LEASE_SOURCE = "ccr"
 # CCR auto-follow patterns exclude `temp-*`, so followers never see a partial build.
 BUILD_INDEX_PREFIX = "temp-"
 
-# Seconds to wait for green health on the build index, which cloning requires, and on
-# its clone, before the clone starts serving the alias.
+# Seconds to wait for green health on the build index, which cloning requires, for the
+# clone's primary to start, and for the clone to be green before it serves the alias.
 CLONE_HEALTH_TIMEOUT_SEC = 600
 
 
@@ -173,8 +173,10 @@ class Indexer:
                 # eligible for deletion while it is the one serving the alias. This
                 # comes after the wait so that a run failing before the swap never
                 # leaves a never-delete copy on the followers (see _clone_build_index).
-                self._apply_active_lifecycle_policy(index_name)
+                # Set first: the request may land even if the call then fails, and
+                # reverting a policy that was never attached is harmless.
                 active_policy_applied = True
+                self._apply_active_lifecycle_policy(index_name)
 
                 # Flip the alias pointer to the new index and remove the previous index
                 alias = self._flip_alias_to_latest(index_name, elasticsearch_alias)
@@ -182,7 +184,7 @@ class Indexer:
                 # The clone, if created, is left in place for ILM to expire rather than
                 # deleted (see _clone_build_index).
                 if active_policy_applied:
-                    self._revert_to_backup_lifecycle_policy(index_name)
+                    self._revert_to_backup_lifecycle_policy(index_name, elasticsearch_alias)
                 raise
             else:
                 logger.info(
@@ -231,20 +233,43 @@ class Indexer:
                     language=self.file_manager.language
                 ),
             },
+            # The clone stays tied to the build index until its primary starts, so
+            # give it time rather than failing and deleting the build index under it.
+            active_shards_timeout=f"{CLONE_HEALTH_TIMEOUT_SEC}s",
+            request_timeout=CLONE_HEALTH_TIMEOUT_SEC + 60,
         )
         logger.info("Cloned index", extra={"source": build_index, "index": index_name})
 
-    def _revert_to_backup_lifecycle_policy(self, index_name: str) -> None:
+    def _revert_to_backup_lifecycle_policy(self, index_name: str, alias: str) -> None:
         """Switch an unpublished index back to the expiring policy.
 
         Called when a run fails after the active policy was attached but before the
-        alias flip, so that the index, which is left in place and still followed,
-        expires on the leader and followers instead of being kept forever. Errors are
-        logged, not raised, so the original failure still surfaces. If the revert
-        fails, the next successful run's backup sweep demotes the index anyway.
+        alias flip completed, so that the index, which is left in place and still
+        followed, expires on the leader and followers instead of being kept forever.
+
+        An alias update can be applied even when the call reports a failure (e.g. a
+        read timeout), so the alias is checked first, and the active policy is kept
+        if `index_name` is already serving it. If that check fails, nothing is
+        reverted, since keeping an index is safer than expiring a live one.
+
+        Errors are logged, not raised, so the original failure still surfaces. An
+        index left on the active policy is demoted by the next successful run's
+        backup sweep.
         """
         policy = BACKUP_ILM_POLICY.format(language=self.file_manager.language)
+        alias = alias.format(version=self.index_version)
         try:
+            serving = (
+                self.elasticsearch.get_indices_for_alias(alias=alias)
+                if self.elasticsearch.alias_exists(alias=alias)
+                else []
+            )
+            if index_name in serving:
+                logger.warning(
+                    "Alias points at the index despite the failure, keeping active policy",
+                    extra={"index": index_name, "alias": alias},
+                )
+                return
             self.elasticsearch.set_index_lifecycle_policy(index=index_name, policy=policy)
             logger.info(
                 "Reverted unpublished index to backup lifecycle policy",
@@ -375,9 +400,9 @@ class Indexer:
         a follower after noticing the new index, so leases are collected for at least
         `follower_discovery_period` before concluding which followers exist. A
         follower has caught up once, on every shard, it holds a lease that retains
-        nothing at or below the leader's global checkpoint. Leases are renewed periodically (every 30s by
-        default), so they may trail the follower's actual progress but never run
-        ahead of it.
+        nothing at or below the leader's global checkpoint. Leases are renewed
+        periodically (every 30s by default), so they may trail the follower's actual
+        progress but never run ahead of it.
 
         Each follower is logged when first discovered, with the seconds since
         `cloned_at` (a `time.monotonic()` reading, defaulting to the start of the wait).

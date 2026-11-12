@@ -122,12 +122,12 @@ def test_followers_start_with_the_finished_index_before_the_alias_flips(
     eventually(lambda: _lifecycle_policy(follower, index) == "enwiki_policy")
 
 
-def test_unpublished_index_keeps_the_expiring_policy_when_the_wait_fails(
+def test_unpublished_index_keeps_the_expiring_policy_when_the_active_policy_fails(
     clients: tuple[Elasticsearch, Elasticsearch], mocker: MockerFixture
 ) -> None:
-    """Verify a run failing after followers caught up, but before the never-delete
-    policy is attached (e.g. a follower wait timeout), leaves the index in place on
-    the backup policy, on the leader and followers alike, for ILM to expire.
+    """Verify a run failing after followers caught up, when the never-delete policy
+    cannot be attached, leaves the index in place on the backup policy, on the leader
+    and followers alike, for ILM to expire.
     """
     leader, follower = clients
     indexer = _indexer(leader)
@@ -154,7 +154,21 @@ def test_unpublished_index_reverts_to_the_expiring_policy_when_the_flip_fails(
     """
     leader, follower = clients
     indexer = _indexer(leader)
-    mocker.patch.object(indexer.elasticsearch, "update_aliases", side_effect=RuntimeError("boom"))
+    index_name: list[str] = []
+
+    def fail_once_the_follower_has_the_active_policy(actions: list[dict]) -> None:
+        """Fail the flip only after the never-delete policy reached the follower, so
+        the revert, not the clone's original setting, is what the test observes.
+        """
+        index_name.append(actions[0]["add"]["index"])
+        eventually(lambda: _lifecycle_policy(follower, index_name[0]) == "enwiki_policy")
+        raise RuntimeError("boom")
+
+    mocker.patch.object(
+        indexer.elasticsearch,
+        "update_aliases",
+        side_effect=fail_once_the_follower_has_the_active_policy,
+    )
 
     with pytest.raises(RuntimeError, match="boom"):
         indexer.index_from_export(DOCS, ALIAS)

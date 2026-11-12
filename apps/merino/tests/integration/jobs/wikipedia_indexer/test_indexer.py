@@ -701,6 +701,67 @@ def test_index_from_export_reverts_to_backup_policy_when_the_flip_fails(
     ]
 
 
+@freezegun.freeze_time(FROZEN_TIME)
+def test_index_from_export_keeps_the_active_policy_if_the_flip_landed_despite_failing(
+    indexer, file_manager, es_adapter, caplog
+):
+    """Verify that when the alias update is applied but the call still fails (e.g. a
+    read timeout), the now-serving index keeps the never-delete policy.
+    """
+    _ready_to_index(file_manager, es_adapter)
+    index_name = f"enwiki-20220101-v1-{EPOCH_FROZEN_TIME}"
+    es_adapter.alias_exists.return_value = True
+    # Before the flip the alias serves the old index, afterwards the new one.
+    es_adapter.get_indices_for_alias.side_effect = [["enwiki-old"], [index_name]]
+    es_adapter.update_aliases.side_effect = TimeoutError("read timed out")
+
+    with pytest.raises(TimeoutError, match="read timed out"):
+        indexer.index_from_export(1, "enwiki-{version}")
+
+    es_adapter.set_index_lifecycle_policy.assert_called_once_with(
+        index=index_name, policy="enwiki_policy"
+    )
+    assert "keeping active policy" in caplog.text
+
+
+def test_index_from_export_does_not_revert_if_the_alias_cannot_be_checked(
+    indexer, file_manager, es_adapter, caplog
+):
+    """Verify the policy is left alone, rather than risk expiring a live index, when
+    the alias cannot be read after a failed flip.
+    """
+    _ready_to_index(file_manager, es_adapter)
+    es_adapter.update_aliases.side_effect = RuntimeError("boom")
+    # The flip itself sees no alias; the check afterwards cannot reach the cluster.
+    es_adapter.alias_exists.side_effect = [False, RuntimeError("unreachable")]
+
+    with pytest.raises(RuntimeError, match="boom"):
+        indexer.index_from_export(1, "enwiki-{version}")
+
+    assert es_adapter.set_index_lifecycle_policy.call_count == 1
+    assert "Failed to revert unpublished index" in caplog.text
+
+
+def test_index_from_export_reverts_when_attaching_the_active_policy_fails(
+    indexer, file_manager, es_adapter
+):
+    """Verify a failed active-policy attach is still reverted, since the request may
+    have been applied before the call failed.
+    """
+    _ready_to_index(file_manager, es_adapter)
+    es_adapter.set_index_lifecycle_policy.side_effect = [TimeoutError("timed out"), None]
+
+    with pytest.raises(TimeoutError, match="timed out"):
+        indexer.index_from_export(1, "enwiki-{version}")
+
+    index_name = es_adapter.create_index.call_args.kwargs["index"].removeprefix("temp-")
+    assert es_adapter.set_index_lifecycle_policy.call_args_list == [
+        mocker_call(index=index_name, policy="enwiki_policy"),
+        mocker_call(index=index_name, policy="enwiki_backup_policy"),
+    ]
+    es_adapter.update_aliases.assert_not_called()
+
+
 def test_index_from_export_reports_the_original_error_when_the_policy_revert_fails(
     indexer, file_manager, es_adapter, caplog
 ):
@@ -1249,6 +1310,8 @@ def test_index_from_export_builds_under_temp_name_and_clones(
         source=build_index,
         target=index_name,
         settings={"index.blocks.write": None, "index.lifecycle.name": "enwiki_backup_policy"},
+        active_shards_timeout="600s",
+        request_timeout=660,
     )
     assert es_adapter.wait_for_health.call_args_list == [
         mocker_call(index=build_index, status="green", timeout=600),

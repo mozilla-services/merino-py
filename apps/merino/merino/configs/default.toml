@@ -1691,7 +1691,8 @@ es_create_index_timeout = 120
 
 # MERINO_JOBS__WIKIPEDIA_INDEXER__FOLLOWER_SYNC_TIMEOUT
 # Seconds to wait for cross-cluster replication followers to replicate a new index
-# before flipping the alias. The job fails (and discards the new index) on timeout.
+# before flipping the alias. On timeout the job fails and leaves the new index for ILM
+# to expire.
 follower_sync_timeout = 3600
 
 # MERINO_JOBS__WIKIPEDIA_INDEXER__FOLLOWER_SYNC_POLL_INTERVAL
