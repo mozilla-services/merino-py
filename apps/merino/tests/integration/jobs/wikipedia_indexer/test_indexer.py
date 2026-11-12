@@ -663,6 +663,25 @@ def test_build_index_is_created_with_the_backup_policy(
     }
 
 
+def test_index_from_export_does_not_publish_a_clone_that_never_turns_green(
+    indexer, file_manager, es_adapter
+):
+    """Verify a clone whose replicas are not all allocated in time is not published,
+    and keeps the backup policy, so it expires rather than serving degraded.
+    """
+    _ready_to_index(file_manager, es_adapter)
+    # The build index is green, its clone is not.
+    es_adapter.wait_for_health.side_effect = [None, TimeoutError("still yellow")]
+
+    with pytest.raises(TimeoutError, match="still yellow"):
+        indexer.index_from_export(1, "enwiki-{version}")
+
+    index_name = es_adapter.create_index.call_args.kwargs["index"].removeprefix("temp-")
+    es_adapter.wait_for_health.assert_called_with(index=index_name, status="green", timeout=600)
+    es_adapter.set_index_lifecycle_policy.assert_not_called()
+    es_adapter.update_aliases.assert_not_called()
+
+
 def test_index_from_export_reverts_to_backup_policy_when_the_flip_fails(
     indexer, file_manager, es_adapter, mocker
 ):
@@ -1159,6 +1178,8 @@ def test_index_from_export_builds_under_temp_name_and_clones(
         "clone_index",
         "get_number_of_shards",
         "get_shard_stats",
+        # The clone is fully allocated before it serves the alias.
+        "wait_for_health",
         # The never-delete policy is only attached once followers have caught up.
         "set_index_lifecycle_policy",
         "update_aliases",
@@ -1174,9 +1195,10 @@ def test_index_from_export_builds_under_temp_name_and_clones(
         target=index_name,
         settings={"index.blocks.write": None, "index.lifecycle.name": "enwiki_backup_policy"},
     )
-    es_adapter.wait_for_health.assert_called_once_with(
-        index=build_index, status="green", timeout=600
-    )
+    assert es_adapter.wait_for_health.call_args_list == [
+        mocker_call(index=build_index, status="green", timeout=600),
+        mocker_call(index=index_name, status="green", timeout=600),
+    ]
     es_adapter.get_shard_stats.assert_called_with(index=index_name)
     es_adapter.update_aliases.assert_called_once_with(
         actions=[{"add": {"index": index_name, "alias": "enwiki-v1"}}]

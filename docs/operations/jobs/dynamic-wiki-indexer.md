@@ -80,7 +80,10 @@ Creating indices with new data dumps proceeds as follows:
    cluster the alias points at an index that is still recovering. Keep the period
    comfortably above the `seconds_since_clone` values you see in production.
 4. **Flip the alias.** Alias changes replicate separately from the data, so the alias
-   only moves once the followers hold the full index.
+   only moves once the followers hold the full index. The job also waits (up to 10
+   minutes) for the clone to reach green on the leader, so it never starts serving
+   with unallocated replicas. Replicas recover while followers catch up, so this
+   rarely adds time.
 
 If followers haven't caught up within `follower_sync_timeout`, the job fails and the alias
 keeps pointing at the previous index. The `temp-` build index is always deleted, whether

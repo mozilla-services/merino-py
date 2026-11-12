@@ -40,7 +40,8 @@ CCR_RETENTION_LEASE_SOURCE = "ccr"
 # CCR auto-follow patterns exclude `temp-*`, so followers never see a partial build.
 BUILD_INDEX_PREFIX = "temp-"
 
-# Seconds to wait for the build index to reach green health, which cloning requires.
+# Seconds to wait for green health on the build index, which cloning requires, and on
+# its clone, before the clone starts serving the alias.
 CLONE_HEALTH_TIMEOUT_SEC = 600
 
 
@@ -160,6 +161,13 @@ class Indexer:
                 # Alias changes replicate to CCR followers independently of the data,
                 # so wait for followers to catch up before the alias goes live there.
                 self._wait_for_followers(index_name, cloned_at)
+
+                # Make sure every replica of the clone is allocated before it serves
+                # traffic. Replicas recover while followers catch up, so this is
+                # usually already satisfied by the time the follower wait returns.
+                self.elasticsearch.wait_for_health(
+                    index=index_name, status="green", timeout=CLONE_HEALTH_TIMEOUT_SEC
+                )
 
                 # Attach the never-delete policy before the swap so the index is never
                 # eligible for deletion while it is the one serving the alias. This
