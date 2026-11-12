@@ -207,21 +207,41 @@ class ElasticSearchAdapter:
         target: str,
         settings: dict[str, Any] | None = None,
         wait_for_active_shards: str | int = "1",
+        active_shards_timeout: str | None = None,
         request_timeout: float | None = None,
     ) -> None:
         """Clone `source` into a new index `target`.
 
         The source must carry a write block. `settings` override those copied from the
-        source onto the target.
+        source onto the target. `active_shards_timeout` (e.g. `"30s"`) bounds the
+        server-side wait for `wait_for_active_shards`, using Elasticsearch's default of
+        30s when unset. `request_timeout` bounds the whole request on the client side.
+
+        Raises:
+            RuntimeError: If the master node did not acknowledge the clone in time
+                (`acknowledged`), or the target's shards did not start before the
+                `wait_for_active_shards` timeout (`shards_acknowledged`). In either case
+                the target may still be created later.
         """
-        self.get_client().options(
-            request_timeout=request_timeout or self._create_index_timeout
-        ).indices.clone(
-            index=source,
-            target=target,
-            settings=settings,
-            wait_for_active_shards=wait_for_active_shards,
+        res = cast(
+            dict[str, Any],
+            self.get_client()
+            .options(request_timeout=request_timeout or self._create_index_timeout)
+            .indices.clone(
+                index=source,
+                target=target,
+                settings=settings,
+                wait_for_active_shards=wait_for_active_shards,
+                timeout=active_shards_timeout,
+            ),
         )
+        if not res.get("acknowledged"):
+            raise RuntimeError(f"Clone of {source} to {target} was not acknowledged")
+        if not res.get("shards_acknowledged"):
+            raise RuntimeError(
+                f"Clone of {source} to {target} did not start {wait_for_active_shards} "
+                "active shard copies before timing out"
+            )
 
     def get_shard_stats(self, *, index: str) -> dict[str, list[dict[str, Any]]]:
         """Return shard-level stats for `index`, keyed by shard number.

@@ -407,3 +407,49 @@ def test_wait_for_health_raises_when_timed_out(
 
     with pytest.raises(TimeoutError, match="my-index did not reach green .*yellow"):
         adapter.wait_for_health(index="my-index", status="green", timeout=1)
+
+
+def test_clone_index_calls_indices_clone(
+    adapter: ElasticSearchAdapter, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Verify a fully acknowledged clone passes its arguments through and returns."""
+    client = _mock_client()
+    client.indices.clone.return_value = {"acknowledged": True, "shards_acknowledged": True}
+    monkeypatch.setattr(adapter, "get_client", MagicMock(return_value=client))
+
+    adapter.clone_index(source="src", target="dst", settings={"index.blocks.write": None})
+
+    client.options.assert_called_once_with(request_timeout=CREATE_INDEX_TIMEOUT)
+    client.indices.clone.assert_called_once_with(
+        index="src",
+        target="dst",
+        settings={"index.blocks.write": None},
+        wait_for_active_shards="1",
+        timeout=None,
+    )
+
+
+@pytest.mark.parametrize(
+    ("response", "match"),
+    [
+        ({"acknowledged": False, "shards_acknowledged": False}, "was not acknowledged"),
+        ({"acknowledged": True, "shards_acknowledged": False}, "did not start 1 active"),
+        ({}, "was not acknowledged"),
+    ],
+    ids=["not-acknowledged", "shards-not-acknowledged", "empty-response"],
+)
+def test_clone_index_raises_unless_fully_acknowledged(
+    adapter: ElasticSearchAdapter,
+    monkeypatch: pytest.MonkeyPatch,
+    response: dict,
+    match: str,
+) -> None:
+    """Verify a clone that the master or the target's shards did not acknowledge in time
+    raises rather than returning as if the clone were ready.
+    """
+    client = _mock_client()
+    client.indices.clone.return_value = response
+    monkeypatch.setattr(adapter, "get_client", MagicMock(return_value=client))
+
+    with pytest.raises(RuntimeError, match=match):
+        adapter.clone_index(source="src", target="dst")

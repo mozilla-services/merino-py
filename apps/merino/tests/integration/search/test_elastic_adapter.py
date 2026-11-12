@@ -89,6 +89,27 @@ def test_clone_index_clears_the_inherited_write_block(adapter: ElasticSearchAdap
         client.index(index=SOURCE, id="new", document={"title": "new"})
 
 
+def test_clone_index_raises_when_the_clone_cannot_start(adapter: ElasticSearchAdapter) -> None:
+    """Verify a clone whose shards cannot be allocated raises instead of returning, and
+    that the target still exists, since the master accepted the clone.
+    """
+    adapter.block_writes(index=SOURCE)
+
+    with pytest.raises(RuntimeError, match="did not start 1 active"):
+        adapter.clone_index(
+            source=SOURCE,
+            target=CLONE,
+            settings={
+                "index.blocks.write": None,
+                # No node matches, so the clone's primary never starts.
+                "index.routing.allocation.require._name": "no-such-node",
+            },
+            active_shards_timeout="1s",
+        )
+
+    assert adapter.index_exists(index=CLONE)
+
+
 def test_wait_for_health_returns_once_the_index_is_green(adapter: ElasticSearchAdapter) -> None:
     """Verify a fully allocated index satisfies a green wait."""
     adapter.wait_for_health(index=SOURCE, status="green", timeout=10)
