@@ -16,3 +16,17 @@ tasks:
   unit-test:
     env:
       EMBROIDERY_ENV: testing
+
+  docker-build:
+    args:
+      - --tag
+      - app-embroidery:build
+      - .
+    # The inherited inputs list Python lockfiles; replacing them keeps a uv.lock bump from
+    # marking this image as affected.
+    inputs:
+      - "**/*"
+      - /version.json
+      - /rust-toolchain.toml
+    options:
+      mergeInputs: replace
