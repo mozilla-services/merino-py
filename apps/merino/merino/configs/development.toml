@@ -111,3 +111,23 @@ enabled = true
 
 # MERINO_MESSAGE_HANDLER__PUBSUB_TOPIC
 pubsub_topic = "projects/merino-local/topics/merino-fleece-sanitization-local"
+
+[development.widgets.providers.framed]
+# MERINO_WIDGETS__PROVIDERS__FRAMED__BUCKET_NAME_KAYAK_TRAVEL
+bucket_name_kayak_travel = "merino-widgets-kayak-travel-public-local"
+# MERINO_WIDGETS__PROVIDERS__FRAMED__BUCKET_NAME_WREXHAMAFC
+bucket_name_wrexhamafc = "merino-widgets-wrexhamafc-public-local"
+# MERINO_WIDGETS__PROVIDERS__FRAMED__BUCKET_NAME_YAHOO_HOROSCOPE
+bucket_name_yahoo_horoscope = "merino-widgets-yahoo-horoscope-public-local"
+# MERINO_WIDGETS__PROVIDERS__FRAMED__BUCKET_NAME_YAHOO_SOLITAIRE
+bucket_name_yahoo_solitaire = "merino-widgets-yahoo-solitaire-public-local"
+# MERINO_WIDGETS__PROVIDERS__FRAMED__CDN_HOSTNAME_KAYAK_TRAVEL
+cdn_hostname_kayak_travel = "local-widgets-kayak-travel.merino.nonprod.webservices.mozgcp.net"
+# MERINO_WIDGETS__PROVIDERS__FRAMED__CDN_HOSTNAME_WREXHAMAFC
+cdn_hostname_wrexhamafc = "local-widgets-wrexhamafc.merino.nonprod.webservices.mozgcp.net"
+# MERINO_WIDGETS__PROVIDERS__FRAMED__CDN_HOSTNAME_YAHOO_HOROSCOPE
+cdn_hostname_yahoo_horoscope = "local-widgets-yahoo-horoscope.merino.nonprod.webservices.mozgcp.net"
+# MERINO_WIDGETS__PROVIDERS__FRAMED__CDN_HOSTNAME_YAHOO_SOLITAIRE
+cdn_hostname_yahoo_solitaire = "local-widgets-yahoo-solitaire.merino.nonprod.webservices.mozgcp.net"
+# GCP project name where the GCS buckets live.
+gcp_project = "moz-fx-merino-local-5050"
