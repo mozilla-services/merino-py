@@ -12,6 +12,9 @@ from starlette.requests import Request
 
 from merino.configs import settings
 from merino.middleware import ScopeKey
+from merino.providers.games import get_particle_provider
+from merino.providers.games.particle.backends.protocol import Particle
+from merino.providers.games.particle.provider import Provider as ParticleProvider
 from merino.providers.rss import get_wikimedia_potd_provider
 from merino.providers.rss.wikimedia_potd.backends.protocol import PictureOfTheDay
 from merino.providers.rss.wikimedia_potd.provider import WikimediaPictureOfTheDayProvider
@@ -49,6 +52,7 @@ MAX_MATCH_LIMIT = 5
 
 _matches_cache_control_ttl = settings.widgets.providers.wrexham.matches_cache_control_ttl_sec
 _standings_cache_control_ttl = settings.widgets.providers.wrexham.standings_cache_control_ttl_sec
+_games_particle_ttl = settings.games_providers.particle.cache_ttl
 
 _WREXHAM_UNAVAILABLE_MESSAGE = "Wrexham data is temporarily unavailable. Please try again later."
 
@@ -230,4 +234,27 @@ async def get_picture_of_the_day(
                 "previous": {"localized_descriptions": True},
             },
         ),
+    )
+
+
+@router.get(
+    "/widgets/games/particle",
+    tags=["widgets"],
+    summary="Particle game for New Tab",
+    response_model=Particle,
+)
+async def get_game_particle(
+    request: Request, provider: ParticleProvider = Depends(get_particle_provider)
+) -> Response:
+    """Return a JSON object containing the public URL for the Particle game."""
+    particle_data = None
+
+    try:
+        particle_data = await provider.get_game_url()
+    except Exception as ex:
+        logger.info(f"Error when fetching Particle game data: {ex.__class__.__name__}")
+
+    return JSONResponse(
+        content=jsonable_encoder(particle_data),
+        headers={"Cache-Control": (f"private, max-age={_games_particle_ttl}")},
     )
