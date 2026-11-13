@@ -1486,6 +1486,23 @@ enabled = true
 # Whether or not the cron to monitor GCS buckets is enabled. Disabed by default.
 cron_enabled = false
 
+# MERINO_WIDGETS__PROVIDERS__FRAMED__INJECT_PARTICLE
+# Whether or not to force the Particle widget into the API response.
+# Needs to be true for all environments except testing until Particle is
+# converted to the common framed widget architecture.
+inject_particle = true
+
+# MERINO_WIDGETS__PROVIDERS__FRAMED__FETCH_WIDGETS_TIMEOUT
+# The amount of time to wait for all async widget fetch tasks to complete.
+fetch_widgets_timeout = 60 # 1 minute
+
+# MERINO_WIDGETS__PROVIDERS__FRAMED__GCS_LIST_BLOBS_TIMEOUT
+# The amount of time to wait for GCS to list blobs for any particular bucket.
+# Set to ensure calls to GCS don't hang forever.
+# NOTE - this is the timeout *per page* in GCS. Multiple pages may be required
+# to list all folders in a bucket.
+gcs_list_blobs_timeout = 10 # seconds
+
 # MERINO_WIDGETS__PROVIDERS__FRAMED__CRON_INTERVAL_SEC
 # How often to the cron runs to potentially check for new framed widget
 # releases. Runs more frequently than the resync_interval_sec to account for

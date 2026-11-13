@@ -113,6 +113,8 @@ enabled = true
 pubsub_topic = "projects/merino-local/topics/merino-fleece-sanitization-local"
 
 [development.widgets.providers.framed]
+enabled = true
+cron_enabled = true
 # MERINO_WIDGETS__PROVIDERS__FRAMED__BUCKET_NAME_KAYAK_TRAVEL
 bucket_name_kayak_travel = "merino-widgets-kayak-travel-public-local"
 # MERINO_WIDGETS__PROVIDERS__FRAMED__BUCKET_NAME_WREXHAMAFC
