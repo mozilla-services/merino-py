@@ -109,6 +109,22 @@ Run all linting, formatting checks, security checks, and type checking:
 moon run ':#quality'
 ```
 
+### OpenAPI schema
+
+Every Merino runtime mode serves the same API docs (`/docs` and `/openapi.json`) from a committed
+schema, `apps/merino/merino/data/openapi.json`. The schema is generated from the `ALL` runtime
+mode, so it covers every endpoint. After changing an endpoint, its parameters, its response
+models, or its tags, regenerate the schema and commit the result:
+
+```bash
+moon run merino:openapi-export
+```
+
+`merino:openapi-check` runs with `:#quality` and in CI. It fails with "OpenAPI schema is out of
+date" when the committed file no longer matches the code; run the export task to fix it. Both
+tasks run `apps/merino/dev/export_openapi.py`. `apps/merino/dev/` holds Merino's development
+scripts, which are not part of the `merino` package.
+
 From anywhere inside a project, `~` means the closest project:
 
 ```bash

@@ -16,7 +16,8 @@ moon run :test merino:diff-coverage   # All tests + 95% combined and changed-lin
 moon run :test                        # Unit + integration tests for every project (needs Docker; 95% Merino coverage enforced)
 moon run :unit-test                   # Unit tests only for every project
 moon run merino:integration-test      # Integration tests (needs Docker)
-moon run ':#quality'                  # ruff + bandit + mypy
+moon run ':#quality'                  # ruff + bandit + mypy + OpenAPI schema check
+moon run merino:openapi-export        # Regenerate the committed OpenAPI schema
 make format               # Auto-format with ruff
 make docker-compose-up    # Start local services (Redis, fake-GCS)
 ```
@@ -36,6 +37,7 @@ Run jobs: `uv run merino-jobs --help` (e.g. `uv run merino-jobs wikipedia-indexe
 - **Pre-commit auto-fixes then fails**: ruff runs with `--exit-non-zero-on-fix`. Re-stage and commit again.
 - **Strict mypy**: `disallow_untyped_calls`, `warn_return_any`, `warn_unused_ignores` are all enabled.
 - **Async tests** need `@pytest.mark.asyncio` or they silently don't run.
+- **API changes need a regenerated schema**: after changing any Merino endpoint, parameter, response model, or tag, run `moon run merino:openapi-export` and commit `apps/merino/merino/data/openapi.json`. Otherwise `merino:openapi-check` fails CI.
 
 ## Coding Conventions (deviations from defaults)
 

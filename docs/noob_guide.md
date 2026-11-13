@@ -255,6 +255,7 @@ It's important to note that the `Manifest` is a [Pydantic BaseModel](https://doc
 Ensure that the following pass without error:
 
 - `make format` -- applies formatting to the python files
+- `moon run merino:openapi-export` -- regenerates the committed OpenAPI schema (`apps/merino/merino/data/openapi.json`). Run it after changing any endpoint, parameter, response model, or tag, and commit the result; otherwise the schema check in `moon run ':#quality'` fails.
 - `moon run ':#quality'` -- General formatting and checks to the code.
 - `moon run :test` -- validate the code operation with unit and integration tests (needs Docker). `moon run merino:unit-test -- -sx` runs unit tests only and stops on the first failure, which is useful for local testing.
 - `moon run merino:integration-test` -- Contract tests for the API only (needs Docker).

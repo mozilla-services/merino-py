@@ -12,6 +12,8 @@ The main domain components are as follows:
 - **Image Manifest API**, located in @apps/merino/merino/providers/manifest, the backend of the `api/v1/manifest` endpoint defined in @apps/merino/merino/web/api_v1.py.
 - **RSS API**, located in @apps/merino/merino/providers/rss, the backend of the `api/v1/rss/*` endpoints defined in @apps/merino/merino/web/api_v1.py.
 - **Jobs**, located in @apps/merino/merino/jobs, a number of Python CLIs (via Typer CLI) that can be executed locally or via a job runner such as Apache Airflow.
+- **API docs**, located in @apps/merino/merino/web/docs.py, the `/docs` and `/openapi.json` routes, served in every runtime mode from the committed schema @apps/merino/merino/data/openapi.json.
+- **Dev scripts**, located in @apps/merino/dev, development scripts that are not part of the `merino` package, such as `export_openapi.py` (run via `moon run merino:openapi-export`).
 
 Other utility and supporting modules:
 
