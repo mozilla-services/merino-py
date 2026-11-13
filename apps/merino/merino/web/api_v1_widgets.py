@@ -1,5 +1,7 @@
 """Merino V1 API for New Tab widgets."""
 
+import logging
+
 from typing import Annotated
 
 from aiodogstatsd import Client
@@ -10,6 +12,9 @@ from starlette.requests import Request
 
 from merino.configs import settings
 from merino.middleware import ScopeKey
+from merino.providers.games import get_particle_provider
+from merino.providers.games.particle.backends.protocol import Particle
+from merino.providers.games.particle.provider import Provider as ParticleProvider
 from merino.providers.widgets import (
     get_framed_widgets_provider,
     get_travel_provider,
@@ -34,6 +39,8 @@ from merino.utils.query_processing.geo_params import (
     get_accepted_languages,
 )
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
 
 HEADER_CHARACTER_MAX = settings.web.api.v1.header_character_max
@@ -42,6 +49,7 @@ MAX_MATCH_LIMIT = 5
 
 _matches_cache_control_ttl = settings.widgets.providers.wrexham.matches_cache_control_ttl_sec
 _standings_cache_control_ttl = settings.widgets.providers.wrexham.standings_cache_control_ttl_sec
+_games_particle_ttl = settings.games_providers.particle.cache_ttl
 
 _WREXHAM_UNAVAILABLE_MESSAGE = "Wrexham data is temporarily unavailable. Please try again later."
 
@@ -190,3 +198,26 @@ async def get_travel_listings(
         listings = await provider.get_listings(q, languages[0], market, vertical)
 
     return JSONResponse(content=jsonable_encoder(listings))
+
+
+@router.get(
+    "/widgets/games/particle",
+    tags=["widgets"],
+    summary="Particle game for New Tab",
+    response_model=Particle,
+)
+async def get_game_particle(
+    request: Request, provider: ParticleProvider = Depends(get_particle_provider)
+) -> Response:
+    """Return a JSON object containing the public URL for the Particle game."""
+    particle_data = None
+
+    try:
+        particle_data = await provider.get_game_url()
+    except Exception as ex:
+        logger.info(f"Error when fetching Particle game data: {ex.__class__.__name__}")
+
+    return JSONResponse(
+        content=jsonable_encoder(particle_data),
+        headers={"Cache-Control": (f"private, max-age={_games_particle_ttl}")},
+    )

@@ -108,6 +108,13 @@ def create_lifespan(mode: RuntimeMode | str):
             await configure_metrics()
             cleanup_callbacks.append(_close_metrics_client)
 
+            # TODO(DISCO-4604): Start games only for WIDGETS once the regular
+            # /api/v1/games/particle alias is removed.
+            if mode_enables(runtime_mode, RuntimeFeature.REGULAR_API) or mode_enables(
+                runtime_mode, RuntimeFeature.WIDGETS
+            ):
+                await _start_games_services()
+
             if mode_enables(runtime_mode, RuntimeFeature.REGULAR_API):
                 await _start_regular_services(cleanup_callbacks)
 
@@ -129,7 +136,7 @@ async def _start_regular_services(cleanup_callbacks: list[CleanupCallback]) -> N
     """Initialize regular Merino services and register cleanup callbacks."""
     from merino import curated_recommendations
     from merino.message_handlers import search_terms
-    from merino.providers import games, manifest, rss, suggest
+    from merino.providers import manifest, rss, suggest
 
     await suggest.init_providers()
     cleanup_callbacks.append(suggest.shutdown_providers)
@@ -144,6 +151,16 @@ async def _start_regular_services(cleanup_callbacks: list[CleanupCallback]) -> N
     cleanup_callbacks.append(rss.shutdown_providers)
 
     curated_recommendations.init_provider()
+
+
+async def _start_games_services() -> None:
+    """Initialize game providers (e.g. Particle).
+
+    These serve both the regular and widget APIs, so they start once for either mode.
+    Games providers have no shutdown work.
+    """
+    from merino.providers import games
+
     await games.init_providers()
 
 
