@@ -31,6 +31,7 @@ from merino.middleware import (
     metrics,
     user_agent,
 )
+from merino.web import docs
 from merino_common.routers import dockerflow
 
 tags_metadata = [
@@ -82,8 +83,9 @@ def create_lifespan(mode: RuntimeMode | str):
 
     To wire a new service into the main app:
     add a RuntimeFeature, opt it into the right RuntimeMode values, start it here,
-    include its router in _include_routers, and add its OpenAPI tag metadata.
-    Dockerflow stays enabled for every mode.
+    include its router in _include_routers, add its OpenAPI tag metadata, and regenerate
+    the committed OpenAPI schema (`moon run merino:openapi-export`).
+    Dockerflow and the API docs stay enabled for every mode.
     """
     runtime_mode = coerce_runtime_mode(mode)
 
@@ -181,6 +183,10 @@ def create_app(mode: RuntimeMode | str | None = None) -> FastAPI:
     runtime_mode = get_runtime_mode() if mode is None else coerce_runtime_mode(mode)
     app = FastAPI(
         openapi_tags=_get_tags_metadata(runtime_mode),
+        # Every mode serves the committed ALL-mode schema instead, see merino.web.docs.
+        openapi_url=None,
+        docs_url=None,
+        redoc_url=None,
         lifespan=create_lifespan(runtime_mode),
         default_response_class=JSONResponse,
     )
@@ -222,6 +228,7 @@ def _add_middleware(app: FastAPI) -> None:
 def _include_routers(app: FastAPI, mode: RuntimeMode) -> None:
     """Include routers enabled for a runtime mode."""
     app.include_router(dockerflow.router)
+    app.include_router(docs.router)
 
     if mode_enables(mode, RuntimeFeature.REGULAR_API):
         from merino.web import api_v1

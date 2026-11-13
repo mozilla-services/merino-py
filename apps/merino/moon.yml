@@ -26,16 +26,19 @@ tasks:
     args:
       - apps/merino/merino
       - apps/merino/tests
+      - apps/merino/dev
 
   format-check:
     args:
       - apps/merino/merino
       - apps/merino/tests
+      - apps/merino/dev
 
   security:
     args:
       - apps/merino/merino
       - apps/merino/tests
+      - apps/merino/dev
       - --configfile
       - pyproject.toml
 
@@ -43,9 +46,41 @@ tasks:
     args:
       - apps/merino/merino
       - apps/merino/tests
+      - apps/merino/dev
       - --config-file=pyproject.toml
     env:
       MYPYPATH: apps/merino:packages/merino-common
+
+  openapi-export:
+    description: Regenerate the committed ALL-mode OpenAPI schema served by every runtime mode
+    deps:
+      - workspace:install
+    command: uv
+    args:
+      - run
+      - --frozen
+      - --no-sync
+      - python
+      - apps/merino/dev/export_openapi.py
+    env:
+      # Document the API as production serves it.
+      MERINO_ENV: production
+    inputs:
+      - "**/*"
+      - /dev/GeoLite2-City-Test.mmdb
+    options:
+      # Writes a committed source file, not a cacheable output.
+      cache: false
+
+  openapi-check:
+    description: Fail if the committed OpenAPI schema is out of date
+    extends: openapi-export
+    args:
+      - --check
+    tags:
+      - quality
+    options:
+      cache: true
 
   unit-test:
     args:

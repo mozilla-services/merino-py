@@ -38,6 +38,8 @@ If provider data seems stale, check if the corresponding job has run:
 
 Merino can be configured to be run in various modes via the configuration `runtime.mode`. Each mode could define its own FastAPI lifespan events (startup & shutdown) via `create_lifespan()` in @apps/merino/merino/main.py.
 
+Every runtime mode serves the same committed ALL-mode OpenAPI schema (`/docs`, `/openapi.json`), because the production gateway routes clients to the right workload. Regenerate it with `moon run merino:openapi-export` after any API change.
+
 ## Middleware Stack (order matters)
 
 CORSMiddleware -> MetricsMiddleware -> CorrelationIdMiddleware -> FeatureFlagsMiddleware -> GeolocationMiddleware -> UserAgentMiddleware -> LoggingMiddleware. LoggingMiddleware depends on CorrelationId and Geolocation.
