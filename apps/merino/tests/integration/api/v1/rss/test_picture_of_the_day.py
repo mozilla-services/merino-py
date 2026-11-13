@@ -2,27 +2,45 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-"""Integration tests for the /api/v1/rss/picture-of-the-day endpoint."""
+"""Integration tests for the picture of the day endpoints.
+
+Every test runs against both the widgets route and the regular route it's replacing, which
+must serve identical responses until the regular alias is removed (DISCO-4604).
+"""
 
 import freezegun
+import pytest
 from fastapi.testclient import TestClient
+from pytest_mock import MockerFixture
 
 from merino.providers.rss.wikimedia_potd.backends.protocol import PictureOfTheDay
 from merino.providers.rss.wikimedia_potd.provider import WikimediaPictureOfTheDayProvider
 
-POTD_URL = "/api/v1/rss/picture-of-the-day"
+
+@pytest.fixture(
+    name="potd_url",
+    params=[
+        "/api/v1/widgets/rss/picture-of-the-day",
+        # TODO(DISCO-4604): Drop the regular alias.
+        "/api/v1/rss/picture-of-the-day",
+    ],
+)
+def fixture_potd_url(request: pytest.FixtureRequest) -> str:
+    """Return each picture of the day route."""
+    return str(request.param)
 
 
 @freezegun.freeze_time("2026-06-07")
 def test_picture_of_the_day_returns_the_previous_day_alongside_today(
     client: TestClient,
+    potd_url: str,
     potd_provider: WikimediaPictureOfTheDayProvider,
     potd: PictureOfTheDay,
 ) -> None:
     """Serves today's picture with the previous day's picture nested under `previous`."""
     potd_provider.potd = potd
 
-    response = client.get(POTD_URL)
+    response = client.get(potd_url)
 
     assert response.status_code == 200
     assert response.json() == {
@@ -52,13 +70,14 @@ def test_picture_of_the_day_returns_the_previous_day_alongside_today(
 @freezegun.freeze_time("2026-06-07")
 def test_picture_of_the_day_omits_the_localization_map_at_both_levels(
     client: TestClient,
+    potd_url: str,
     potd_provider: WikimediaPictureOfTheDayProvider,
     potd: PictureOfTheDay,
 ) -> None:
     """Keeps the server-side localization map out of the response, nested one included."""
     potd_provider.potd = potd
 
-    body = client.get(POTD_URL).json()
+    body = client.get(potd_url).json()
 
     assert "localized_descriptions" not in body
     assert "localized_descriptions" not in body["previous"]
@@ -67,13 +86,14 @@ def test_picture_of_the_day_omits_the_localization_map_at_both_levels(
 @freezegun.freeze_time("2026-06-07")
 def test_picture_of_the_day_localizes_both_descriptions_for_accept_language(
     client: TestClient,
+    potd_url: str,
     potd_provider: WikimediaPictureOfTheDayProvider,
     potd: PictureOfTheDay,
 ) -> None:
     """Swaps in the client's language for today's description and the previous day's."""
     potd_provider.potd = potd
 
-    body = client.get(POTD_URL, headers={"Accept-Language": "de-DE,de;q=0.9"}).json()
+    body = client.get(potd_url, headers={"Accept-Language": "de-DE,de;q=0.9"}).json()
 
     assert body["description"] == "Heutiger deutscher Text"
     assert body["previous"]["description"] == "Gestriger deutscher Text"
@@ -82,13 +102,14 @@ def test_picture_of_the_day_localizes_both_descriptions_for_accept_language(
 @freezegun.freeze_time("2026-06-07")
 def test_picture_of_the_day_keeps_default_descriptions_for_an_unmatched_language(
     client: TestClient,
+    potd_url: str,
     potd_provider: WikimediaPictureOfTheDayProvider,
     potd: PictureOfTheDay,
 ) -> None:
     """Serves the default descriptions when the client's language has no localization."""
     potd_provider.potd = potd
 
-    body = client.get(POTD_URL, headers={"Accept-Language": "fr-FR"}).json()
+    body = client.get(potd_url, headers={"Accept-Language": "fr-FR"}).json()
 
     assert body["description"] == "Today's description."
     assert body["previous"]["description"] == "Yesterday's description."
@@ -97,26 +118,43 @@ def test_picture_of_the_day_keeps_default_descriptions_for_an_unmatched_language
 @freezegun.freeze_time("2026-06-07")
 def test_picture_of_the_day_returns_previous_as_null_when_there_is_no_previous_day(
     client: TestClient,
+    potd_url: str,
     potd_provider: WikimediaPictureOfTheDayProvider,
     potd: PictureOfTheDay,
 ) -> None:
     """Always sends the `previous` key, as null, so clients see one response shape."""
     potd_provider.potd = potd.model_copy(update={"previous": None})
 
-    body = client.get(POTD_URL).json()
+    body = client.get(potd_url).json()
 
     assert body["previous"] is None
 
 
 def test_picture_of_the_day_returns_null_when_nothing_is_cached(
     client: TestClient,
+    potd_url: str,
     potd_provider: WikimediaPictureOfTheDayProvider,
     backend_mock,
 ) -> None:
     """Serves a null body when no picture has ever been cached, exclusions notwithstanding."""
     backend_mock.fetch_potd_from_gcs_bucket.return_value = None
 
-    response = client.get(POTD_URL)
+    response = client.get(potd_url)
+
+    assert response.status_code == 200
+    assert response.json() is None
+
+
+def test_picture_of_the_day_returns_null_when_the_provider_fails(
+    client: TestClient,
+    potd_url: str,
+    potd_provider: WikimediaPictureOfTheDayProvider,
+    mocker: MockerFixture,
+) -> None:
+    """Serves a null body instead of an error when fetching the picture raises."""
+    mocker.patch.object(potd_provider, "get_picture_of_the_day", side_effect=RuntimeError("boom"))
+
+    response = client.get(potd_url)
 
     assert response.status_code == 200
     assert response.json() is None
