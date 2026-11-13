@@ -1,0 +1,4145 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "FastAPI",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/": {
+      "get": {
+        "summary": "Redirect Home To Docs",
+        "description": "Redirects home endpoint to the interactive documentation provided by FastAPI.",
+        "operationId": "redirect_home_to_docs__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/__version__": {
+      "get": {
+        "tags": [
+          "__version__"
+        ],
+        "summary": "Dockerflow: __version__",
+        "description": "Dockerflow: Query service version.",
+        "operationId": "version___version___get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Version"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/__heartbeat__": {
+      "get": {
+        "tags": [
+          "__heartbeat__"
+        ],
+        "summary": "Dockerflow: __heartbeat__",
+        "description": "Dockerflow: Query service heartbeat. It returns an empty string in the response.",
+        "operationId": "heartbeat___heartbeat___get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/__lbheartbeat__": {
+      "get": {
+        "tags": [
+          "__lbheartbeat__"
+        ],
+        "summary": "Dockerflow: __lbheartbeat__",
+        "description": "Dockerflow: Query service heartbeat for load balancer. It returns an empty string in the\nresponse.",
+        "operationId": "lbheartbeat___lbheartbeat___get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/__error__": {
+      "get": {
+        "tags": [
+          "__error__"
+        ],
+        "summary": "Dockerflow: __error__",
+        "description": "Dockerflow: Return an API error to test service error handling.",
+        "operationId": "test_error___error___get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/suggest": {
+      "get": {
+        "tags": [
+          "suggest"
+        ],
+        "summary": "Merino suggest endpoint",
+        "description": "Query Merino for suggestions.\n\nThis is the primary endpoint that consumes user input and suggests\npages the user may want to visit. The expectation is that\nthis is shown alongside other content the browser suggests\nto the user, such as bookmarks and history.\n\nThis endpoint accepts GET requests and takes parameters as query string values\nand headers.\n\n**Args:**\n\n- `q`: The query that the user has typed. This is expected to be a partial\n    input, sent as fast as once per keystroke, though a slower period may be\n    appropriate for the user agent.\n- `city`: [Optional] City name. E.g. “New York”. If provided,\n    Accuweather provider returns weather suggestions based on this city. Note: If provided,\n    `region` and `country` must also be provided to successfully return weather suggestions.\n- `country`: [Optional] ISO 3166-2 country code. E.g.: “US”. If provided,\n    Accuweather provider returns weather suggestions based on this country. Note: If provided,\n    `city` and `region` must also be provided to successfully return weather suggestions.\n- `region`: [Optional] Comma separated string of subdivision code(s). This may contain FIPs codes\n    and/or iso codes. If provided, Accuweather provider will try to return weather suggestions based on this region(s).\n    Note: If provided,`city` and `country` must also be provided to successfully return weather suggestions.\n- `source`: [Optional] Identifier of which part of firefox the request comes from.\n- `client_variants`: [Optional] A comma-separated list of any experiments or\n    rollouts that are affecting the client's Suggest experience. If Merino\n    recognizes any of them it will modify its behavior accordingly.\n- `providers`: [Optional] A comma-separated list of providers to use for this\n    request. See the `/providers` endpoint below for valid options. If provided,\n    only suggestions from the listed providers will be returned. If not provided,\n    Merino will use a built-in default set of providers. The default set of\n    providers can be seen in the `/providers` endpoint. Supplying the `default`\n    value to the `providers` parameter will return suggestions from the default providers.\n    You can then pass other providers that are not enabled after `default`,\n    allowing for customization of the suggestion request.\n- `request_type`: [Optional] For AccuWeather provider, the request type should be either a\n    \"location\" or \"weather\" string. For \"location\" it will get location completion\n    suggestion. For \"weather\" it will return weather suggestions. If omitted, it defaults\n    to weather suggestions. For the Polygon provider with `source=newtab`, the\n    \"ticker_search\" request type searches tickers by symbol or company name and returns\n    candidate matches instead of prices.\n\n**Headers:**\n\n- `Accept-Language` - The locale preferences expressed in this header in\n  accordance with [RFC 2616 section 14.4][rfc-2616-14-4] will be used to\n  determine suggestions. Merino maintains a list of supported locales. Merino\n  will choose the locale from its list that has the highest `q` (quality) value\n  in the user's `Accept-Language` header. Locales with `q=0` will not be used.\n\n  If no locales match, Merino will not return any suggestions. If the header is\n  not included or empty, Merino will default to the `en-US` locale.\n\n  If the highest quality, compatible language produces no suggestion results,\n  Merino will return an empty list instead of attempting to query other\n  languages.\n\n- `User-Agent` - A user's device form factor, operating system, and\n  browser/Firefox version are detected from the `User-Agent` header included in\n  the request.\n\n[rfc-2616-14-4]: https://datatracker.ietf.org/doc/html/rfc2616/#section-14.4\n\n**Other derived inputs:**\n\n- Location - The IP address of the user or nearest proxy will be used to\n  determine location. This location may be as granular as city level, depending\n  on server configuration.\n\n  Users that use VPN services will be identified according to the VPN exit node\n  they use, allowing them to change Merino's understanding of their location.\n  VPN exit nodes are often mis-identified in geolocation databases, and may\n  produce unreliable results.\n\n\n**Returns:**\n\nThe response will be a JSON object containing the following keys:\n- `client_variants` - A list of strings specified from the `client_variants`\n    parameter in the request.\n- `server_variants` - A list of strings indicating the server variants.\n- `request_id` - A string identifier identifying every API request sent from Firefox.\n- `suggestions` - A list of suggestions or an empty list if nothing was found.\n    Please look at the documentation for `BaseSuggestion` model for information\n    about what the model contains.\nor 204 - No content if a weather request is made and no weather was found for the location.\n\n**Response Headers:**\n\nResponses will carry standard HTTP caching headers that indicate the validity of\nthe suggestions. User agents should prefer to provide the user with cached\nresults as indicated by these headers.",
+        "operationId": "suggest_api_v1_suggest_get",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 500,
+              "title": "Q"
+            }
+          },
+          {
+            "name": "country",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 2,
+                  "maxLength": 2
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Country"
+            }
+          },
+          {
+            "name": "region",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 500
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Region"
+            }
+          },
+          {
+            "name": "city",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 500
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "City"
+            }
+          },
+          {
+            "name": "source",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "urlbar",
+                "newtab",
+                "unknown"
+              ],
+              "type": "string",
+              "maxLength": 500,
+              "default": "unknown",
+              "title": "Source"
+            }
+          },
+          {
+            "name": "providers",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Providers"
+            }
+          },
+          {
+            "name": "client_variants",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 100
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Client Variants"
+            }
+          },
+          {
+            "name": "request_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^(location|weather|ticker_search)$"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Request Type"
+            }
+          },
+          {
+            "name": "accept-language",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 100
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Accept-Language"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuggestResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/providers": {
+      "get": {
+        "tags": [
+          "providers"
+        ],
+        "summary": "Merino provider endpoint",
+        "description": "Query Merino for suggestion providers.\n\nThis endpoint gives a list of available providers, along with their\n_availability_. It accepts GET requests and takes no parameters.\n\n**Returns:**\nThe response will be a JSON object containing the key `providers`, which is a\nmap where the keys to this map are the IDs of the provider, and the values are\nprovider metadata object. Each provider metadata object will have the following\nformat:\n\n- `id` - A string that can be used to identify this provider. This ID can be\n    used for the `providers` field of the suggest API.\n- `availability` - A string describing how this provider is used in Merino. It\n    will be one of:\n    - `\"enabled_by_default\"` - This provider will be used for requests that don't\n        specify providers, and it should be provided to the user as a selection that\n        can be turned off.\n    - `\"disabled_by_default\"` - This provider is not used automatically. It should\n        be provided to the user as a selection that could be turned on.\n    - `\"hidden\"` - This provider is not used automatically. It should not be\n        provided to the user as an option to turn on. It may be used for debugging\n        or other internal uses.",
+        "operationId": "providers_api_v1_providers_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ProviderResponse"
+                  },
+                  "type": "array",
+                  "title": "Response Providers Api V1 Providers Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/curated-recommendations": {
+      "post": {
+        "summary": "Curated recommendations for New Tab",
+        "description": "Query Merino for curated recommendations.\n\nThis endpoint accepts POST requests and takes parameters as a JSON body.\n\n**JSON body:**\n\n- `locale`: The Firefox installed locale, for example en, en-US, de-DE.\n    See the Request body schema below for the full list of supported values.\n    This will determine the language of the recommendations.\n- `region`: [Optional] The country-level region, for example US or IE (Ireland).\n    This will help return more relevant recommendations. If `region` is missing or cannot\n    be parsed as a 2-letter code, it is derived from the second part of the `locale`\n    parameter, if present (e.g. en-US -> US).\n- `count`: [Optional] The maximum number of recommendations in the legacy grid response\n    (the `data` list). Defaults to 100. Ignored when the sections feed is requested.\n- `feeds`: [Optional] A list of feeds to include; \"sections\" is the only recognized value.\n    When \"sections\" is requested, recommendations are grouped into topic sections in the\n    `feeds` response field; otherwise a legacy grid response is returned in `data`.\n- `sections`: [Optional] The user's followed and blocked sections. Followed sections rank\n    directly below the top stories section (`followedAt` orders them). Blocking removes\n    recommendations whose topic matches the blocked section id; other blocked sections are\n    only flagged `isBlocked`. Only affects responses with sections.\n- `enableInterestPicker`: [Optional] When true and sections are returned, sections get\n    `isInitiallyVisible` set, and the response includes an interest picker (a prompt to\n    follow more sections) if at least 8 followable sections are not initially visible.\n- `inferredInterests`: [Optional] A dictionary of interests with relative values, computed\n    locally by the client; it must include a `model_id` to affect ranking. Personalizes the\n    ranking of sections and items. When present, the response includes `inferredLocalModel`.\n- `coarseOs`: [Optional] Coarse operating system (mac, win, linux, android, ios, other).\n    Reserved for future use; it currently does not affect the response.\n- `utcOffset`: [Optional] The user's UTC offset in hours (0-23). Reserved for future use;\n    it currently does not affect the response.\n- `experimentName`: [Optional] The Nimbus New Tab experiment name that the user is enrolled in.\n    When an experiment _only_ requires backend changes, this allows us to run the experiments\n    without waiting on the Firefox release cycle. When an experiment _does_ require changes in\n    Firefox, other parameters can be changed, such as we did for topic preferences. The API\n    schema does not list all New Tab experiments; only those which the backend uses to change\n    its behavior. Any string or null is accepted.\n- `experimentBranch`: [Optional] The branch name of the Nimbus experiment that the user is in.\n\nUnknown body parameters are accepted and ignored, including the retired `topics` parameter.",
+        "operationId": "curated_content_api_v1_curated_recommendations_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CuratedRecommendationsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CuratedRecommendationsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/curated-recommendations/legacy-115-129": {
+      "get": {
+        "summary": "Curated Recommendations for New Tab Firefox v115-129",
+        "description": "Query for a list of curated content recommendations for legacy Firefox desktop clients\n(versions 115–129) using the legacy schema structure.\n\nThis endpoint maps modern recommendation data into a response format compatible with\nolder Firefox versions that expect the original `/desktop/v1/recommendations` structure.\n\nQuery parameters:\n- `locale`: The Firefox installed locale, for example en, en-US, de-DE.\n    See the Request body schema below for the full list of supported values.\n    This will determine the language of the recommendations.\n- `region`: [Optional] The country-level region, for example US or IE (Ireland).\n    This will help return more relevant recommendations. If `region` is not provided,\n    then region is extracted from the `locale` parameter if it contains two parts (e.g. en-US).\n- `count`: [Optional] The maximum number of recommendations to return. Defaults to 30.",
+        "operationId": "curated_content_legacy_fx_115_129_api_v1_curated_recommendations_legacy_115_129_get",
+        "parameters": [
+          {
+            "name": "locale",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Locale"
+            }
+          },
+          {
+            "name": "region",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Region"
+            }
+          },
+          {
+            "name": "count",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "maximum": 30,
+                  "minimum": 1
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": 30,
+              "title": "Count"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CuratedRecommendationsLegacyFx115Fx129Response"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/curated-recommendations/legacy-114": {
+      "get": {
+        "summary": "Legacy Recommendations for New Tab Fx <= 114",
+        "description": "Query for a list of curated content recommendations for legacy Firefox desktop clients\n(versions <= 114) using the legacy schema structure.\n\nThis endpoint maps modern recommendation data into a response format compatible with\nolder Firefox versions that expect the original `/v3/firefox/global-recs` structure.\n\nQuery parameters:\n- `locale_lang`: The Firefox installed locale, for example en, en-US, de-DE.\n    See the Request body schema below for the full list of supported values.\n    This will determine the language of the recommendations.\n- `region`: [Optional] The country-level region, for example US or IE (Ireland).\n    This will help return more relevant recommendations. If `region` is not provided,\n    then region is extracted from the `locale` parameter if it contains two parts (e.g. en-US).\n- `count`: [Optional] The maximum number of recommendations to return. Defaults to 10.",
+        "operationId": "curated_content_legacy_fx_114_api_v1_curated_recommendations_legacy_114_get",
+        "parameters": [
+          {
+            "name": "locale_lang",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Locale"
+            }
+          },
+          {
+            "name": "region",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Region"
+            }
+          },
+          {
+            "name": "count",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "maximum": 50,
+                  "minimum": 1
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": 20,
+              "title": "Count"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CuratedRecommendationsLegacyFx114Response"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/manifest": {
+      "get": {
+        "tags": [
+          "manifest"
+        ],
+        "summary": "Get latest website favicons manifest",
+        "description": "Returns the full manifest, plus an ``ETag`` derived from the underlying GCS generation. Clients that cache the manifest should send the ETag back as ``If-None-Match`` on subsequent requests; when the manifest has not changed the server replies with ``304 Not Modified`` and an empty body.",
+        "operationId": "get_manifest_api_v1_manifest_get",
+        "parameters": [
+          {
+            "name": "if-none-match",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-None-Match"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManifestData"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/weather/hourly-forecasts": {
+      "get": {
+        "tags": [
+          "weather"
+        ],
+        "summary": "Get hourly Forecasts",
+        "description": "Query merino for hourly forecast data.\n\n**Args**:\n- `country`: [Optional] ISO 3166-2 country code. E.g.: “US”. If provided,\n    Accuweather provider returns hourly forecasts based on this country. Note: If provided,\n    `city` and `region` must also be provided to successfully return hourly forecasts.\n- `region`: [Optional] Comma separated string of subdivision code(s). This may contain FIPs codes\n    and/or iso codes. If provided, Accuweather provider will try to return hourly forecasts based on this region(s).\n    Note: If provided,`city` and `country` must also be provided to successfully return hourly forecasts.\n- `city`: [Optional] City name. E.g. “New York”. If provided,\n    Accuweather provider returns hourly forecasts based on this city. Note: If provided,\n    `region` and `country` must also be provided to successfully return hourly forecasts.\n- provider: Injected weather provider dependecy used to fetch hourly forecasts data.\n\n**Headers**:\n- `Accept-Language` - The locale preferences expressed in this header in\n  accordance with [RFC 2616 section 14.4][rfc-2616-14-4] will be used to\n  determine suggestions. Merino maintains a list of supported locales. Merino\n  will choose the locale from its list that has the highest `q` (quality) value\n  in the user's `Accept-Language` header. Locales with `q=0` will not be used.\n\n  If no locales match, Merino will not return any suggestions. If the header is\n  not included or empty, Merino will default to the `en-US` locale.\n\n  If the highest quality, compatible language produces no suggestion results,\n  Merino will return an empty list instead of attempting to query other\n  languages.",
+        "operationId": "get_hourly_forecasts_api_v1_weather_hourly_forecasts_get",
+        "parameters": [
+          {
+            "name": "country",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 2,
+                  "maxLength": 2
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Country"
+            }
+          },
+          {
+            "name": "region",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 500
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Region"
+            }
+          },
+          {
+            "name": "city",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 500
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "City"
+            }
+          },
+          {
+            "name": "accept-language",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 100
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Accept-Language"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/HourlyForecast"
+                  },
+                  "title": "Response Get Hourly Forecasts Api V1 Weather Hourly Forecasts Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/rss/picture-of-the-day": {
+      "get": {
+        "tags": [
+          "rss"
+        ],
+        "summary": "Get picture of the day",
+        "description": "Get the picture of the day, localized to the client's Accept-Language when available.",
+        "operationId": "get_picture_of_the_day_api_v1_rss_picture_of_the_day_get",
+        "parameters": [
+          {
+            "name": "accept-language",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 100
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Accept-Language"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PictureOfTheDay"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/games/particle": {
+      "get": {
+        "tags": [
+          "Games"
+        ],
+        "summary": "Particle game for New Tab",
+        "description": "Return a JSON object containing the public URL for the Particle game.",
+        "operationId": "get_game_particle_api_v1_games_particle_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Particle"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/widgets/wrexham/matches": {
+      "get": {
+        "tags": [
+          "widgets"
+        ],
+        "summary": "Wrexham AFC matches",
+        "description": "Return Wrexham's EFL Championship and FA Cup matches, grouped into previous,\ncurrent and upcoming.\n\n**Args**:\n- `limit`: [Optional] Maximum number of previous and upcoming matches. Defaults to 5.",
+        "operationId": "get_wrexham_matches_api_v1_widgets_wrexham_matches_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 5,
+              "minimum": 1,
+              "description": "Maximum number of previous and upcoming matches to return.",
+              "default": 5,
+              "title": "Limit"
+            },
+            "description": "Maximum number of previous and upcoming matches to return."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MatchesResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Wrexham data can't be read right now.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/widgets/wrexham/standings": {
+      "get": {
+        "tags": [
+          "widgets"
+        ],
+        "summary": "EFL Championship standings",
+        "description": "Return the EFL Championship table, ordered by league position. The table is empty when\nnone is available yet, e.g. before the season starts.",
+        "operationId": "get_wrexham_standings_api_v1_widgets_wrexham_standings_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandingsResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Wrexham data can't be read right now.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/widgets/framed": {
+      "get": {
+        "tags": [
+          "widgets"
+        ],
+        "summary": "All enabled widgets intended to be displayed in iframes",
+        "description": "Query merino for framed widgets.\n\n**Args**:\n- locale: optionally provided by the caller, defaults to en-US (future-proofing design)\n- provider: Injected iframed widgets provider dependency used to build response.",
+        "operationId": "get_iframed_widgets_api_v1_widgets_framed_get",
+        "parameters": [
+          {
+            "name": "locale",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 16,
+              "default": "en-US",
+              "title": "Locale"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FramedWidgetsApiResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/widgets/travel": {
+      "get": {
+        "tags": [
+          "widgets"
+        ],
+        "summary": "Travel listings",
+        "description": "Query merino for travel listings.\n\n**Args**:\n- `vertical`: Travel vertical, one of `hotels`, `flights` or `cars`.\n- `q`: The search query, between 3 and 64 characters.\n- `market`: [Optional] Two-letter market (country) code, e.g. `US`, `GB`. Defaults to `US`.\n- provider: Injected travel provider dependency used to fetch listings.\n\n**Headers**:\n- `Accept-Language` - The primary language subtag of the highest `q` (quality) value\n  locale in this header is used to localize listings. If the header is not included,\n  empty or cannot be parsed, Merino will default to `en`.",
+        "operationId": "get_travel_listings_api_v1_widgets_travel_get",
+        "parameters": [
+          {
+            "name": "vertical",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "enum": [
+                "hotels",
+                "flights",
+                "cars"
+              ],
+              "type": "string",
+              "title": "Vertical"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 64,
+              "title": "Q"
+            }
+          },
+          {
+            "name": "market",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 2,
+              "pattern": "^[A-Za-z]{2}$",
+              "default": "US",
+              "title": "Market"
+            }
+          },
+          {
+            "name": "accept-language",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 100
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Accept-Language"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TravelListing"
+                  },
+                  "title": "Response Get Travel Listings Api V1 Widgets Travel Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AirlineDetails": {
+        "properties": {
+          "code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "color": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Color"
+          },
+          "icon": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2083,
+                "minLength": 1,
+                "format": "uri"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Icon"
+          }
+        },
+        "type": "object",
+        "title": "AirlineDetails",
+        "description": "Details of the operating airline for a flight"
+      },
+      "AirportDetails": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "city": {
+            "type": "string",
+            "title": "City"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "city"
+        ],
+        "title": "AirportDetails",
+        "description": "Details of origin/destination airport"
+      },
+      "AmoDetails": {
+        "properties": {
+          "rating": {
+            "type": "string",
+            "title": "Rating"
+          },
+          "number_of_ratings": {
+            "type": "integer",
+            "title": "Number Of Ratings"
+          },
+          "guid": {
+            "type": "string",
+            "title": "Guid"
+          }
+        },
+        "type": "object",
+        "required": [
+          "rating",
+          "number_of_ratings",
+          "guid"
+        ],
+        "title": "AmoDetails",
+        "description": "Addon specific fields."
+      },
+      "AmpDetails": {
+        "properties": {
+          "header_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Header Text"
+          },
+          "suggestion_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suggestion Id"
+          }
+        },
+        "type": "object",
+        "title": "AmpDetails",
+        "description": "AMP specific fields."
+      },
+      "BaseSuggestion": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "description": "The full title of the suggestion resulting from the query. Using the example of apples above, 'this might be \"Types of Apples in the Pacific Northwest\". This field should be treated as plain text."
+          },
+          "url": {
+            "type": "string",
+            "maxLength": 2083,
+            "minLength": 1,
+            "format": "uri",
+            "title": "Url",
+            "description": " The URL of the page that should be navigated to if the user selects this suggestion. This will be a resource with the title specified in the `title` field."
+          },
+          "provider": {
+            "type": "string",
+            "title": "Provider",
+            "description": "A string that identifies the provider of this suggestion, such as \"adM\". In general, this field is not intended to be directly displayed to the user."
+          },
+          "is_sponsored": {
+            "type": "boolean",
+            "title": "Is Sponsored",
+            "description": "A boolean indicating if this suggestion is sponsored content. If this is true, the UI must indicate to the user that the suggestion is sponsored."
+          },
+          "score": {
+            "type": "number",
+            "title": "Score",
+            "description": "A value between 0.0 and 1.0 used to compare suggestions. When choosing a suggestion to show the user, higher scored suggestions are preferred."
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description",
+            "description": "[Optional] Text description of the suggestion."
+          },
+          "icon": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Icon",
+            "description": "[Optional] A URL of an image to display alongside the suggestion.This will be a small square image, suitable to be included inline with the text, such as a site's favicon."
+          },
+          "custom_details": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CustomDetails"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "[Optional] Object that contains provider specific fields.`custom_details` is keyed by the provider name and references custom schemas."
+          },
+          "categories": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/Category"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Categories",
+            "description": "[Optional] List that contains categories associated to the suggestion."
+          },
+          "is_top_pick": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Top Pick",
+            "description": "[Optional] indicating if the suggestion requires a 'top pick' UI treatment."
+          }
+        },
+        "type": "object",
+        "required": [
+          "title",
+          "url",
+          "provider",
+          "is_sponsored",
+          "score"
+        ],
+        "title": "BaseSuggestion",
+        "description": "Base model for suggestions.\n\n**Deprecation Notice:**\nThe original usage of this model was to extend it for specific providers.\nThese extended suggestions added extra fields to the top level of `BaseSuggestion`.\nFor completeness (as the autogenerated documentation cannot access these models)\nwe will reference the extra fields that the Suggestion object may also include\nin this documentation.\nFor adding new Providers with custom suggestion fields, we should be adding to the\n`CustomDetails` object.\nFor more context and list of providers affected, please consult\n[this ADR](https://mozilla-services.github.io/merino-py/adr/0002-merino-general-response.html).\n\nExtra Provider Specific Fields:\n-------------------------------\n\n- `block_id` - A number that can be used, along with the `provider` field below,\n  to uniquely identify this suggestion. Two suggestions with the same `provider`\n  and `block_id` should be treated as the same suggestion, even if other fields,\n  such as `click_url` change. Merino will enforce that they are equivalent from\n  a user's point of view.\n- `full_keyword` - In the case that the query was a partial match to the\n  suggestion, this is the completed query that would also match this query. For\n  example, if the user was searching for fruit and typed \"appl\", this field\n  might contain the string \"apples\". This is suitable to show as a completion of\n  the user's input. This field should be treated as plain text.\n- `impression_url` - A provider specified telemetry URL that should be notified\n  if the browser shows this suggestion to the user. This is used along with\n  `click_url` to monitor the relevancy of suggestions. This field may be null, in\n  which case no impression ping is required for this suggestion provider.\n- `click_url` - A provider specified telemetry URL that should be notified if\n  the user selects this suggestion. This should only be notified as the result\n  of positive user action, and only if the user has navigated to the page\n  specified in the `url` field. This field may be null, in\n  which case no click ping is required for this suggestion provider.\n- `advertiser` - The name of the advertiser, such as \"Nike\". Note that a `provider`\n  could have multiple `advertiser`s.\n- `is_sponsored` - A boolean indicating if this suggestion is sponsored content.\n  If this is true, the UI must indicate to the user that the suggestion is\n  sponsored.\n- `is_top_pick` - A boolean indicating if the suggestion requires a \"top pick\"\n  UI treatment.\n- `city_name` - A string representing the city name. To be used with weather suggestions.\n- `current_conditions` - An object that contains the current weather conditions for a location.\n  To be used with weather suggestions. Please reference `CurrentCondition` model\n  for more information.\n- `forecast` - An object that contains the one-day weather forecast information.\n  To be used with weather suggestions. Please reference `Forecast` model for more information."
+      },
+      "Category": {
+        "type": "integer",
+        "enum": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19
+        ],
+        "title": "Category",
+        "description": "Enum of possible SERP categories (interests) for a suggestion."
+      },
+      "CoarseOS": {
+        "type": "string",
+        "enum": [
+          "mac",
+          "win",
+          "linux",
+          "android",
+          "ios",
+          "other"
+        ],
+        "title": "CoarseOS",
+        "description": "Supported operating systems at a coarse granularity."
+      },
+      "Competition": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id",
+            "description": "SportsDataIO competition ID."
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Competition name."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "Competition",
+        "description": "A competition a match belongs to."
+      },
+      "Coordinates": {
+        "properties": {
+          "latitude": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latitude"
+          },
+          "longitude": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Longitude"
+          },
+          "radius": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Radius"
+          }
+        },
+        "type": "object",
+        "title": "Coordinates",
+        "description": "Data model for coordinates for geolocation."
+      },
+      "CuratedRecommendation": {
+        "properties": {
+          "corpusItemId": {
+            "type": "string",
+            "title": "Corpusitemid"
+          },
+          "scheduledCorpusItemId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scheduledcorpusitemid"
+          },
+          "url": {
+            "type": "string",
+            "maxLength": 2083,
+            "minLength": 1,
+            "format": "uri",
+            "title": "Url"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "excerpt": {
+            "type": "string",
+            "title": "Excerpt"
+          },
+          "topic": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Topic"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "publisher": {
+            "type": "string",
+            "title": "Publisher"
+          },
+          "isTimeSensitive": {
+            "type": "boolean",
+            "title": "Istimesensitive"
+          },
+          "imageUrl": {
+            "type": "string",
+            "maxLength": 2083,
+            "minLength": 1,
+            "format": "uri",
+            "title": "Imageurl"
+          },
+          "iconUrl": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2083,
+                "minLength": 1,
+                "format": "uri"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Iconurl"
+          },
+          "tileId": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 9007199254740991.0,
+                "minimum": 10000000.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tileid"
+          },
+          "receivedRank": {
+            "type": "integer",
+            "title": "Receivedrank"
+          },
+          "variantId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Variantid",
+            "default": 0
+          },
+          "sourceSectionId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourcesectionid"
+          },
+          "serverScore": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Serverscore"
+          },
+          "features": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Features",
+            "description": "Maps feature names to weights, which the client can use to create a coarse interest vector."
+          }
+        },
+        "type": "object",
+        "required": [
+          "corpusItemId",
+          "url",
+          "title",
+          "excerpt",
+          "publisher",
+          "isTimeSensitive",
+          "imageUrl",
+          "receivedRank"
+        ],
+        "title": "CuratedRecommendation",
+        "description": "Extends CorpusItem with additional fields for a curated recommendation"
+      },
+      "CuratedRecommendationLegacyFx114": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "url": {
+            "type": "string",
+            "maxLength": 2083,
+            "minLength": 1,
+            "format": "uri",
+            "title": "Url"
+          },
+          "excerpt": {
+            "type": "string",
+            "title": "Excerpt"
+          },
+          "domain": {
+            "type": "string",
+            "title": "Domain"
+          },
+          "image_src": {
+            "type": "string",
+            "maxLength": 2083,
+            "minLength": 1,
+            "format": "uri",
+            "title": "Image Src"
+          },
+          "raw_image_src": {
+            "type": "string",
+            "maxLength": 2083,
+            "minLength": 1,
+            "format": "uri",
+            "title": "Raw Image Src"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "url",
+          "excerpt",
+          "domain",
+          "image_src",
+          "raw_image_src"
+        ],
+        "title": "CuratedRecommendationLegacyFx114",
+        "description": "Schema for a single legacy Fx114 recommendation."
+      },
+      "CuratedRecommendationLegacyFx115Fx129": {
+        "properties": {
+          "__typename": {
+            "type": "string",
+            "title": "Typename",
+            "default": "Recommendation"
+          },
+          "recommendationId": {
+            "type": "string",
+            "title": "Recommendationid"
+          },
+          "tileId": {
+            "type": "integer",
+            "title": "Tileid"
+          },
+          "url": {
+            "type": "string",
+            "maxLength": 2083,
+            "minLength": 1,
+            "format": "uri",
+            "title": "Url"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "excerpt": {
+            "type": "string",
+            "title": "Excerpt"
+          },
+          "publisher": {
+            "type": "string",
+            "title": "Publisher"
+          },
+          "imageUrl": {
+            "type": "string",
+            "maxLength": 2083,
+            "minLength": 1,
+            "format": "uri",
+            "title": "Imageurl"
+          }
+        },
+        "type": "object",
+        "required": [
+          "recommendationId",
+          "tileId",
+          "url",
+          "title",
+          "excerpt",
+          "publisher",
+          "imageUrl"
+        ],
+        "title": "CuratedRecommendationLegacyFx115Fx129",
+        "description": "Schema for a single desktop legacy recommendation."
+      },
+      "CuratedRecommendationsLegacyFx114Response": {
+        "properties": {
+          "status": {
+            "type": "integer",
+            "title": "Status",
+            "default": 1
+          },
+          "spocs": {
+            "items": {},
+            "type": "array",
+            "title": "Spocs"
+          },
+          "settings": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Settings",
+            "default": {
+              "domainAffinityParameterSets": {},
+              "timeSegments": [
+                {
+                  "endTime": 0,
+                  "id": "week",
+                  "startTime": 604800,
+                  "weightPosition": 1
+                },
+                {
+                  "endTime": 604800,
+                  "id": "month",
+                  "startTime": 2592000,
+                  "weightPosition": 0.5
+                }
+              ],
+              "recsExpireTime": 5400,
+              "spocsPerNewTabs": 0.5,
+              "version": "6f605b0212069b4b8d3d040faf55742061a25c16"
+            }
+          },
+          "recommendations": {
+            "items": {
+              "$ref": "#/components/schemas/CuratedRecommendationLegacyFx114"
+            },
+            "type": "array",
+            "title": "Recommendations"
+          }
+        },
+        "type": "object",
+        "required": [
+          "recommendations"
+        ],
+        "title": "CuratedRecommendationsLegacyFx114Response",
+        "description": "Response schema for a list of curated recommendations for\n/curated-recommendations/legacy-114 endpoint"
+      },
+      "CuratedRecommendationsLegacyFx115Fx129Response": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/CuratedRecommendationLegacyFx115Fx129"
+            },
+            "type": "array",
+            "title": "Data"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "CuratedRecommendationsLegacyFx115Fx129Response",
+        "description": "Response schema for a list of curated recommendations for\nthe /curated-recommendations/legacy-115-129 endpoint"
+      },
+      "CuratedRecommendationsRequest": {
+        "properties": {
+          "locale": {
+            "$ref": "#/components/schemas/Locale"
+          },
+          "region": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Region"
+          },
+          "coarseOs": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CoarseOS"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "utc_offset": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 23.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Utc Offset",
+            "description": "UTC offset in hours. Must be between 0 and 23 inclusive."
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count",
+            "default": 100
+          },
+          "feeds": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Feeds"
+          },
+          "sections": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/SectionConfiguration"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sections"
+          },
+          "experimentName": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ExperimentName"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Experimentname"
+          },
+          "experimentBranch": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Experimentbranch"
+          },
+          "enableInterestPicker": {
+            "type": "boolean",
+            "title": "Enableinterestpicker",
+            "default": false
+          },
+          "inferredInterests": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/InferredInterests"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "locale"
+        ],
+        "title": "CuratedRecommendationsRequest",
+        "description": "Body schema for requesting a list of curated recommendations"
+      },
+      "CuratedRecommendationsResponse": {
+        "properties": {
+          "recommendedAt": {
+            "type": "integer",
+            "title": "Recommendedat"
+          },
+          "surfaceId": {
+            "$ref": "#/components/schemas/SurfaceId"
+          },
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/CuratedRecommendation"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "feeds": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/Section"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Feeds"
+          },
+          "interestPicker": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/InterestPicker"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "inferredLocalModel": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/InferredLocalModel"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "recommendedAt",
+          "surfaceId",
+          "data"
+        ],
+        "title": "CuratedRecommendationsResponse",
+        "description": "Response schema for a list of curated recommendations"
+      },
+      "CustomDetails": {
+        "properties": {
+          "amo": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AmoDetails"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "amp": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AmpDetails"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "geolocation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GeolocationDetails"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "weather": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WeatherDetails"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "polygon": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PolygonDetails"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "yelp": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/YelpDetails"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sports": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SportEventDetails"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "flightaware": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FlightAwareDetails"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "title": "CustomDetails",
+        "description": "Contain references to custom fields for each provider.\nThis object uses the provider name as the key, and references custom schema models.\nPlease consult the custom details object for more information."
+      },
+      "DayTimeWeightingConfig": {
+        "properties": {
+          "days": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Days"
+          },
+          "relative_weight": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Relative Weight"
+          }
+        },
+        "type": "object",
+        "required": [
+          "days",
+          "relative_weight"
+        ],
+        "title": "DayTimeWeightingConfig",
+        "description": "Day ranges and relative weights. 1 is no special weighting. Each list (days and relative_weight) must have the same length"
+      },
+      "Domain": {
+        "properties": {
+          "rank": {
+            "type": "integer",
+            "title": "Rank"
+          },
+          "domain": {
+            "type": "string",
+            "title": "Domain"
+          },
+          "categories": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Categories"
+          },
+          "serp_categories": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Serp Categories"
+          },
+          "url": {
+            "type": "string",
+            "maxLength": 2083,
+            "minLength": 1,
+            "format": "uri",
+            "title": "Url"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "icon": {
+            "type": "string",
+            "title": "Icon"
+          }
+        },
+        "type": "object",
+        "required": [
+          "rank",
+          "domain",
+          "categories",
+          "serp_categories",
+          "url",
+          "title",
+          "icon"
+        ],
+        "title": "Domain",
+        "description": "Model for a domain within a manifest."
+      },
+      "ErrorResponse": {
+        "properties": {
+          "statusCode": {
+            "type": "integer",
+            "title": "Statuscode",
+            "description": "HTTP status code."
+          },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "description": "Human-readable error message."
+          }
+        },
+        "type": "object",
+        "required": [
+          "statusCode",
+          "message"
+        ],
+        "title": "ErrorResponse",
+        "description": "Error response for the widget endpoints."
+      },
+      "ExperimentName": {
+        "type": "string",
+        "enum": [
+          "new-tab-feed-reduce-exploration",
+          "new-tab-topic-feeds-rollout-holdback",
+          "new-ranking-for-legacy-topics-in-new-tab-v1",
+          "daily-briefing-v1",
+          "new-tab-ad-updates-nightly",
+          "new-tab-contextual-ad-updates-v2-nightly",
+          "new-tab-contextual-ad-updates-beta",
+          "new-tab-contextual-ad-updates-v2-beta",
+          "new-tab-contextual-ad-updates-release",
+          "new-tab-contextual-ad-updates-v2-release",
+          "new-tab-custom-sections",
+          "new-tab-stories-time-zone-based-ranking",
+          "ctrpred_engb",
+          "new-tab-automated-personalization-local-ranking",
+          "new-tab-automated-personalization-local-ranking-2",
+          "new-tab-automated-personalization-v3",
+          "new-tab-automated-personalization-v4",
+          "newtab-cosine-ranking"
+        ],
+        "title": "ExperimentName",
+        "description": "List of Nimbus experiment names on New Tab. This list is NOT meant to be exhaustive.\nThis is simply intended to make it easier to reference experiment names in this codebase,\nwhen Merino needs to change behavior depending on the experimentName request parameter."
+      },
+      "FlightAwareDetails": {
+        "properties": {
+          "values": {
+            "items": {
+              "$ref": "#/components/schemas/FlightSummary"
+            },
+            "type": "array",
+            "title": "Values"
+          }
+        },
+        "type": "object",
+        "required": [
+          "values"
+        ],
+        "title": "FlightAwareDetails",
+        "description": "FlightAware specific fields."
+      },
+      "FlightScheduleSegment": {
+        "properties": {
+          "scheduled_time": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Scheduled Time"
+          },
+          "estimated_time": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estimated Time"
+          }
+        },
+        "type": "object",
+        "required": [
+          "scheduled_time",
+          "estimated_time"
+        ],
+        "title": "FlightScheduleSegment",
+        "description": "Scheduled date and time details for a flight segment (e.g., departure or arrival)."
+      },
+      "FlightStatus": {
+        "type": "string",
+        "enum": [
+          "Scheduled",
+          "En Route",
+          "Arrived",
+          "Cancelled",
+          "Delayed",
+          "Unknown"
+        ],
+        "title": "FlightStatus",
+        "description": "Status of a specific flight instance"
+      },
+      "FlightSummary": {
+        "properties": {
+          "flight_number": {
+            "type": "string",
+            "title": "Flight Number"
+          },
+          "destination": {
+            "$ref": "#/components/schemas/AirportDetails"
+          },
+          "origin": {
+            "$ref": "#/components/schemas/AirportDetails"
+          },
+          "departure": {
+            "$ref": "#/components/schemas/FlightScheduleSegment"
+          },
+          "arrival": {
+            "$ref": "#/components/schemas/FlightScheduleSegment"
+          },
+          "status": {
+            "$ref": "#/components/schemas/FlightStatus"
+          },
+          "progress_percent": {
+            "type": "integer",
+            "title": "Progress Percent",
+            "default": 0
+          },
+          "time_left_minutes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Time Left Minutes"
+          },
+          "delayed": {
+            "type": "boolean",
+            "title": "Delayed"
+          },
+          "url": {
+            "type": "string",
+            "maxLength": 2083,
+            "minLength": 1,
+            "format": "uri",
+            "title": "Url"
+          },
+          "airline": {
+            "$ref": "#/components/schemas/AirlineDetails"
+          }
+        },
+        "type": "object",
+        "required": [
+          "flight_number",
+          "destination",
+          "origin",
+          "departure",
+          "arrival",
+          "status",
+          "delayed",
+          "url",
+          "airline"
+        ],
+        "title": "FlightSummary",
+        "description": "Information about a specific flight instance"
+      },
+      "FramedWidgetResponse": {
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled",
+            "description": "Instruct New Tab whether or not to show the widget."
+          },
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Identifier for the widget. Must match the source of truth - New Tab widget registry."
+          },
+          "vendor": {
+            "type": "string",
+            "title": "Vendor",
+            "description": "Vendor supplying the widget, e.g. 'Yahoo'. Use 'Mozilla' for internal widgets."
+          },
+          "url": {
+            "type": "string",
+            "maxLength": 2083,
+            "minLength": 1,
+            "format": "uri",
+            "title": "Url",
+            "description": "URL of the widget. Should be a GCP load balancer URL or equivalent."
+          }
+        },
+        "type": "object",
+        "required": [
+          "enabled",
+          "id",
+          "vendor",
+          "url"
+        ],
+        "title": "FramedWidgetResponse",
+        "description": "Model for a single framed widget for API response."
+      },
+      "FramedWidgetsApiResponse": {
+        "properties": {
+          "date_utc": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Date Utc",
+            "description": "The UTC datetime the response was sent."
+          },
+          "locale": {
+            "type": "string",
+            "title": "Locale",
+            "description": "The locale requested by the client. In the future may filter the widget result set."
+          },
+          "widgets": {
+            "items": {
+              "$ref": "#/components/schemas/FramedWidgetResponse"
+            },
+            "type": "array",
+            "title": "Widgets",
+            "description": "The list of available framed widgets."
+          }
+        },
+        "type": "object",
+        "required": [
+          "date_utc",
+          "locale",
+          "widgets"
+        ],
+        "title": "FramedWidgetsApiResponse",
+        "description": "Model for the full API response."
+      },
+      "GeolocationDetails": {
+        "properties": {
+          "country": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Country"
+          },
+          "country_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Country Code"
+          },
+          "region_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Region Code"
+          },
+          "region": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Region"
+          },
+          "city": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "City"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Coordinates"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "title": "GeolocationDetails",
+        "description": "Geolocation specific fields."
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HourlyForecast": {
+        "properties": {
+          "date_time": {
+            "type": "string",
+            "title": "Date Time"
+          },
+          "epoch_date_time": {
+            "type": "integer",
+            "title": "Epoch Date Time"
+          },
+          "temperature": {
+            "$ref": "#/components/schemas/Temperature"
+          },
+          "icon_id": {
+            "type": "integer",
+            "title": "Icon Id"
+          },
+          "url": {
+            "type": "string",
+            "maxLength": 2083,
+            "minLength": 1,
+            "format": "uri",
+            "title": "Url"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          }
+        },
+        "type": "object",
+        "required": [
+          "date_time",
+          "epoch_date_time",
+          "temperature",
+          "icon_id",
+          "url",
+          "summary"
+        ],
+        "title": "HourlyForecast",
+        "description": "Model for a single hourly weather forecast."
+      },
+      "IABMetadata": {
+        "properties": {
+          "taxonomy": {
+            "type": "string",
+            "title": "Taxonomy",
+            "description": "IAB taxonomy version, v3.0 currently used, e.g. IAB-3.0",
+            "default": "IAB-3.0"
+          },
+          "categories": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Categories"
+          }
+        },
+        "type": "object",
+        "required": [
+          "categories"
+        ],
+        "title": "IABMetadata",
+        "description": "IAB (v3.0) metadata for a Section."
+      },
+      "InferredInterests": {
+        "additionalProperties": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          ]
+        },
+        "type": "object",
+        "title": "InferredInterests",
+        "description": "Raw inferred interests from client request - may contain encoded or decoded values"
+      },
+      "InferredLocalModel": {
+        "properties": {
+          "model_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Id"
+          },
+          "model_version": {
+            "type": "integer",
+            "title": "Model Version"
+          },
+          "surface_id": {
+            "type": "string",
+            "title": "Surface Id"
+          },
+          "model_data": {
+            "$ref": "#/components/schemas/ModelData"
+          },
+          "privacy_overrides": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PrivacyOverrides"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "model_id",
+          "model_version",
+          "surface_id",
+          "model_data"
+        ],
+        "title": "InferredLocalModel",
+        "description": "Class that defines parameters on the local Firefox client for defining an interest vector from interaction\nevents"
+      },
+      "InterestPicker": {
+        "properties": {
+          "receivedFeedRank": {
+            "type": "integer",
+            "title": "Receivedfeedrank"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "subtitle": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subtitle"
+          },
+          "sections": {
+            "items": {
+              "$ref": "#/components/schemas/InterestPickerSection"
+            },
+            "type": "array",
+            "title": "Sections"
+          }
+        },
+        "type": "object",
+        "required": [
+          "receivedFeedRank",
+          "title",
+          "sections"
+        ],
+        "title": "InterestPicker",
+        "description": "Model representing the interest picker component for following sections."
+      },
+      "InterestPickerSection": {
+        "properties": {
+          "sectionId": {
+            "type": "string",
+            "title": "Sectionid"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sectionId"
+        ],
+        "title": "InterestPickerSection",
+        "description": "Model representing a single section entry in the interest picker."
+      },
+      "InterestVectorConfig": {
+        "properties": {
+          "features": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Features"
+          },
+          "thresholds": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Thresholds"
+          },
+          "diff_p": {
+            "type": "number",
+            "title": "Diff P"
+          },
+          "diff_q": {
+            "type": "number",
+            "title": "Diff Q"
+          }
+        },
+        "type": "object",
+        "required": [
+          "features",
+          "thresholds",
+          "diff_p",
+          "diff_q"
+        ],
+        "title": "InterestVectorConfig",
+        "description": "Class that defines the mapping of several article features (that were impressed, clicked etc) to an output feature"
+      },
+      "Layout": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "responsiveLayouts": {
+            "items": {
+              "$ref": "#/components/schemas/ResponsiveLayout"
+            },
+            "type": "array",
+            "title": "Responsivelayouts"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "responsiveLayouts"
+        ],
+        "title": "Layout",
+        "description": "Defines a responsive layout configuration with multiple column layouts."
+      },
+      "Locale": {
+        "type": "string",
+        "enum": [
+          "fr",
+          "fr-BE",
+          "fr-FR",
+          "es",
+          "es-ES",
+          "es-AR",
+          "es-CL",
+          "es-MX",
+          "it",
+          "it-IT",
+          "en",
+          "en-CA",
+          "en-GB",
+          "en-IE",
+          "en-US",
+          "de",
+          "de-DE",
+          "de-AT",
+          "de-CH",
+          "pl",
+          "pl-PL"
+        ],
+        "title": "Locale",
+        "description": "Supported locales for curated recommendations on New Tab"
+      },
+      "ManifestData": {
+        "properties": {
+          "domains": {
+            "items": {
+              "$ref": "#/components/schemas/Domain"
+            },
+            "type": "array",
+            "title": "Domains"
+          },
+          "partners": {
+            "items": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Partners"
+          }
+        },
+        "type": "object",
+        "required": [
+          "domains",
+          "partners"
+        ],
+        "title": "ManifestData",
+        "description": "Model for manifest file content"
+      },
+      "Match": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id",
+            "description": "Unique match identifier."
+          },
+          "competition": {
+            "$ref": "#/components/schemas/Competition",
+            "description": "Competition the match belongs to."
+          },
+          "kickoff": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Kickoff",
+            "description": "Latest scheduled kickoff time, in UTC."
+          },
+          "home_team": {
+            "$ref": "#/components/schemas/Team",
+            "description": "Home team."
+          },
+          "away_team": {
+            "$ref": "#/components/schemas/Team",
+            "description": "Away team."
+          },
+          "period": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MatchPeriod"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Current phase during play, final phase after completion. Null before the match begins."
+          },
+          "status": {
+            "$ref": "#/components/schemas/MatchStatus",
+            "description": "Match status."
+          },
+          "clock": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clock",
+            "description": "Elapsed minutes including stoppage time, e.g. '67' or '90+3'. Null when the match is not live or when match is on break."
+          },
+          "home_score": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Home Score",
+            "description": "Home goals including extra time, excluding the penalty shootout. Null before the match begins."
+          },
+          "away_score": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Away Score",
+            "description": "Away goals including extra time, excluding the penalty shootout. Null before the match begins."
+          },
+          "home_penalty_score": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Home Penalty Score",
+            "description": "Home penalty shootout goals. Null when not applicable."
+          },
+          "away_penalty_score": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Away Penalty Score",
+            "description": "Away penalty shootout goals. Null when not applicable."
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At",
+            "description": "Time the match data was last updated, in UTC."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "competition",
+          "kickoff",
+          "home_team",
+          "away_team",
+          "period",
+          "status",
+          "clock",
+          "home_score",
+          "away_score",
+          "home_penalty_score",
+          "away_penalty_score",
+          "updated_at"
+        ],
+        "title": "Match",
+        "description": "A Wrexham match."
+      },
+      "MatchPeriod": {
+        "type": "string",
+        "enum": [
+          "Regular",
+          "ExtraTime",
+          "PenaltyShootout"
+        ],
+        "title": "MatchPeriod",
+        "description": "Phase of play. During play it is the current phase; after completion, the final one."
+      },
+      "MatchStatus": {
+        "type": "string",
+        "enum": [
+          "Scheduled",
+          "InProgress",
+          "Break",
+          "Final",
+          "Postponed",
+          "Canceled",
+          "Suspended",
+          "Delayed"
+        ],
+        "title": "MatchStatus",
+        "description": "Match status, normalized from SportsDataIO."
+      },
+      "MatchesResponse": {
+        "properties": {
+          "previous": {
+            "items": {
+              "$ref": "#/components/schemas/Match"
+            },
+            "type": "array",
+            "title": "Previous",
+            "description": "Completed or cancelled matches, newest first."
+          },
+          "current": {
+            "items": {
+              "$ref": "#/components/schemas/Match"
+            },
+            "type": "array",
+            "title": "Current",
+            "description": "Matches in progress, on a break, delayed or suspended."
+          },
+          "upcoming": {
+            "items": {
+              "$ref": "#/components/schemas/Match"
+            },
+            "type": "array",
+            "title": "Upcoming",
+            "description": "Scheduled or postponed matches, earliest first."
+          }
+        },
+        "type": "object",
+        "required": [
+          "previous",
+          "current",
+          "upcoming"
+        ],
+        "title": "MatchesResponse",
+        "description": "Response for the matches endpoint."
+      },
+      "ModelData": {
+        "properties": {
+          "model_type": {
+            "$ref": "#/components/schemas/ModelType"
+          },
+          "rescale": {
+            "type": "boolean",
+            "title": "Rescale"
+          },
+          "ctr_prior_strength": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ctr Prior Strength"
+          },
+          "day_time_weighting": {
+            "$ref": "#/components/schemas/DayTimeWeightingConfig"
+          },
+          "interest_vector": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/InterestVectorConfig"
+            },
+            "type": "object",
+            "title": "Interest Vector"
+          },
+          "noise_scale": {
+            "type": "number",
+            "title": "Noise Scale"
+          },
+          "private_features": {
+            "anyOf": [
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Private Features"
+          }
+        },
+        "type": "object",
+        "required": [
+          "model_type",
+          "rescale",
+          "day_time_weighting",
+          "interest_vector",
+          "noise_scale"
+        ],
+        "title": "ModelData",
+        "description": "Data defining a model that maps interactions over many features to an interest vector of smaller number of dimensions"
+      },
+      "ModelType": {
+        "type": "string",
+        "enum": [
+          "clicks",
+          "ctr",
+          "click_impression_pair"
+        ],
+        "title": "ModelType",
+        "description": "Type of model. Indicates source of data, such as whether we are working with clicks or include impressions"
+      },
+      "Particle": {
+        "properties": {
+          "url": {
+            "type": "string",
+            "title": "Url",
+            "description": "Public URL for the game"
+          }
+        },
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "title": "Particle",
+        "description": "Model for Particle game data"
+      },
+      "PictureOfTheDay": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "description": "Title of the picture of the day."
+          },
+          "thumbnail_image_url": {
+            "type": "string",
+            "maxLength": 2083,
+            "minLength": 1,
+            "format": "uri",
+            "title": "Thumbnail Image Url",
+            "description": "Thumbnail URL of the picture of the day image."
+          },
+          "high_res_image_url": {
+            "type": "string",
+            "maxLength": 2083,
+            "minLength": 1,
+            "format": "uri",
+            "title": "High Res Image Url",
+            "description": "High resolution URL of the picture of the day image."
+          },
+          "published_date": {
+            "type": "string",
+            "title": "Published Date",
+            "description": "Date when the image was published."
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "description": "Description of the image in the default (en) or the requested language."
+          },
+          "localized_descriptions": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Localized Descriptions",
+            "description": "Localized descriptions keyed by language code (e.g. 'de', 'es'). Server-side NOTE: only used to localize `description` for the client's Accept-Language and is omitted from the API response."
+          },
+          "author": {
+            "type": "string",
+            "title": "Author",
+            "description": "Name of the image's artist.",
+            "default": ""
+          },
+          "file_page": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2083,
+                "minLength": 1,
+                "format": "uri"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File Page",
+            "description": "Commons file page URL."
+          },
+          "license_label": {
+            "type": "string",
+            "title": "License Label",
+            "description": "License type, e.g. 'CC BY-SA 4.0'.",
+            "default": ""
+          },
+          "license_link": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2083,
+                "minLength": 1,
+                "format": "uri"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "License Link",
+            "description": "License URL."
+          },
+          "previous": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PictureOfTheDayBase"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The previous day's picture of the day, or null when that day has no manifest."
+          }
+        },
+        "type": "object",
+        "required": [
+          "title",
+          "thumbnail_image_url",
+          "high_res_image_url",
+          "published_date",
+          "description"
+        ],
+        "title": "PictureOfTheDay",
+        "description": "The picture of the day served to clients, with the previous day's picture attached."
+      },
+      "PictureOfTheDayBase": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "description": "Title of the picture of the day."
+          },
+          "thumbnail_image_url": {
+            "type": "string",
+            "maxLength": 2083,
+            "minLength": 1,
+            "format": "uri",
+            "title": "Thumbnail Image Url",
+            "description": "Thumbnail URL of the picture of the day image."
+          },
+          "high_res_image_url": {
+            "type": "string",
+            "maxLength": 2083,
+            "minLength": 1,
+            "format": "uri",
+            "title": "High Res Image Url",
+            "description": "High resolution URL of the picture of the day image."
+          },
+          "published_date": {
+            "type": "string",
+            "title": "Published Date",
+            "description": "Date when the image was published."
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "description": "Description of the image in the default (en) or the requested language."
+          },
+          "localized_descriptions": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Localized Descriptions",
+            "description": "Localized descriptions keyed by language code (e.g. 'de', 'es'). Server-side NOTE: only used to localize `description` for the client's Accept-Language and is omitted from the API response."
+          },
+          "author": {
+            "type": "string",
+            "title": "Author",
+            "description": "Name of the image's artist.",
+            "default": ""
+          },
+          "file_page": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2083,
+                "minLength": 1,
+                "format": "uri"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File Page",
+            "description": "Commons file page URL."
+          },
+          "license_label": {
+            "type": "string",
+            "title": "License Label",
+            "description": "License type, e.g. 'CC BY-SA 4.0'.",
+            "default": ""
+          },
+          "license_link": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2083,
+                "minLength": 1,
+                "format": "uri"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "License Link",
+            "description": "License URL."
+          }
+        },
+        "type": "object",
+        "required": [
+          "title",
+          "thumbnail_image_url",
+          "high_res_image_url",
+          "published_date",
+          "description"
+        ],
+        "title": "PictureOfTheDayBase",
+        "description": "Model for a single day's Wikimedia Picture of the Day."
+      },
+      "PolygonDetails": {
+        "properties": {
+          "values": {
+            "items": {
+              "$ref": "#/components/schemas/TickerSummary"
+            },
+            "type": "array",
+            "title": "Values"
+          },
+          "matches": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/TickerMatch"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Matches",
+            "description": "Candidates for the stocks widget's search pick-list. Only present on `request_type=ticker_search` responses."
+          }
+        },
+        "type": "object",
+        "required": [
+          "values"
+        ],
+        "title": "PolygonDetails",
+        "description": "Polygon specific fields."
+      },
+      "PrivacyOverrides": {
+        "properties": {
+          "iv_in_telemetry": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Iv In Telemetry"
+          },
+          "random_content_click_probability_epsilon_micro": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Random Content Click Probability Epsilon Micro"
+          },
+          "daily_click_event_cap": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Daily Click Event Cap"
+          },
+          "local_popular_today_rerank": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Local Popular Today Rerank"
+          }
+        },
+        "type": "object",
+        "title": "PrivacyOverrides",
+        "description": "Defines privacy overrides, so they can be applied automatically for Merino based experiments to reduce risk of privacy issues"
+      },
+      "ProviderResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "availability": {
+            "type": "string",
+            "title": "Availability"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "availability"
+        ],
+        "title": "ProviderResponse",
+        "description": "Model for the `providers` API response."
+      },
+      "RankingData": {
+        "properties": {
+          "alpha": {
+            "type": "number",
+            "title": "Alpha"
+          },
+          "beta": {
+            "type": "number",
+            "title": "Beta"
+          },
+          "score": {
+            "type": "number",
+            "title": "Score"
+          },
+          "is_fresh": {
+            "type": "boolean",
+            "title": "Is Fresh",
+            "default": false
+          },
+          "remaining_impressions": {
+            "type": "integer",
+            "title": "Remaining Impressions",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "alpha",
+          "beta",
+          "score"
+        ],
+        "title": "RankingData",
+        "description": "Data used to compute score, and current computed score"
+      },
+      "ResponsiveLayout": {
+        "properties": {
+          "columnCount": {
+            "type": "integer",
+            "maximum": 4.0,
+            "minimum": 1.0,
+            "title": "Columncount"
+          },
+          "tiles": {
+            "items": {
+              "$ref": "#/components/schemas/Tile"
+            },
+            "type": "array",
+            "title": "Tiles"
+          }
+        },
+        "type": "object",
+        "required": [
+          "columnCount",
+          "tiles"
+        ],
+        "title": "ResponsiveLayout",
+        "description": "Defines layout properties for a specific column count."
+      },
+      "Section": {
+        "properties": {
+          "receivedFeedRank": {
+            "type": "integer",
+            "title": "Receivedfeedrank"
+          },
+          "recommendations": {
+            "items": {
+              "$ref": "#/components/schemas/CuratedRecommendation"
+            },
+            "type": "array",
+            "title": "Recommendations"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "iab": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/IABMetadata"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "subtitle": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subtitle"
+          },
+          "heroTitle": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Herotitle"
+          },
+          "heroSubtitle": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Herosubtitle"
+          },
+          "layout": {
+            "$ref": "#/components/schemas/Layout"
+          },
+          "isFollowed": {
+            "type": "boolean",
+            "title": "Isfollowed",
+            "default": false
+          },
+          "isBlocked": {
+            "type": "boolean",
+            "title": "Isblocked",
+            "default": false
+          },
+          "followedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Followedat",
+            "description": "Timestamp when the section was followed. Must be in ISO 8601 format with timezone, e.g. '2024-03-24T12:34:56Z' or '2024-03-24T14:34:56+02:00'."
+          },
+          "isInitiallyVisible": {
+            "type": "boolean",
+            "title": "Isinitiallyvisible",
+            "default": true
+          },
+          "followable": {
+            "type": "boolean",
+            "title": "Followable",
+            "description": "Whether users can follow this section.",
+            "default": true
+          },
+          "allowAds": {
+            "type": "boolean",
+            "title": "Allowads",
+            "description": "Whether ads can be displayed in this section.",
+            "default": true
+          },
+          "variantId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Variantid",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "receivedFeedRank",
+          "recommendations",
+          "title",
+          "layout"
+        ],
+        "title": "Section",
+        "description": "A ranked list of curated recommendations with responsive layout configurations."
+      },
+      "SectionConfiguration": {
+        "properties": {
+          "sectionId": {
+            "type": "string",
+            "title": "Sectionid"
+          },
+          "isFollowed": {
+            "type": "boolean",
+            "title": "Isfollowed"
+          },
+          "isBlocked": {
+            "type": "boolean",
+            "title": "Isblocked"
+          },
+          "followedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Followedat",
+            "description": "Timestamp when the section was followed. Must be in ISO 8601 format with timezone, e.g. '2024-03-24T12:34:56Z' or '2024-03-24T14:34:56+02:00'."
+          }
+        },
+        "type": "object",
+        "required": [
+          "sectionId",
+          "isFollowed",
+          "isBlocked"
+        ],
+        "title": "SectionConfiguration",
+        "description": "Configuration settings for a Section"
+      },
+      "SportCategory": {
+        "type": "string",
+        "enum": [
+          "baseball",
+          "basketball",
+          "hockey",
+          "soccer",
+          "football",
+          "golf",
+          "racing",
+          "misc"
+        ],
+        "title": "SportCategory",
+        "description": "Enum for sports category values."
+      },
+      "SportEventDetail": {
+        "properties": {
+          "sport": {
+            "type": "string",
+            "title": "Sport"
+          },
+          "sport_category": {
+            "$ref": "#/components/schemas/SportCategory"
+          },
+          "query": {
+            "type": "string",
+            "title": "Query"
+          },
+          "date": {
+            "type": "string",
+            "title": "Date"
+          },
+          "home_team": {
+            "$ref": "#/components/schemas/SportTeamDetail"
+          },
+          "away_team": {
+            "$ref": "#/components/schemas/SportTeamDetail"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "status_type": {
+            "type": "string",
+            "title": "Status Type"
+          },
+          "touched": {
+            "type": "string",
+            "title": "Touched"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sport",
+          "sport_category",
+          "query",
+          "date",
+          "home_team",
+          "away_team",
+          "status",
+          "status_type",
+          "touched"
+        ],
+        "title": "SportEventDetail",
+        "description": "Data about the specific Sport event."
+      },
+      "SportEventDetails": {
+        "properties": {
+          "values": {
+            "items": {
+              "$ref": "#/components/schemas/SportEventDetail"
+            },
+            "type": "array",
+            "title": "Values"
+          }
+        },
+        "type": "object",
+        "required": [
+          "values"
+        ],
+        "title": "SportEventDetails",
+        "description": "Return a set of Sports Results in a decollated manner.\n\nThis presumes that results can be from mixed sports, and that there\nis only one level of structure to the result. If you want to do\nmultiple sport results that are collated, you probably want to\nlook at SportSummary and returning a list of those."
+      },
+      "SportTeamDetail": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "colors": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Colors"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score"
+          },
+          "icon": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2083,
+                "minLength": 1,
+                "format": "uri"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Icon"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "name",
+          "colors",
+          "score"
+        ],
+        "title": "SportTeamDetail",
+        "description": "Data about the specific Sport team."
+      },
+      "Standing": {
+        "properties": {
+          "position": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Position",
+            "description": "Overall league position."
+          },
+          "team": {
+            "$ref": "#/components/schemas/Team",
+            "description": "Team, with its abbreviated name."
+          },
+          "played": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Played",
+            "description": "Number of matches played."
+          },
+          "goal_difference": {
+            "type": "integer",
+            "title": "Goal Difference",
+            "description": "Goals scored minus goals conceded."
+          },
+          "points": {
+            "type": "integer",
+            "title": "Points",
+            "description": "League points. Can be negative after a points deduction."
+          }
+        },
+        "type": "object",
+        "required": [
+          "position",
+          "team",
+          "played",
+          "goal_difference",
+          "points"
+        ],
+        "title": "Standing",
+        "description": "A row in the league table."
+      },
+      "StandingsResponse": {
+        "properties": {
+          "competition": {
+            "$ref": "#/components/schemas/Competition",
+            "description": "Competition the table belongs to."
+          },
+          "standings": {
+            "items": {
+              "$ref": "#/components/schemas/Standing"
+            },
+            "type": "array",
+            "title": "Standings",
+            "description": "Table rows ordered by position. Empty when no table is available yet."
+          }
+        },
+        "type": "object",
+        "required": [
+          "competition",
+          "standings"
+        ],
+        "title": "StandingsResponse",
+        "description": "Response for the standings endpoint."
+      },
+      "SuggestResponse": {
+        "properties": {
+          "suggestions": {
+            "items": {
+              "$ref": "#/components/schemas/BaseSuggestion"
+            },
+            "type": "array",
+            "title": "Suggestions"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Id"
+          },
+          "client_variants": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Client Variants",
+            "default": []
+          },
+          "server_variants": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Server Variants",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "suggestions"
+        ],
+        "title": "SuggestResponse",
+        "description": "Model for the `suggest` API response."
+      },
+      "SurfaceId": {
+        "type": "string",
+        "enum": [
+          "NEW_TAB_DE_AT",
+          "NEW_TAB_DE_CH",
+          "NEW_TAB_DE_DE",
+          "NEW_TAB_EN_CA",
+          "NEW_TAB_EN_GB",
+          "NEW_TAB_EN_IE",
+          "NEW_TAB_EN_INTL",
+          "NEW_TAB_EN_ROW",
+          "NEW_TAB_EN_US",
+          "NEW_TAB_ES_ES",
+          "NEW_TAB_ES_ROW",
+          "NEW_TAB_FR_BE",
+          "NEW_TAB_FR_FR",
+          "NEW_TAB_IT_IT",
+          "NEW_TAB_PL_PL"
+        ],
+        "title": "SurfaceId",
+        "description": "Defines the possible recommendation surfaces."
+      },
+      "Team": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id",
+            "description": "SportsDataIO global team ID."
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Team name."
+          },
+          "logo_url": {
+            "type": "string",
+            "maxLength": 2083,
+            "minLength": 1,
+            "format": "uri",
+            "title": "Logo Url",
+            "description": "URL of the team crest, or of a fallback image."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "logo_url"
+        ],
+        "title": "Team",
+        "description": "A team taking part in a match or listed in the standings."
+      },
+      "Temperature": {
+        "properties": {
+          "c": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "C"
+          },
+          "f": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "F"
+          }
+        },
+        "type": "object",
+        "title": "Temperature",
+        "description": "Model for temperature with C and F values."
+      },
+      "TickerMatch": {
+        "properties": {
+          "ticker": {
+            "type": "string",
+            "title": "Ticker"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "exchange": {
+            "type": "string",
+            "title": "Exchange"
+          },
+          "is_etf": {
+            "type": "boolean",
+            "title": "Is Etf"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ticker",
+          "name",
+          "exchange",
+          "is_etf"
+        ],
+        "title": "TickerMatch",
+        "description": "One candidate from a ticker search, shown in the widget's search pick-list.\n\nThe user selects a match client-side; the widget stores the ticker symbol\nand uses it for subsequent quote lookups. Merino keeps no selection state."
+      },
+      "TickerSummary": {
+        "properties": {
+          "ticker": {
+            "type": "string",
+            "title": "Ticker"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "last_price": {
+            "type": "string",
+            "title": "Last Price"
+          },
+          "todays_change_perc": {
+            "type": "string",
+            "title": "Todays Change Perc"
+          },
+          "query": {
+            "type": "string",
+            "title": "Query"
+          },
+          "exchange": {
+            "type": "string",
+            "title": "Exchange"
+          },
+          "image_url": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2083,
+                "minLength": 1,
+                "format": "uri"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ticker",
+          "name",
+          "last_price",
+          "todays_change_perc",
+          "query",
+          "exchange",
+          "image_url"
+        ],
+        "title": "TickerSummary",
+        "description": "Ticker summary."
+      },
+      "Tile": {
+        "properties": {
+          "size": {
+            "$ref": "#/components/schemas/TileSize"
+          },
+          "position": {
+            "type": "integer",
+            "title": "Position"
+          },
+          "hasAd": {
+            "type": "boolean",
+            "title": "Hasad"
+          },
+          "hasExcerpt": {
+            "type": "boolean",
+            "title": "Hasexcerpt"
+          }
+        },
+        "type": "object",
+        "required": [
+          "size",
+          "position",
+          "hasAd",
+          "hasExcerpt"
+        ],
+        "title": "Tile",
+        "description": "Defines properties for a single tile in a responsive layout."
+      },
+      "TileSize": {
+        "type": "string",
+        "enum": [
+          "small",
+          "medium",
+          "large"
+        ],
+        "title": "TileSize",
+        "description": "Defines possible sizes for a tile in the layout."
+      },
+      "Topic": {
+        "type": "string",
+        "enum": [
+          "business",
+          "career",
+          "arts",
+          "food",
+          "health",
+          "home",
+          "finance",
+          "government",
+          "sports",
+          "tech",
+          "travel",
+          "education",
+          "hobbies",
+          "society-parenting",
+          "education-science",
+          "society"
+        ],
+        "title": "Topic",
+        "description": "Topics supported for curated recommendations.\n\nThe section names must match the corresponding topic names in lowercase. Please update\napps/merino/merino/curated_recommendations/protocol.py if the enum names (e.g. BUSINESS)\nare changed.\n\nThe enum values correspond to the topic identifiers. Changing them would be a breaking change."
+      },
+      "TravelListing": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Localised name of the place, e.g. hotel, airport or city name"
+          },
+          "full_name": {
+            "type": "string",
+            "title": "Full Name",
+            "description": "Localised full name, may include city, region, country and airport name"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type",
+            "description": "Primary place type of the place, e.g. `city`, `airport` or `hotel`"
+          },
+          "iata_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Iata Code",
+            "description": "IATA code for the airport or metro area"
+          },
+          "place_id": {
+            "type": "integer",
+            "title": "Place Id",
+            "description": "Kayak's unique identifier of the place"
+          },
+          "city_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "City Id",
+            "description": "Kayak's identifier of the city"
+          },
+          "country": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Country",
+            "description": "Localised country name of the place"
+          },
+          "hotel_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hotel Id",
+            "description": "Kayak's identifier of the hotel, only set for hotel places"
+          },
+          "entity_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entity Key",
+            "description": "Kayak's entity key of the place, e.g. `khotel:59560`, used for hotel search"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "full_name",
+          "type",
+          "place_id"
+        ],
+        "title": "TravelListing",
+        "description": "Model for a travel listing"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "Version": {
+        "properties": {
+          "source": {
+            "type": "string",
+            "maxLength": 2083,
+            "minLength": 1,
+            "format": "uri",
+            "title": "Source"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version"
+          },
+          "commit": {
+            "type": "string",
+            "title": "Commit"
+          },
+          "build": {
+            "type": "string",
+            "title": "Build"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "source",
+          "version",
+          "commit",
+          "build"
+        ],
+        "title": "Version",
+        "description": "Model for version.json data"
+      },
+      "WeatherDetails": {
+        "properties": {
+          "weather_report_ttl": {
+            "type": "integer",
+            "title": "Weather Report Ttl"
+          }
+        },
+        "type": "object",
+        "required": [
+          "weather_report_ttl"
+        ],
+        "title": "WeatherDetails",
+        "description": "Weather specific fields."
+      },
+      "YelpBusinessDetails": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "url": {
+            "type": "string",
+            "maxLength": 2083,
+            "minLength": 1,
+            "format": "uri",
+            "title": "Url"
+          },
+          "city": {
+            "type": "string",
+            "title": "City"
+          },
+          "address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address"
+          },
+          "price": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price"
+          },
+          "rating": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rating"
+          },
+          "review_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Count"
+          },
+          "business_hours": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Business Hours"
+          },
+          "image_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "url",
+          "city"
+        ],
+        "title": "YelpBusinessDetails",
+        "description": "Yelp business details."
+      },
+      "YelpDetails": {
+        "properties": {
+          "values": {
+            "items": {
+              "$ref": "#/components/schemas/YelpBusinessDetails"
+            },
+            "type": "array",
+            "title": "Values"
+          }
+        },
+        "type": "object",
+        "required": [
+          "values"
+        ],
+        "title": "YelpDetails",
+        "description": "Yelp specific fields."
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "suggest",
+      "description": "Main search API to query Firefox Suggest."
+    },
+    {
+      "name": "providers",
+      "description": "Get a list of Firefox Suggest providers and their availability."
+    },
+    {
+      "name": "widgets",
+      "description": "APIs serving Firefox New Tab widgets."
+    }
+  ]
+}
