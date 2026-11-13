@@ -40,9 +40,7 @@ from merino.curated_recommendations.provider import (
 )
 from merino.middleware import ScopeKey
 from merino.middleware.user_agent import UserAgent
-from merino.providers.games import get_particle_provider
 from merino.providers.games.particle.backends.protocol import Particle
-from merino.providers.games.particle.provider import Provider as ParticleProvider
 from merino.providers.manifest import get_provider as get_manifest_provider
 from merino.providers.manifest.backends.protocol import ManifestData
 from merino.providers.manifest.provider import Provider as ManifestProvider
@@ -89,6 +87,7 @@ from merino.utils.query_processing.query_patterns import (
     build_query_pattern_matcher,
     emit_query_pattern_metrics,
 )
+from merino.web import api_v1_widgets
 from merino.web.models_v1 import ProviderResponse, SuggestResponse
 
 logger = logging.getLogger(__name__)
@@ -718,29 +717,16 @@ async def get_picture_of_the_day(
     )
 
 
-# Module-level variable as retrieving from settings on each
-# call is expensive
-_games_particle_ttl = settings.games_providers.particle.cache_ttl
-
-
-@router.get(
+# TODO(DISCO-4604): Remove this alias once the HTTP rewrite rule that sends this path to the
+# widget workload is deployed. The endpoint lives on the widgets router at
+# /api/v1/widgets/games/particle; this keeps the old path serving the same handler so
+# traffic reaching the regular workload before the rewrite doesn't error out.
+router.add_api_route(
     "/games/particle",
+    api_v1_widgets.get_game_particle,
+    methods=["GET"],
     tags=["Games"],
     summary="Particle game for New Tab",
     response_model=Particle,
+    deprecated=True,
 )
-async def get_game_particle(
-    request: Request, provider: ParticleProvider = Depends(get_particle_provider)
-) -> Response:  # pragma: no cover
-    """Return a JSON object containing the public URL for the Particle game."""
-    particle_data = None
-
-    try:
-        particle_data = await provider.get_game_url()
-    except Exception as ex:
-        logger.info(f"Error when fetching Particle game data: {ex.__class__.__name__}")
-
-    return JSONResponse(
-        content=jsonable_encoder(particle_data),
-        headers={"Cache-Control": (f"private, max-age={_games_particle_ttl}")},
-    )

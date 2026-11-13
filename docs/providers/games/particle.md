@@ -16,7 +16,7 @@ _Note_ - In addition to the static website files, we also store a JSON manifest 
 
 ## New Tab Delivery
 
-The URL to the static website is provided to New Tab by the `/games/particle` endpoint. No other data is returned to New Tab.
+The URL to the static website is provided to New Tab by the `/api/v1/widgets/games/particle` endpoint (also served at the deprecated `/api/v1/games/particle` until DISCO-4604). No other data is returned to New Tab.
 
 ### Directory Structure
 
