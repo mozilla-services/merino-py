@@ -622,6 +622,17 @@ jobs/widgets/wrexham:
       The Wrexham ingestion job (`merino-jobs wrexham run-loop`).
     alert_policy: []
 
+providers/widgets/framed:
+  widgets.framed.request.timing:
+    description: |
+      A timer to measure how long it takes to return a response for
+      framed widgets.
+    type: timing
+    labels: [] # no labels
+    scope: |
+      The "api/v1/widgets/framed/" API endpoint.
+    alert_policy: []
+
 utils/icon_processor:
   icon_processor.requests:
     description: |
