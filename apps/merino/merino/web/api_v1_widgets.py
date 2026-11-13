@@ -1,5 +1,7 @@
 """Merino V1 API for New Tab widgets."""
 
+import logging
+
 from typing import Annotated
 
 from aiodogstatsd import Client
@@ -10,6 +12,9 @@ from starlette.requests import Request
 
 from merino.configs import settings
 from merino.middleware import ScopeKey
+from merino.providers.rss import get_wikimedia_potd_provider
+from merino.providers.rss.wikimedia_potd.backends.protocol import PictureOfTheDay
+from merino.providers.rss.wikimedia_potd.provider import WikimediaPictureOfTheDayProvider
 from merino.providers.widgets import (
     get_framed_widgets_provider,
     get_travel_provider,
@@ -33,6 +38,8 @@ from merino.providers.widgets.travel.kayak.provider import Provider as TravelPro
 from merino.utils.query_processing.geo_params import (
     get_accepted_languages,
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -190,3 +197,37 @@ async def get_travel_listings(
         listings = await provider.get_listings(q, languages[0], market, vertical)
 
     return JSONResponse(content=jsonable_encoder(listings))
+
+
+@router.get(
+    "/widgets/rss/picture-of-the-day",
+    tags=["widgets"],
+    summary="Get picture of the day",
+    response_model=PictureOfTheDay,
+)
+async def get_picture_of_the_day(
+    request: Request,
+    accept_language: Annotated[str | None, Header(max_length=HEADER_CHARACTER_MAX)] = None,
+    provider: WikimediaPictureOfTheDayProvider = Depends(get_wikimedia_potd_provider),
+) -> Response:
+    """Get the picture of the day, localized to the client's Accept-Language when available."""
+    potd = None
+    try:
+        languages = get_accepted_languages(accept_language)
+        potd = await provider.get_picture_of_the_day(languages)
+    except Exception as ex:
+        logger.info(f"Something went wrong when fetching potd: {ex.__class__.__name__}")
+
+    # localized_descriptions is a server-side selection map used to swap `description` into
+    # the client's language; it is not part of the client-facing contract, so exclude it here
+    # (but keep it on the model and in the GCS manifest, which localization reads back from).
+    # The nested previous day's picture carries the same map and is excluded the same way.
+    return JSONResponse(
+        content=jsonable_encoder(
+            potd,
+            exclude={
+                "localized_descriptions": True,
+                "previous": {"localized_descriptions": True},
+            },
+        ),
+    )
