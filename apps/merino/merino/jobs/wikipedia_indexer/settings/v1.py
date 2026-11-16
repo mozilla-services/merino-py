@@ -1,5 +1,7 @@
 """Version 1 of the index mapping & settings"""
 
+from typing import Literal
+
 
 def get_suggest_mapping(analyzer_suffix: str) -> dict:
     """Return an Elasticsearch mapping for suggestions using language-specific analyzers based on the given suffix."""
@@ -33,7 +35,9 @@ def get_suggest_mapping(analyzer_suffix: str) -> dict:
 FR_INDEX_SETTINGS: dict = {
     "refresh_interval": "-1",
     "number_of_shards": "1",  # <10gb
-    "index.auto_expand_replicas": "1-all",  # autoscale replicas so all nodes have a copy
+    # One copy per node. Production clusters need 2+ nodes for redundancy; a single-node
+    # cluster (local dev, CI) gets no replica, so the index can still reach green.
+    "index.auto_expand_replicas": "0-all",
     "index.lifecycle.name": "frwiki_policy",
     "analysis": {
         "filter": {
@@ -112,7 +116,9 @@ FR_INDEX_SETTINGS: dict = {
 DE_INDEX_SETTINGS: dict = {
     "refresh_interval": "-1",
     "number_of_shards": "1",
-    "index.auto_expand_replicas": "1-all",  # autoscale replicas so all nodes have a copy
+    # One copy per node. Production clusters need 2+ nodes for redundancy; a single-node
+    # cluster (local dev, CI) gets no replica, so the index can still reach green.
+    "index.auto_expand_replicas": "0-all",
     "index.lifecycle.name": "dewiki_policy",
     "analysis": {
         "filter": {
@@ -169,7 +175,9 @@ DE_INDEX_SETTINGS: dict = {
 EN_INDEX_SETTINGS: dict = {
     "refresh_interval": "-1",
     "number_of_shards": "1",
-    "index.auto_expand_replicas": "1-all",  # autoscale replicas so all nodes have a copy
+    # One copy per node. Production clusters need 2+ nodes for redundancy; a single-node
+    # cluster (local dev, CI) gets no replica, so the index can still reach green.
+    "index.auto_expand_replicas": "0-all",
     "index.lifecycle.name": "enwiki_policy",
     "analysis": {
         "filter": {
@@ -266,7 +274,9 @@ EN_INDEX_SETTINGS: dict = {
 IT_INDEX_SETTINGS: dict = {
     "refresh_interval": "-1",
     "number_of_shards": "1",
-    "index.auto_expand_replicas": "1-all",  # autoscale replicas so all nodes have a copy
+    # One copy per node. Production clusters need 2+ nodes for redundancy; a single-node
+    # cluster (local dev, CI) gets no replica, so the index can still reach green.
+    "index.auto_expand_replicas": "0-all",
     "index.lifecycle.name": "itwiki_policy",
     "analysis": {
         "filter": {
@@ -352,7 +362,9 @@ IT_INDEX_SETTINGS: dict = {
 PL_INDEX_SETTINGS: dict = {
     "refresh_interval": "-1",
     "number_of_shards": "1",
-    "index.auto_expand_replicas": "1-all",  # autoscale replicas so all nodes have a copy
+    # One copy per node. Production clusters need 2+ nodes for redundancy; a single-node
+    # cluster (local dev, CI) gets no replica, so the index can still reach green.
+    "index.auto_expand_replicas": "0-all",
     "index.lifecycle.name": "plwiki_policy",
     "analysis": {
         "filter": {
@@ -399,19 +411,64 @@ PL_INDEX_SETTINGS: dict = {
     },
 }
 
-
-LANGUAGE_SETTINGS_BUILDERS: dict[str, dict] = {
-    "en": EN_INDEX_SETTINGS,
-    "fr": FR_INDEX_SETTINGS,
-    "de": DE_INDEX_SETTINGS,
-    "it": IT_INDEX_SETTINGS,
-    "pl": PL_INDEX_SETTINGS,
+# Settings for the `temp-` index an indexing run builds into before cloning it under its
+# real name. They match the published index settings, except for the expiring backup ILM
+# policy, so a build index left behind by a killed run is eventually cleaned up.
+EN_INDEX_TEMP_SETTINGS: dict = {
+    **EN_INDEX_SETTINGS,
+    "index.lifecycle.name": "enwiki_backup_policy",
+}
+FR_INDEX_TEMP_SETTINGS: dict = {
+    **FR_INDEX_SETTINGS,
+    "index.lifecycle.name": "frwiki_backup_policy",
+}
+DE_INDEX_TEMP_SETTINGS: dict = {
+    **DE_INDEX_SETTINGS,
+    "index.lifecycle.name": "dewiki_backup_policy",
+}
+IT_INDEX_TEMP_SETTINGS: dict = {
+    **IT_INDEX_SETTINGS,
+    "index.lifecycle.name": "itwiki_backup_policy",
+}
+PL_INDEX_TEMP_SETTINGS: dict = {
+    **PL_INDEX_SETTINGS,
+    "index.lifecycle.name": "plwiki_backup_policy",
 }
 
 
-def get_suggest_settings(language_code: str) -> dict:
-    """Return elasticsearch settings for the given language code."""
+LANGUAGE_SETTINGS_BUILDERS: dict[str, dict[str, dict]] = {
+    "en": {
+        "default": EN_INDEX_SETTINGS,
+        "temp": EN_INDEX_TEMP_SETTINGS,
+    },
+    "fr": {
+        "default": FR_INDEX_SETTINGS,
+        "temp": FR_INDEX_TEMP_SETTINGS,
+    },
+    "de": {
+        "default": DE_INDEX_SETTINGS,
+        "temp": DE_INDEX_TEMP_SETTINGS,
+    },
+    "it": {
+        "default": IT_INDEX_SETTINGS,
+        "temp": IT_INDEX_TEMP_SETTINGS,
+    },
+    "pl": {
+        "default": PL_INDEX_SETTINGS,
+        "temp": PL_INDEX_TEMP_SETTINGS,
+    },
+}
+
+
+def get_suggest_settings(
+    language_code: str, index_type: Literal["temp", "default"] = "default"
+) -> dict:
+    """Return elasticsearch settings for the given language code.
+
+    `index_type` selects the settings for the published index (`default`) or for the
+    `temp-` index a run builds into before cloning it under its real name (`temp`).
+    """
     try:
-        return LANGUAGE_SETTINGS_BUILDERS[language_code]
+        return LANGUAGE_SETTINGS_BUILDERS[language_code][index_type]
     except KeyError:
         raise ValueError(f"No analyzer settings defined for language: {language_code}")

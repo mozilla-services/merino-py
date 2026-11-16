@@ -32,6 +32,18 @@ BACKUP_ILM_POLICY = "{language}wiki_backup_policy"
 # e.g. `enwiki-20240101-v1-1700000000`.
 INDEX_PATTERN = "{language}wiki-*-{version}-*"
 
+# Source of the retention lease a cross-cluster replication follower holds on each
+# leader shard. Followers renew it with their global checkpoint + 1 as they replicate.
+CCR_RETENTION_LEASE_SOURCE = "ccr"
+
+# Prefix for the index a run builds into before cloning it under its real name.
+# CCR auto-follow patterns exclude `temp-*`, so followers never see a partial build.
+BUILD_INDEX_PREFIX = "temp-"
+
+# Seconds to wait for green health on the build index, which cloning requires, for the
+# clone's primary to start, and for the clone to be green before it serves the alias.
+CLONE_HEALTH_TIMEOUT_SEC = 600
+
 
 class Indexer:
     """Index documents from wikimedia search exports into Elasticsearch"""
@@ -53,8 +65,21 @@ class Indexer:
         title_blocklist: set[str],
         file_manager: FileManager,
         elasticsearch: ElasticSearchAdapter,
+        follower_sync_timeout: float = 3600,
+        follower_sync_poll_interval: float = 15,
+        follower_discovery_period: float = 120,
     ):
+        if follower_sync_timeout < follower_discovery_period:
+            # The wait can only succeed once the discovery period has elapsed, so a
+            # shorter timeout would fail every run.
+            raise ValueError(
+                f"follower_sync_timeout ({follower_sync_timeout}s) must be at least "
+                f"follower_discovery_period ({follower_discovery_period}s)"
+            )
         self.queue = []
+        self.follower_sync_timeout = follower_sync_timeout
+        self.follower_sync_poll_interval = follower_sync_poll_interval
+        self.follower_discovery_period = follower_discovery_period
         self.index_version = index_version
         self.file_manager = file_manager
         self.elasticsearch = elasticsearch
@@ -74,13 +99,19 @@ class Indexer:
 
         # parse the index name out of the latest file name
         index_name = self._get_index_name(latest.name)
-        logger.info("Ensuring index exists", extra={"index": index_name})
+        # The index is built under a temporary name that CCR auto-follow patterns
+        # exclude, then cloned to `index_name` once complete. Followers bootstrap by
+        # copying the leader's segment files, so they start out with the finished,
+        # force merged and searchable index rather than replaying the build.
+        build_index = f"{BUILD_INDEX_PREFIX}{index_name}"
+        logger.info("Ensuring index exists", extra={"index": build_index})
 
-        if self._create_index(index_name):
+        if self._create_index(build_index):
+            active_policy_applied = False
             try:
-                logger.info("Start indexing", extra={"index": index_name})
+                logger.info("Start indexing", extra={"index": build_index})
                 reporter = ProgressReporter(
-                    logger, "Indexing", latest.name, index_name, total_docs
+                    logger, "Indexing", latest.name, build_index, total_docs
                 )
                 indexed = 0
                 blocked = 0
@@ -97,7 +128,7 @@ class Indexer:
                     if self._should_filter(doc):
                         blocked += 1
                     else:
-                        self._enqueue(index_name, (op, doc))
+                        self._enqueue(build_index, (op, doc))
                         indexed += self._index_docs(False)
 
                     # report percent completed
@@ -107,31 +138,53 @@ class Indexer:
                 self._index_docs(True)
                 logger.info(
                     "Completed indexing",
-                    extra={"latest_name": latest.name, "index": index_name},
+                    extra={"latest_name": latest.name, "index": build_index},
                 )
 
                 # Refresh the new index
-                self.elasticsearch.refresh_index(index=index_name)
-                logger.info("Refreshed index", extra={"index": index_name})
+                self.elasticsearch.refresh_index(index=build_index)
+                logger.info("Refreshed index", extra={"index": build_index})
 
                 # Force merge to a single segment for optimal read performance.
                 # This is a long-running operation on large indices; use a 2-hour timeout.
                 self.elasticsearch.forcemerge(
-                    index=index_name,
+                    index=build_index,
                     max_num_segments=1,
                     request_timeout=7200,
                     wait_for_completion=True,
                 )
-                logger.info("Force merged index", extra={"index": index_name})
+                logger.info("Force merged index", extra={"index": build_index})
+
+                self._clone_build_index(build_index, index_name)
+                cloned_at = time.monotonic()
+
+                # Alias changes replicate to CCR followers independently of the data,
+                # so wait for followers to catch up before the alias goes live there.
+                self._wait_for_followers(index_name, cloned_at)
+
+                # Make sure every replica of the clone is allocated before it serves
+                # traffic. Replicas recover while followers catch up, so this is
+                # usually already satisfied by the time the follower wait returns.
+                self.elasticsearch.wait_for_health(
+                    index=index_name, status="green", timeout=CLONE_HEALTH_TIMEOUT_SEC
+                )
 
                 # Attach the never-delete policy before the swap so the index is never
-                # eligible for deletion while it is the one serving the alias.
+                # eligible for deletion while it is the one serving the alias. This
+                # comes after the wait so that a run failing before the swap never
+                # leaves a never-delete copy on the followers (see _clone_build_index).
+                # Set first: the request may land even if the call then fails, and
+                # reverting a policy that was never attached is harmless.
+                active_policy_applied = True
                 self._apply_active_lifecycle_policy(index_name)
 
                 # Flip the alias pointer to the new index and remove the previous index
                 alias = self._flip_alias_to_latest(index_name, elasticsearch_alias)
             except Exception:
-                self._discard_index(index_name)
+                # The clone, if created, is left in place for ILM to expire rather than
+                # deleted (see _clone_build_index).
+                if active_policy_applied:
+                    self._revert_to_backup_lifecycle_policy(index_name, elasticsearch_alias)
                 raise
             else:
                 logger.info(
@@ -142,8 +195,91 @@ class Indexer:
                 # Anything the alias no longer points at is now a backup, so hand it
                 # over to the expiring policy.
                 self._apply_backup_lifecycle_policies(alias)
+            finally:
+                self._discard_index(build_index)
         else:
             raise Exception("Could not create the index")
+
+    def _clone_build_index(self, build_index: str, index_name: str) -> None:
+        """Clone the finished `build_index` to `index_name`.
+
+        Cloning requires a write block on the source and green source health. The clone
+        would inherit the write block, so it is lifted on the target to leave
+        `index_name` as a regular index.
+
+        Raises:
+            TimeoutError: If `build_index` does not reach green within
+                `CLONE_HEALTH_TIMEOUT_SEC`.
+
+        The clone is created with the expiring backup ILM policy, which replicates to
+        followers. The job cannot reach the followers, and deleting the leader index
+        would not delete their copies, so if the run fails after cloning the index is
+        left in place rather than deleted. ILM on the leader and on each follower
+        then expires it like any superseded index. On success, the published index is
+        switched to the active policy, which retains indefinitely, and that change
+        replicates to the followers too.
+        """
+        self.elasticsearch.block_writes(index=build_index)
+        # Cloning requires a green source, i.e. every primary and replica assigned.
+        self.elasticsearch.wait_for_health(
+            index=build_index, status="green", timeout=CLONE_HEALTH_TIMEOUT_SEC
+        )
+        self.elasticsearch.clone_index(
+            source=build_index,
+            target=index_name,
+            settings={
+                "index.blocks.write": None,
+                "index.lifecycle.name": BACKUP_ILM_POLICY.format(
+                    language=self.file_manager.language
+                ),
+            },
+            # The clone stays tied to the build index until its primary starts, so
+            # give it time rather than failing and deleting the build index under it.
+            active_shards_timeout=f"{CLONE_HEALTH_TIMEOUT_SEC}s",
+            request_timeout=CLONE_HEALTH_TIMEOUT_SEC + 60,
+        )
+        logger.info("Cloned index", extra={"source": build_index, "index": index_name})
+
+    def _revert_to_backup_lifecycle_policy(self, index_name: str, alias: str) -> None:
+        """Switch an unpublished index back to the expiring policy.
+
+        Called when a run fails after the active policy was attached but before the
+        alias flip completed, so that the index, which is left in place and still
+        followed, expires on the leader and followers instead of being kept forever.
+
+        An alias update can be applied even when the call reports a failure (e.g. a
+        read timeout), so the alias is checked first, and the active policy is kept
+        if `index_name` is already serving it. If that check fails, nothing is
+        reverted, since keeping an index is safer than expiring a live one.
+
+        Errors are logged, not raised, so the original failure still surfaces. An
+        index left on the active policy is demoted by the next successful run's
+        backup sweep.
+        """
+        policy = BACKUP_ILM_POLICY.format(language=self.file_manager.language)
+        alias = alias.format(version=self.index_version)
+        try:
+            serving = (
+                self.elasticsearch.get_indices_for_alias(alias=alias)
+                if self.elasticsearch.alias_exists(alias=alias)
+                else []
+            )
+            if index_name in serving:
+                logger.warning(
+                    "Alias points at the index despite the failure, keeping active policy",
+                    extra={"index": index_name, "alias": alias},
+                )
+                return
+            self.elasticsearch.set_index_lifecycle_policy(index=index_name, policy=policy)
+            logger.info(
+                "Reverted unpublished index to backup lifecycle policy",
+                extra={"index": index_name, "policy": policy},
+            )
+        except Exception:
+            logger.exception(
+                "Failed to revert unpublished index to backup lifecycle policy",
+                extra={"index": index_name, "policy": policy},
+            )
 
     def _discard_index(self, index_name: str) -> None:
         """Delete an index this run built but never published."""
@@ -216,7 +352,7 @@ class Indexer:
             return self.elasticsearch.create_index(
                 index=index_name,
                 mappings=get_suggest_mapping(language),
-                settings=get_suggest_settings(language),
+                settings=get_suggest_settings(language, index_type="temp"),
             )
 
         return False
@@ -255,6 +391,130 @@ class Indexer:
                     "previous_policy": current_policy,
                 },
             )
+
+    def _wait_for_followers(self, index_name: str, cloned_at: float | None = None) -> None:
+        """Block until every CCR follower of `index_name` has replicated all of it.
+
+        This runs on the leader cluster. Followers are discovered from the retention
+        leases they hold on the leader's primary shards. Auto-follow only creates
+        a follower after noticing the new index, so leases are collected for at least
+        `follower_discovery_period` before concluding which followers exist. A
+        follower has caught up once, on every shard, it holds a lease that retains
+        nothing at or below the leader's global checkpoint. Leases are renewed
+        periodically (every 30s by default), so they may trail the follower's actual
+        progress but never run ahead of it.
+
+        Each follower is logged when first discovered, with the seconds since
+        `cloned_at` (a `time.monotonic()` reading, defaulting to the start of the wait).
+        That is how long auto-follow took to pick up the index, to within one poll
+        interval, which can be used to tune the `follower_discovery_period`.
+
+        If no followers are configured, this method will proceed after the
+        `follower_discovery_period` has elapsed.
+
+        Raises:
+            TimeoutError: If followers have not caught up within `follower_sync_timeout`.
+        """
+        start = time.monotonic()
+        if cloned_at is None:
+            cloned_at = start
+        # Shard count is fixed at creation
+        number_of_shards = self.elasticsearch.get_number_of_shards(index=index_name)
+        discovered: set[str] = set()
+        while True:
+            followers, lagging = self._get_follower_progress(index_name, number_of_shards)
+            now = time.monotonic()
+            for follower in sorted(followers - discovered):
+                logger.info(
+                    "Discovered follower",
+                    extra={
+                        "index": index_name,
+                        "follower": follower,
+                        "seconds_since_clone": round(now - cloned_at, 1),
+                    },
+                )
+            discovered |= followers
+            elapsed = now - start
+            if not lagging and elapsed >= self.follower_discovery_period:
+                logger.info(
+                    "Followers are in sync" if followers else "Index has no followers",
+                    extra={"index": index_name, "followers": sorted(followers)},
+                )
+                return
+            if elapsed >= self.follower_sync_timeout:
+                raise TimeoutError(
+                    f"Followers of {index_name} did not catch up within "
+                    f"{self.follower_sync_timeout}s: {sorted(lagging)}"
+                )
+            logger.info(
+                "Waiting for followers",
+                extra={
+                    "index": index_name,
+                    "followers": sorted(followers),
+                    "lagging_followers": sorted(lagging),
+                },
+            )
+            time.sleep(self.follower_sync_poll_interval)
+
+    def _get_follower_progress(
+        self, index_name: str, number_of_shards: int
+    ) -> tuple[set[str], set[str]]:
+        """Return the CCR follower lease IDs on `index_name` and the subset still behind.
+
+        Progress is read from two values in the leader's shard stats, both sequence
+        numbers. Every operation on a shard (index, update, delete) gets the next
+        sequence number, so they count operations, not documents.
+
+        - The primary's `global_checkpoint` is the highest sequence number that every
+          in-sync copy of the shard has processed. It is the most the leader can
+          guarantee a follower could have read.
+        - A CCR follower holds a retention lease on each leader shard it follows, so the
+          leader keeps the operation history the follower still needs. The lease's
+          `retaining_seq_no` is the first sequence number the follower still needs,
+          i.e. the follower's own global checkpoint + 1, renewed periodically.
+
+        A follower is lagging on a shard while `retaining_seq_no <= global_checkpoint`,
+        because it still needs an operation the leader already has. Once
+        `retaining_seq_no > global_checkpoint`, it has everything.
+
+        See https://www.elastic.co/docs/reference/elasticsearch/index-settings/history-retention
+        for how retention leases work.
+
+        A follower is identified by the same lease ID on every shard. One that holds a
+        lease on some shards but not yet on others is still bootstrapping, so it is
+        reported as lagging until it holds a caught-up lease on every shard.
+
+        Shard stats only list started copies, so a primary can be briefly missing, for
+        example while a replica is promoted after a node restart, and a shard with no
+        started copies is missing entirely. Progress on such a shard is then unknown,
+        so it is reported as lagging until its primary is back.
+        """
+        followers: set[str] = set()
+        lagging: set[str] = set()
+        # CCR follower lease IDs held on each shard whose primary is started.
+        leases_by_shard: dict[str, set[str]] = {}
+        stats = self.elasticsearch.get_shard_stats(index=index_name)
+        for missing in {str(n) for n in range(number_of_shards)} - stats.keys():
+            lagging.add(f"shard {missing} (no started copies)")
+        for shard, copies in stats.items():
+            primary = next((copy for copy in copies if copy["routing"]["primary"]), None)
+            if primary is None:
+                lagging.add(f"shard {shard} (no started primary)")
+                continue
+            global_checkpoint = primary["seq_no"]["global_checkpoint"]
+            held = leases_by_shard.setdefault(shard, set())
+            for lease in primary["retention_leases"]["leases"]:
+                if lease["source"] != CCR_RETENTION_LEASE_SOURCE:
+                    continue
+                held.add(lease["id"])
+                if lease["retaining_seq_no"] <= global_checkpoint:
+                    lagging.add(lease["id"])
+            followers |= held
+        # A follower acquires a lease on each shard as it starts following it, so one
+        # seen on some shards but not yet on another hasn't caught up on that shard.
+        for held in leases_by_shard.values():
+            lagging |= followers - held
+        return followers, lagging
 
     def _flip_alias_to_latest(self, current_index: str, alias: str) -> str:
         """Point `alias` at `current_index` only, and return the resolved alias."""

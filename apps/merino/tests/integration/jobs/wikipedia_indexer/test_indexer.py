@@ -9,6 +9,7 @@ import freezegun
 import pytest
 from merino.jobs.wikipedia_indexer.filemanager import Snapshot
 from merino.jobs.wikipedia_indexer.indexer import Indexer
+from merino.jobs.wikipedia_indexer.settings.v1 import get_suggest_settings
 from merino.search.elastic import ElasticSearchAdapter
 
 FROZEN_TIME = "2020-01-01"
@@ -50,13 +51,23 @@ def es_adapter(mocker):
     # Defaults so the lifecycle sweep after the alias flip has iterable results.
     adapter_mock.get_indices_for_alias.return_value = []
     adapter_mock.get_index_lifecycle_policies.return_value = {}
+    # A single started shard with no CCR followers unless a test says otherwise.
+    adapter_mock.get_number_of_shards.return_value = 1
+    adapter_mock.get_shard_stats.return_value = {"0": [_shard(0)]}
     return adapter_mock
 
 
 @pytest.fixture
 def indexer(file_manager, es_adapter, category_blocklist, title_blocklist):
     """Return a mock indexer instance"""
-    return Indexer("v1", category_blocklist, title_blocklist, file_manager, es_adapter)
+    return Indexer(
+        "v1",
+        category_blocklist,
+        title_blocklist,
+        file_manager,
+        es_adapter,
+        follower_discovery_period=0,
+    )
 
 
 @pytest.mark.parametrize(
@@ -207,10 +218,9 @@ def test_flip_alias(
 
 @freezegun.freeze_time(FROZEN_TIME)
 def test_index_from_export(
+    indexer,
     file_manager,
     es_adapter,
-    category_blocklist,
-    title_blocklist,
 ):
     """Test full index from export flow."""
     file_manager.get_latest_gcs.return_value = SNAPSHOT
@@ -240,14 +250,15 @@ def test_index_from_export(
     ]
 
     file_manager.stream_from_gcs.return_value = (input for input in inputs)
-    indexer = Indexer("v1", category_blocklist, title_blocklist, file_manager, es_adapter)
 
     indexer.index_from_export(1, "enwiki")
 
     es_adapter.bulk.assert_called_once()
     es_adapter.refresh_index.assert_called_once()
     es_adapter.update_aliases.assert_called_once()
-    es_adapter.delete_index.assert_not_called()
+    es_adapter.delete_index.assert_called_once_with(
+        index=f"temp-enwiki-20220101-v1-{EPOCH_FROZEN_TIME}", ignore_missing=True
+    )
     es_adapter.set_index_lifecycle_policy.assert_called_once_with(
         index=f"enwiki-20220101-v1-{EPOCH_FROZEN_TIME}", policy="enwiki_policy"
     )
@@ -255,10 +266,9 @@ def test_index_from_export(
 
 @freezegun.freeze_time(FROZEN_TIME)
 def test_index_from_export_applies_active_policy_before_flipping_alias(
+    indexer,
     file_manager,
     es_adapter,
-    category_blocklist,
-    title_blocklist,
     mocker,
 ):
     """Test that the new index is never exposed under the alias while it still
@@ -280,7 +290,6 @@ def test_index_from_export_applies_active_policy_before_flipping_alias(
         json.dumps({"title": "Paris", "page_id": 1000, "category": ["cities"]}),
     ]
     file_manager.stream_from_gcs.return_value = (input for input in inputs)
-    indexer = Indexer("v1", category_blocklist, title_blocklist, file_manager, es_adapter)
 
     indexer.index_from_export(1, "enwiki-{version}")
 
@@ -290,10 +299,9 @@ def test_index_from_export_applies_active_policy_before_flipping_alias(
 
 @freezegun.freeze_time(FROZEN_TIME)
 def test_index_from_export_demotes_superseded_indices_to_backup_policy(
+    indexer,
     file_manager,
     es_adapter,
-    category_blocklist,
-    title_blocklist,
 ):
     """Test that indices no longer served by the alias get the backup policy, and
     that the live index and already-demoted indices are left alone.
@@ -319,7 +327,6 @@ def test_index_from_export_demotes_superseded_indices_to_backup_policy(
         json.dumps({"title": "Paris", "page_id": 1000, "category": ["cities"]}),
     ]
     file_manager.stream_from_gcs.return_value = (input for input in inputs)
-    indexer = Indexer("v1", category_blocklist, title_blocklist, file_manager, es_adapter)
 
     indexer.index_from_export(1, "enwiki-{version}")
 
@@ -356,10 +363,9 @@ def test_backup_lifecycle_policies_are_language_scoped(
 
 
 def test_index_from_export_with_category_blocklist_content_filter(
+    indexer,
     file_manager,
     es_adapter,
-    category_blocklist,
-    title_blocklist,
 ):
     """Test content moderation removes blocked categories from category blocklist."""
     file_manager.get_latest_gcs.return_value = SNAPSHOT
@@ -411,7 +417,6 @@ def test_index_from_export_with_category_blocklist_content_filter(
     ]
 
     file_manager.stream_from_gcs.return_value = (input for input in inputs)
-    indexer = Indexer("v1", category_blocklist, title_blocklist, file_manager, es_adapter)
 
     indexer.index_from_export(1, "enwiki")
 
@@ -419,10 +424,9 @@ def test_index_from_export_with_category_blocklist_content_filter(
 
 
 def test_index_from_export_with_title_blocklist_content_filter(
+    indexer,
     file_manager,
     es_adapter,
-    category_blocklist,
-    title_blocklist,
 ):
     """Test content moderation removes blocked categories from title blocklist.
     Also verifies that matching results are not case sensitive, given a title.
@@ -476,7 +480,6 @@ def test_index_from_export_with_title_blocklist_content_filter(
     ]
 
     file_manager.stream_from_gcs.return_value = (input for input in inputs)
-    indexer = Indexer("v1", category_blocklist, title_blocklist, file_manager, es_adapter)
 
     indexer.index_from_export(1, "enwiki")
 
@@ -484,10 +487,9 @@ def test_index_from_export_with_title_blocklist_content_filter(
 
 
 def test_index_from_export_filters_redirects(
+    indexer,
     file_manager,
     es_adapter,
-    category_blocklist,
-    title_blocklist,
 ):
     """Test that redirect documents are not indexed."""
     file_manager.get_latest_gcs.return_value = SNAPSHOT
@@ -540,7 +542,6 @@ def test_index_from_export_filters_redirects(
     ]
 
     file_manager.stream_from_gcs.return_value = (input for input in inputs)
-    indexer = Indexer("v1", category_blocklist, title_blocklist, file_manager, es_adapter)
 
     indexer.index_from_export(1, "enwiki")
 
@@ -548,10 +549,9 @@ def test_index_from_export_filters_redirects(
 
 
 def test_index_from_export_keeps_documents_without_a_page_type(
+    indexer,
     file_manager,
     es_adapter,
-    category_blocklist,
-    title_blocklist,
 ):
     """Test that a document with no page type is still indexed."""
     file_manager.get_latest_gcs.return_value = SNAPSHOT
@@ -581,7 +581,6 @@ def test_index_from_export_keeps_documents_without_a_page_type(
     ]
 
     file_manager.stream_from_gcs.return_value = (input for input in inputs)
-    indexer = Indexer("v1", category_blocklist, title_blocklist, file_manager, es_adapter)
 
     indexer.index_from_export(1, "enwiki")
 
@@ -616,22 +615,166 @@ def _ready_to_index(file_manager, es_adapter, docs=1):
 
 @pytest.mark.parametrize(
     "failing_call",
-    ["bulk", "refresh_index", "forcemerge", "set_index_lifecycle_policy", "update_aliases"],
+    [
+        "bulk",
+        "refresh_index",
+        "forcemerge",
+        "block_writes",
+        "wait_for_health",
+        "clone_index",
+        "set_index_lifecycle_policy",
+        "update_aliases",
+    ],
 )
-def test_index_from_export_discards_the_index_when_the_build_fails(
+def test_index_from_export_deletes_only_the_build_index_when_the_build_fails(
     indexer, file_manager, es_adapter, failing_call
 ):
-    """Verify an index that never reached the alias is deleted on any failure."""
+    """Verify the build index is deleted on any failure, and the clone, which followers
+    may already hold, is left for ILM to expire.
+    """
     _ready_to_index(file_manager, es_adapter)
     getattr(es_adapter, failing_call).side_effect = RuntimeError("boom")
 
     with pytest.raises(RuntimeError, match="boom"):
         indexer.index_from_export(1, "enwiki-{version}")
 
-    es_adapter.delete_index.assert_called_once()
-    deleted = es_adapter.delete_index.call_args.kwargs
-    assert deleted["index"] == es_adapter.create_index.call_args.kwargs["index"]
-    assert deleted["ignore_missing"] is True
+    build_index = es_adapter.create_index.call_args.kwargs["index"]
+    es_adapter.delete_index.assert_called_once_with(index=build_index, ignore_missing=True)
+
+
+@pytest.mark.parametrize("language", ["en", "fr", "de", "it", "pl"])
+def test_build_index_is_created_with_the_backup_policy(
+    file_manager, es_adapter, category_blocklist, title_blocklist, language
+):
+    """Verify the build index uses the published index settings, except for the
+    expiring policy, so it expires via ILM if a killed run never deletes it.
+    """
+    file_manager.language = language
+    es_adapter.index_exists.return_value = False
+    indexer = Indexer("v1", category_blocklist, title_blocklist, file_manager, es_adapter)
+
+    indexer._create_index("temp-index")
+
+    settings = es_adapter.create_index.call_args.kwargs["settings"]
+    assert settings["index.lifecycle.name"] == f"{language}wiki_backup_policy"
+    assert settings == {
+        **get_suggest_settings(language),
+        "index.lifecycle.name": f"{language}wiki_backup_policy",
+    }
+
+
+def test_index_from_export_does_not_publish_a_clone_that_never_turns_green(
+    indexer, file_manager, es_adapter
+):
+    """Verify a clone whose replicas are not all allocated in time is not published,
+    and keeps the backup policy, so it expires rather than serving degraded.
+    """
+    _ready_to_index(file_manager, es_adapter)
+    # The build index is green, its clone is not.
+    es_adapter.wait_for_health.side_effect = [None, TimeoutError("still yellow")]
+
+    with pytest.raises(TimeoutError, match="still yellow"):
+        indexer.index_from_export(1, "enwiki-{version}")
+
+    index_name = es_adapter.create_index.call_args.kwargs["index"].removeprefix("temp-")
+    es_adapter.wait_for_health.assert_called_with(index=index_name, status="green", timeout=600)
+    es_adapter.set_index_lifecycle_policy.assert_not_called()
+    es_adapter.update_aliases.assert_not_called()
+
+
+def test_index_from_export_reverts_to_backup_policy_when_the_flip_fails(
+    indexer, file_manager, es_adapter, mocker
+):
+    """Verify an unpublished index that already carries the never-delete policy is
+    switched back to the backup policy, so it expires on the leader and followers.
+    """
+    _ready_to_index(file_manager, es_adapter)
+    es_adapter.update_aliases.side_effect = RuntimeError("boom")
+
+    with pytest.raises(RuntimeError, match="boom"):
+        indexer.index_from_export(1, "enwiki-{version}")
+
+    index_name = es_adapter.create_index.call_args.kwargs["index"].removeprefix("temp-")
+    assert es_adapter.set_index_lifecycle_policy.call_args_list == [
+        mocker_call(index=index_name, policy="enwiki_policy"),
+        mocker_call(index=index_name, policy="enwiki_backup_policy"),
+    ]
+
+
+@freezegun.freeze_time(FROZEN_TIME)
+def test_index_from_export_keeps_the_active_policy_if_the_flip_landed_despite_failing(
+    indexer, file_manager, es_adapter, caplog
+):
+    """Verify that when the alias update is applied but the call still fails (e.g. a
+    read timeout), the now-serving index keeps the never-delete policy.
+    """
+    _ready_to_index(file_manager, es_adapter)
+    index_name = f"enwiki-20220101-v1-{EPOCH_FROZEN_TIME}"
+    es_adapter.alias_exists.return_value = True
+    # Before the flip the alias serves the old index, afterwards the new one.
+    es_adapter.get_indices_for_alias.side_effect = [["enwiki-old"], [index_name]]
+    es_adapter.update_aliases.side_effect = TimeoutError("read timed out")
+
+    with pytest.raises(TimeoutError, match="read timed out"):
+        indexer.index_from_export(1, "enwiki-{version}")
+
+    es_adapter.set_index_lifecycle_policy.assert_called_once_with(
+        index=index_name, policy="enwiki_policy"
+    )
+    assert "keeping active policy" in caplog.text
+
+
+def test_index_from_export_does_not_revert_if_the_alias_cannot_be_checked(
+    indexer, file_manager, es_adapter, caplog
+):
+    """Verify the policy is left alone, rather than risk expiring a live index, when
+    the alias cannot be read after a failed flip.
+    """
+    _ready_to_index(file_manager, es_adapter)
+    es_adapter.update_aliases.side_effect = RuntimeError("boom")
+    # The flip itself sees no alias; the check afterwards cannot reach the cluster.
+    es_adapter.alias_exists.side_effect = [False, RuntimeError("unreachable")]
+
+    with pytest.raises(RuntimeError, match="boom"):
+        indexer.index_from_export(1, "enwiki-{version}")
+
+    assert es_adapter.set_index_lifecycle_policy.call_count == 1
+    assert "Failed to revert unpublished index" in caplog.text
+
+
+def test_index_from_export_reverts_when_attaching_the_active_policy_fails(
+    indexer, file_manager, es_adapter
+):
+    """Verify a failed active-policy attach is still reverted, since the request may
+    have been applied before the call failed.
+    """
+    _ready_to_index(file_manager, es_adapter)
+    es_adapter.set_index_lifecycle_policy.side_effect = [TimeoutError("timed out"), None]
+
+    with pytest.raises(TimeoutError, match="timed out"):
+        indexer.index_from_export(1, "enwiki-{version}")
+
+    index_name = es_adapter.create_index.call_args.kwargs["index"].removeprefix("temp-")
+    assert es_adapter.set_index_lifecycle_policy.call_args_list == [
+        mocker_call(index=index_name, policy="enwiki_policy"),
+        mocker_call(index=index_name, policy="enwiki_backup_policy"),
+    ]
+    es_adapter.update_aliases.assert_not_called()
+
+
+def test_index_from_export_reports_the_original_error_when_the_policy_revert_fails(
+    indexer, file_manager, es_adapter, caplog
+):
+    """Verify a failed revert is logged, and does not mask the original error."""
+    _ready_to_index(file_manager, es_adapter)
+    es_adapter.update_aliases.side_effect = RuntimeError("boom")
+    # The active policy attach succeeds, the revert fails.
+    es_adapter.set_index_lifecycle_policy.side_effect = [None, RuntimeError("revert")]
+
+    with pytest.raises(RuntimeError, match="boom"):
+        indexer.index_from_export(1, "enwiki-{version}")
+
+    assert "Failed to revert unpublished index to backup lifecycle policy" in caplog.text
 
 
 def test_index_from_export_discards_the_index_when_the_export_is_unreadable(
@@ -644,7 +787,9 @@ def test_index_from_export_discards_the_index_when_the_export_is_unreadable(
     with pytest.raises(RuntimeError, match="gcs is down"):
         indexer.index_from_export(1, "enwiki-{version}")
 
-    es_adapter.delete_index.assert_called_once()
+    es_adapter.delete_index.assert_called_with(
+        index=es_adapter.create_index.call_args.kwargs["index"], ignore_missing=True
+    )
 
 
 def test_index_from_export_keeps_the_index_once_the_alias_has_flipped(
@@ -658,9 +803,11 @@ def test_index_from_export_keeps_the_index_once_the_alias_has_flipped(
     with pytest.raises(RuntimeError, match="too late"):
         indexer.index_from_export(1, "enwiki-{version}")
 
-    # The flip happened, so we chose not to delete.
+    # The flip happened, so only the temp build index is deleted.
     es_adapter.update_aliases.assert_called_once()
-    es_adapter.delete_index.assert_not_called()
+    es_adapter.delete_index.assert_called_once_with(
+        index=es_adapter.create_index.call_args.kwargs["index"], ignore_missing=True
+    )
 
 
 def test_index_from_export_reports_the_original_error_when_cleanup_fails(
@@ -736,3 +883,474 @@ def test_index_docs_success_returns_item_count(indexer, es_adapter):
     count = indexer._index_docs(force=True)
     assert count == 3
     assert indexer.queue == []
+
+
+def _shard(global_checkpoint: int, *ccr_retaining_seq_nos: int, primary: bool = True) -> dict:
+    """Return one shard copy's stats with a peer recovery lease plus one CCR lease
+    per follower, retaining the given sequence numbers.
+
+    The shape mirrors a real `_stats?level=shards` response, which
+    tests/integration/search/test_elastic_adapter.py checks against Elasticsearch, and
+    test_indexer_ccr.py exercises real CCR leases against a leader and follower.
+    """
+    leases = [{"id": "peer_recovery/node", "retaining_seq_no": 0, "source": "peer recovery"}]
+    leases += [
+        {"id": f"follower-{i}", "retaining_seq_no": seq_no, "source": "ccr"}
+        for i, seq_no in enumerate(ccr_retaining_seq_nos)
+    ]
+    return {
+        "routing": {"primary": primary},
+        "seq_no": {"global_checkpoint": global_checkpoint},
+        "retention_leases": {"leases": leases},
+    }
+
+
+class FakeClock:
+    """Stands in for the indexer's monotonic clock; sleeping advances it instantly."""
+
+    def __init__(self) -> None:
+        self.now = 0.0
+
+    def monotonic(self) -> float:
+        """Return the current fake time."""
+        return self.now
+
+    def sleep(self, seconds: float) -> None:
+        """Advance the fake time without blocking."""
+        self.now += seconds
+
+
+@pytest.fixture
+def clock(mocker) -> FakeClock:
+    """Patch the indexer's clock with a FakeClock."""
+    fake = FakeClock()
+    mocker.patch(
+        "merino.jobs.wikipedia_indexer.indexer.time.monotonic", side_effect=fake.monotonic
+    )
+    mocker.patch("merino.jobs.wikipedia_indexer.indexer.time.sleep", side_effect=fake.sleep)
+    return fake
+
+
+def test_wait_for_followers_polls_until_every_shard_catches_up(
+    file_manager, es_adapter, category_blocklist, title_blocklist, clock
+):
+    """Test that the wait continues until all followers retain past the leader's
+    global checkpoint on every shard, judging only the primary copy.
+    """
+    es_adapter.get_shard_stats.side_effect = [
+        # Both followers behind on shard 0.
+        {"0": [_shard(99, 50, 0)], "1": [_shard(42, 43, 43)]},
+        # follower-1 still behind on shard 0. The replica's stale view is ignored.
+        {"0": [_shard(99, 0, 0, primary=False), _shard(99, 100, 99)], "1": [_shard(42, 43, 43)]},
+        # Caught up.
+        {"0": [_shard(99, 100, 100)], "1": [_shard(42, 43, 43)]},
+    ]
+    es_adapter.get_number_of_shards.return_value = 2
+    indexer = Indexer(
+        "v1",
+        category_blocklist,
+        title_blocklist,
+        file_manager,
+        es_adapter,
+        follower_sync_poll_interval=7,
+        follower_discovery_period=0,
+    )
+
+    indexer._wait_for_followers("enwiki-1")
+
+    assert es_adapter.get_shard_stats.call_count == 3
+    assert clock.now == 14
+
+
+def test_wait_for_followers_waits_for_a_lease_on_every_shard(
+    file_manager, es_adapter, category_blocklist, title_blocklist, clock
+):
+    """Test that a follower holding a caught-up lease on one shard, but no lease yet on
+    another, is still waited on, rather than judged only where it holds a lease.
+    """
+    es_adapter.get_shard_stats.side_effect = [
+        # follower-1 is caught up on shard 0 but has not started following shard 1.
+        {"0": [_shard(99, 100, 100)], "1": [_shard(42, 43)]},
+        # It now holds a lease on shard 1 too, and is caught up there.
+        {"0": [_shard(99, 100, 100)], "1": [_shard(42, 43, 43)]},
+    ]
+    es_adapter.get_number_of_shards.return_value = 2
+    indexer = Indexer(
+        "v1",
+        category_blocklist,
+        title_blocklist,
+        file_manager,
+        es_adapter,
+        follower_sync_poll_interval=7,
+        follower_discovery_period=0,
+    )
+
+    indexer._wait_for_followers("enwiki-1")
+
+    assert es_adapter.get_shard_stats.call_count == 2
+    assert clock.now == 7
+
+
+def test_wait_for_followers_names_followers_missing_a_shard_lease_on_timeout(
+    file_manager, es_adapter, category_blocklist, title_blocklist, clock
+):
+    """Test that a follower which never acquires a lease on a shard fails the wait,
+    and is named as lagging.
+    """
+    es_adapter.get_shard_stats.return_value = {
+        "0": [_shard(99, 100, 100)],
+        "1": [_shard(42, 43)],
+    }
+    es_adapter.get_number_of_shards.return_value = 2
+    indexer = Indexer(
+        "v1",
+        category_blocklist,
+        title_blocklist,
+        file_manager,
+        es_adapter,
+        follower_sync_timeout=30,
+        follower_sync_poll_interval=15,
+        follower_discovery_period=0,
+    )
+
+    with pytest.raises(TimeoutError, match=r"\['follower-1'\]"):
+        indexer._wait_for_followers("enwiki-1")
+
+
+def test_wait_for_followers_times_out(
+    file_manager, es_adapter, category_blocklist, title_blocklist, clock
+):
+    """Test that a follower that never catches up fails the wait."""
+    es_adapter.get_shard_stats.return_value = {"0": [_shard(99, 100, 10)]}
+    indexer = Indexer(
+        "v1",
+        category_blocklist,
+        title_blocklist,
+        file_manager,
+        es_adapter,
+        follower_sync_timeout=60,
+        follower_sync_poll_interval=15,
+        follower_discovery_period=0,
+    )
+
+    with pytest.raises(TimeoutError, match=r"enwiki-1 did not catch up within 60s.*follower-1"):
+        indexer._wait_for_followers("enwiki-1")
+
+    assert clock.now == 60
+
+
+def test_wait_for_followers_waits_while_a_primary_is_missing(
+    file_manager, es_adapter, category_blocklist, title_blocklist, clock
+):
+    """Test that a shard with no started primary counts as lagging, rather than failing
+    the run, until its primary is back.
+    """
+    es_adapter.get_shard_stats.side_effect = [
+        {"0": [_shard(99, 100)], "1": [_shard(42, 43, primary=False)]},
+        {"0": [_shard(99, 100)], "1": [_shard(42, 43)]},
+    ]
+    indexer = Indexer(
+        "v1",
+        category_blocklist,
+        title_blocklist,
+        file_manager,
+        es_adapter,
+        follower_sync_poll_interval=15,
+        follower_discovery_period=0,
+    )
+
+    indexer._wait_for_followers("enwiki-1")
+
+    assert es_adapter.get_shard_stats.call_count == 2
+
+
+def test_wait_for_followers_names_shards_without_a_primary_on_timeout(
+    file_manager, es_adapter, category_blocklist, title_blocklist, clock
+):
+    """Test that a primary that never comes back fails the wait, naming its shard."""
+    es_adapter.get_shard_stats.return_value = {"0": [_shard(42, 43, primary=False)]}
+    indexer = Indexer(
+        "v1",
+        category_blocklist,
+        title_blocklist,
+        file_manager,
+        es_adapter,
+        follower_sync_timeout=30,
+        follower_sync_poll_interval=15,
+        follower_discovery_period=0,
+    )
+
+    with pytest.raises(TimeoutError, match=r"shard 0 \(no started primary\)"):
+        indexer._wait_for_followers("enwiki-1")
+
+
+def test_wait_for_followers_waits_while_a_shard_has_no_started_copies(
+    file_manager, es_adapter, category_blocklist, title_blocklist, clock
+):
+    """Test that a shard missing from the stats counts as lagging, even when every
+    reported shard is in sync, until a copy of it is started again.
+    """
+    es_adapter.get_number_of_shards.return_value = 2
+    es_adapter.get_shard_stats.side_effect = [
+        {"0": [_shard(99, 100)]},
+        {},
+        {"0": [_shard(99, 100)], "1": [_shard(42, 43)]},
+    ]
+    indexer = Indexer(
+        "v1",
+        category_blocklist,
+        title_blocklist,
+        file_manager,
+        es_adapter,
+        follower_sync_poll_interval=15,
+        follower_discovery_period=0,
+    )
+
+    indexer._wait_for_followers("enwiki-1")
+
+    assert es_adapter.get_shard_stats.call_count == 3
+    es_adapter.get_number_of_shards.assert_called_once_with(index="enwiki-1")
+
+
+def test_wait_for_followers_names_shards_without_started_copies_on_timeout(
+    file_manager, es_adapter, category_blocklist, title_blocklist, clock
+):
+    """Test that a shard that never comes back fails the wait, naming the shard."""
+    es_adapter.get_number_of_shards.return_value = 2
+    es_adapter.get_shard_stats.return_value = {"0": [_shard(99, 100)]}
+    indexer = Indexer(
+        "v1",
+        category_blocklist,
+        title_blocklist,
+        file_manager,
+        es_adapter,
+        follower_sync_timeout=30,
+        follower_sync_poll_interval=15,
+        follower_discovery_period=0,
+    )
+
+    with pytest.raises(TimeoutError, match=r"shard 1 \(no started copies\)"):
+        indexer._wait_for_followers("enwiki-1")
+
+
+@pytest.mark.parametrize(
+    ("timeout", "discovery_period"),
+    [(59, 60), (0, 1)],
+    ids=["shorter-than-discovery", "zero-timeout"],
+)
+def test_init_rejects_a_sync_timeout_shorter_than_the_discovery_period(
+    file_manager, es_adapter, category_blocklist, title_blocklist, timeout, discovery_period
+):
+    """Test that a timeout that could never be met is rejected up front."""
+    with pytest.raises(ValueError, match="must be at least follower_discovery_period"):
+        Indexer(
+            "v1",
+            category_blocklist,
+            title_blocklist,
+            file_manager,
+            es_adapter,
+            follower_sync_timeout=timeout,
+            follower_discovery_period=discovery_period,
+        )
+
+
+@freezegun.freeze_time(FROZEN_TIME)
+def test_index_from_export_keeps_the_unpublished_index_when_followers_time_out(
+    file_manager, es_adapter, category_blocklist, title_blocklist
+):
+    """Test that the alias is left alone when followers never catch up, and the new
+    index stays on the backup policy for ILM to expire rather than being deleted.
+    """
+    file_manager.get_latest_gcs.return_value = SNAPSHOT
+    es_adapter.bulk.return_value = {"acknowledged": True, "errors": False, "items": [{"id": 1000}]}
+    es_adapter.index_exists.return_value = False
+    es_adapter.create_index.return_value = True
+    es_adapter.get_shard_stats.return_value = {"0": [_shard(99, 10)]}
+
+    inputs = [
+        json.dumps({"index": {"_type": "doc", "_id": "1000"}}),
+        json.dumps({"title": "Paris", "page_id": 1000, "category": ["cities"]}),
+    ]
+    file_manager.stream_from_gcs.return_value = (input for input in inputs)
+    indexer = Indexer(
+        "v1",
+        category_blocklist,
+        title_blocklist,
+        file_manager,
+        es_adapter,
+        follower_sync_timeout=0,
+        follower_discovery_period=0,
+    )
+
+    with pytest.raises(TimeoutError):
+        indexer.index_from_export(1, "enwiki-{version}")
+
+    es_adapter.update_aliases.assert_not_called()
+    # The never-delete policy is never attached, so the clone keeps the backup policy.
+    es_adapter.set_index_lifecycle_policy.assert_not_called()
+    es_adapter.delete_index.assert_called_once_with(
+        index=f"temp-enwiki-20220101-v1-{EPOCH_FROZEN_TIME}", ignore_missing=True
+    )
+
+
+def test_wait_for_followers_waits_out_the_discovery_period_without_followers(
+    file_manager, es_adapter, category_blocklist, title_blocklist, clock
+):
+    """Test that an index without followers is only declared follower-free once
+    auto-follow has had the discovery period to pick it up.
+    """
+    es_adapter.get_shard_stats.return_value = {"0": [_shard(99)]}
+    indexer = Indexer(
+        "v1",
+        category_blocklist,
+        title_blocklist,
+        file_manager,
+        es_adapter,
+        follower_sync_poll_interval=15,
+        follower_discovery_period=60,
+    )
+
+    indexer._wait_for_followers("enwiki-1")
+
+    assert clock.now == 60
+
+
+def test_wait_for_followers_waits_on_followers_found_during_discovery(
+    file_manager, es_adapter, category_blocklist, title_blocklist, clock
+):
+    """Test that a follower that appears partway through discovery is waited on, even
+    after an earlier follower is already in sync.
+    """
+    es_adapter.get_shard_stats.side_effect = [
+        {"0": [_shard(99, 100)]},
+        {"0": [_shard(99, 100, 0)]},
+        {"0": [_shard(99, 100, 50)]},
+        {"0": [_shard(99, 100, 100)]},
+    ]
+    indexer = Indexer(
+        "v1",
+        category_blocklist,
+        title_blocklist,
+        file_manager,
+        es_adapter,
+        follower_sync_poll_interval=15,
+        follower_discovery_period=30,
+    )
+
+    indexer._wait_for_followers("enwiki-1")
+
+    assert es_adapter.get_shard_stats.call_count == 4
+
+
+@freezegun.freeze_time(FROZEN_TIME)
+def test_index_from_export_builds_under_temp_name_and_clones(
+    indexer, file_manager, es_adapter, mocker
+):
+    """Test that documents go into the temp build index, which is force merged and
+    cloned under the real name, and that followers are checked before the alias
+    points at the clone.
+    """
+    build_index = f"temp-enwiki-20220101-v1-{EPOCH_FROZEN_TIME}"
+    index_name = f"enwiki-20220101-v1-{EPOCH_FROZEN_TIME}"
+    file_manager.get_latest_gcs.return_value = SNAPSHOT
+    bulk_indices = []
+
+    def capture_bulk(operations):
+        """Record target indices at call time; the queue is cleared afterwards."""
+        bulk_indices.extend(op["index"]["_index"] for op in operations if "index" in op)
+        return {"acknowledged": True, "errors": False, "items": [{"id": 1000}]}
+
+    es_adapter.bulk.side_effect = capture_bulk
+    es_adapter.index_exists.return_value = False
+    es_adapter.create_index.return_value = True
+    es_adapter.alias_exists.return_value = False
+
+    calls = mocker.Mock()
+    for name in [
+        "forcemerge",
+        "block_writes",
+        "wait_for_health",
+        "clone_index",
+        "get_number_of_shards",
+        "get_shard_stats",
+        "set_index_lifecycle_policy",
+        "update_aliases",
+        "delete_index",
+    ]:
+        calls.attach_mock(getattr(es_adapter, name), name)
+
+    inputs = [
+        json.dumps({"index": {"_type": "doc", "_id": "1000"}}),
+        json.dumps({"title": "Paris", "page_id": 1000, "category": ["cities"]}),
+    ]
+    file_manager.stream_from_gcs.return_value = (input for input in inputs)
+
+    indexer.index_from_export(1, "enwiki-{version}")
+
+    assert [call[0] for call in calls.mock_calls] == [
+        "forcemerge",
+        "block_writes",
+        "wait_for_health",
+        "clone_index",
+        "get_number_of_shards",
+        "get_shard_stats",
+        # The clone is fully allocated before it serves the alias.
+        "wait_for_health",
+        # The never-delete policy is only attached once followers have caught up.
+        "set_index_lifecycle_policy",
+        "update_aliases",
+        "delete_index",
+    ]
+    assert es_adapter.create_index.call_args.kwargs["index"] == build_index
+    assert bulk_indices == [build_index]
+    assert es_adapter.forcemerge.call_args.kwargs["index"] == build_index
+    # The clone would otherwise inherit the build's write block, and starts on the
+    # expiring policy so that unpublished copies on followers are cleaned up.
+    es_adapter.clone_index.assert_called_once_with(
+        source=build_index,
+        target=index_name,
+        settings={"index.blocks.write": None, "index.lifecycle.name": "enwiki_backup_policy"},
+        active_shards_timeout="600s",
+        request_timeout=660,
+    )
+    assert es_adapter.wait_for_health.call_args_list == [
+        mocker_call(index=build_index, status="green", timeout=600),
+        mocker_call(index=index_name, status="green", timeout=600),
+    ]
+    es_adapter.get_shard_stats.assert_called_with(index=index_name)
+    es_adapter.update_aliases.assert_called_once_with(
+        actions=[{"add": {"index": index_name, "alias": "enwiki-v1"}}]
+    )
+    es_adapter.delete_index.assert_called_once_with(index=build_index, ignore_missing=True)
+
+
+def test_wait_for_followers_logs_each_follower_once_when_discovered(
+    file_manager, es_adapter, category_blocklist, title_blocklist, clock, caplog
+):
+    """Test that each follower is logged once, on first sighting, with the seconds
+    since the clone so that auto-follow pickup time can be measured.
+    """
+    es_adapter.get_shard_stats.side_effect = [
+        {"0": [_shard(99, 100)]},
+        {"0": [_shard(99, 100, 0)]},
+        {"0": [_shard(99, 100, 100)]},
+    ]
+    indexer = Indexer(
+        "v1",
+        category_blocklist,
+        title_blocklist,
+        file_manager,
+        es_adapter,
+        follower_sync_poll_interval=15,
+        follower_discovery_period=30,
+    )
+
+    with caplog.at_level(logging.INFO):
+        indexer._wait_for_followers("enwiki-1", cloned_at=-10)
+
+    discovered = [
+        (r.follower, r.seconds_since_clone, r.index)
+        for r in caplog.records
+        if r.message == "Discovered follower"
+    ]
+    assert discovered == [("follower-0", 10.0, "enwiki-1"), ("follower-1", 25.0, "enwiki-1")]

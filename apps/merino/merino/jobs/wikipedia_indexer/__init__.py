@@ -50,6 +50,9 @@ def index(
     elasticsearch_api_key: str = job_settings.es_api_key,
     elasticsearch_request_timeout: float = job_settings.es_request_timeout,
     elasticsearch_create_index_timeout: float = job_settings.es_create_index_timeout,
+    follower_sync_timeout: float = job_settings.follower_sync_timeout,
+    follower_sync_poll_interval: float = job_settings.follower_sync_poll_interval,
+    follower_discovery_period: float = job_settings.follower_discovery_period,
     blocklist_file_url: str = job_settings.blocklist_file_url,
     index_version: str = version_option,
     total_docs: int = job_settings.total_docs,
@@ -81,6 +84,9 @@ def index(
         WIKIPEDIA_TITLE_BLOCKLIST,
         file_manager,
         elasticsearch,
+        follower_sync_timeout=follower_sync_timeout,
+        follower_sync_poll_interval=follower_sync_poll_interval,
+        follower_discovery_period=follower_discovery_period,
     )
     indexer.index_from_export(total_docs, elasticsearch_alias)
 

@@ -122,6 +122,54 @@ services:
     entrypoint: ["sh", "/setup.sh"]
     restart: "no"
 
+  # Optional cross-cluster replication follower of es01, enabled with `--profile ccr`
+  # (see `make docker-compose-up-ccr`). es-ccr-setup auto-follows new `*wiki-*` indices.
+  es02:
+    profiles: ["ccr"]
+    build:
+      context: ./local_setup/elasticsearch
+      dockerfile: Dockerfile
+      args:
+        STACK_VERSION: ${STACK_VERSION}
+    volumes:
+      - esdata02:/usr/share/elasticsearch/data
+    ports:
+      - ${ES_FOLLOWER_PORT:-9201}:9200
+    environment:
+      - node.name=es02
+      - cluster.name=${CLUSTER_NAME}-follower
+      - discovery.type=single-node
+      - bootstrap.memory_lock=false
+      - xpack.security.enabled=false
+      - xpack.ml.enabled=false
+      - xpack.license.self_generated.type=${LICENSE}
+    mem_limit: ${MEM_LIMIT}
+    depends_on:
+      es01:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          'curl -sf http://localhost:9200/_cluster/health | grep -qv ''"status":"red"''',
+        ]
+      interval: 10s
+      timeout: 10s
+      retries: 120
+
+  es-ccr-setup:
+    profiles: ["ccr"]
+    image: curlimages/curl:latest
+    depends_on:
+      es01:
+        condition: service_healthy
+      es02:
+        condition: service_healthy
+    volumes:
+      - ./local_setup/elasticsearch/ccr_setup.sh:/ccr_setup.sh:ro
+    entrypoint: ["sh", "/ccr_setup.sh"]
+    restart: "no"
+
   otel-collector:
     image: otel/opentelemetry-collector:0.142.0
     restart: always
@@ -174,4 +222,6 @@ volumes:
   kibanadata:
     driver: local
   esdata01:
+    driver: local
+  esdata02:
     driver: local

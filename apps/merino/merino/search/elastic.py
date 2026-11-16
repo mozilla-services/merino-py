@@ -1,6 +1,6 @@
 """Elasticsearch service utilities."""
 
-from typing import Any, Mapping, Sequence, cast
+from typing import Any, Literal, Mapping, Sequence, cast
 
 from elasticsearch import Elasticsearch
 
@@ -168,6 +168,104 @@ class ElasticSearchAdapter:
             max_num_segments=max_num_segments,
             wait_for_completion=wait_for_completion,
         )
+
+    def block_writes(self, *, index: str) -> None:
+        """Add a write block to an index, e.g. before cloning it."""
+        self.get_client().indices.add_block(index=index, block="write")
+
+    def wait_for_health(
+        self, *, index: str, status: Literal["green", "yellow"], timeout: float
+    ) -> None:
+        """Block until `index` reaches `status` health or better.
+
+        Raises:
+            TimeoutError: If `index` has not reached `status` within `timeout` seconds.
+        """
+        res = cast(
+            dict[str, Any],
+            self.get_client()
+            .options(
+                # The wait happens server side, so the request must outlast it.
+                request_timeout=timeout + self._request_timeout,
+                # A wait that times out is answered with a 408 and the current health.
+                ignore_status=408,
+            )
+            .cluster.health(
+                index=index, wait_for_status=status, timeout=f"{int(timeout * 1000)}ms"
+            ),
+        )
+        if res["timed_out"]:
+            raise TimeoutError(
+                f"{index} did not reach {status} health within {timeout}s "
+                f"(status: {res['status']})"
+            )
+
+    def clone_index(
+        self,
+        *,
+        source: str,
+        target: str,
+        settings: dict[str, Any] | None = None,
+        wait_for_active_shards: str | int = "1",
+        active_shards_timeout: str | None = None,
+        request_timeout: float | None = None,
+    ) -> None:
+        """Clone `source` into a new index `target`.
+
+        The source must carry a write block. `settings` override those copied from the
+        source onto the target. `active_shards_timeout` (e.g. `"30s"`) bounds the
+        server-side wait for `wait_for_active_shards`, using Elasticsearch's default of
+        30s when unset. `request_timeout` bounds the whole request on the client side.
+
+        Raises:
+            RuntimeError: If the master node did not acknowledge the clone in time
+                (`acknowledged`), or the target's shards did not start before the
+                `wait_for_active_shards` timeout (`shards_acknowledged`). In either case
+                the target may still be created later.
+        """
+        res = cast(
+            dict[str, Any],
+            self.get_client()
+            .options(request_timeout=request_timeout or self._create_index_timeout)
+            .indices.clone(
+                index=source,
+                target=target,
+                settings=settings,
+                wait_for_active_shards=wait_for_active_shards,
+                timeout=active_shards_timeout,
+            ),
+        )
+        if not res.get("acknowledged"):
+            raise RuntimeError(f"Clone of {source} to {target} was not acknowledged")
+        if not res.get("shards_acknowledged"):
+            raise RuntimeError(
+                f"Clone of {source} to {target} did not start {wait_for_active_shards} "
+                "active shard copies before timing out"
+            )
+
+    def get_shard_stats(self, *, index: str) -> dict[str, list[dict[str, Any]]]:
+        """Return shard-level stats for `index`, keyed by shard number.
+
+        Each shard number maps to a list with one entry per shard copy (primary and
+        replicas), including its `routing`, `seq_no` and `retention_leases`. Only
+        started copies are listed, so a shard with none is absent, and an index with
+        none at all yields an empty dict.
+        """
+        res = cast(
+            dict[str, Any],
+            self.get_client().indices.stats(index=index, level="shards"),
+        )
+        if index not in res["indices"]:
+            return {}
+        return cast(dict[str, list[dict[str, Any]]], res["indices"][index]["shards"])
+
+    def get_number_of_shards(self, *, index: str) -> int:
+        """Return the number of primary shards configured for `index`."""
+        res = cast(
+            dict[str, Any],
+            self.get_client().indices.get_settings(index=index, name="index.number_of_shards"),
+        )
+        return int(res[index]["settings"]["index"]["number_of_shards"])
 
     def get_index_lifecycle_policies(self, *, index: str) -> dict[str, str | None]:
         """Return the ILM policy attached to each index matching `index`.
