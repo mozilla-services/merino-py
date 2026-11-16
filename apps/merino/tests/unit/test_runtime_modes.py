@@ -100,18 +100,27 @@ def test_configured_runtime_mode_passes_startup_validation(mode: RuntimeMode) ->
                 "/api/v1/widgets/framed",
                 "/api/v1/widgets/rss/picture-of-the-day",
                 "/api/v1/rss/picture-of-the-day",
+                "/api/v1/widgets/games/particle",
+                "/api/v1/games/particle",
             },
             set(),
         ),
         (
             RuntimeMode.REGULAR,
-            # TODO(DISCO-4604): Move the regular picture of the day alias to unexpected paths.
-            {"/__heartbeat__", "/api/v1/suggest", "/api/v1/rss/picture-of-the-day"},
+            # TODO(DISCO-4604): Move the regular picture of the day and Particle aliases to
+            # unexpected paths.
+            {
+                "/__heartbeat__",
+                "/api/v1/suggest",
+                "/api/v1/rss/picture-of-the-day",
+                "/api/v1/games/particle",
+            },
             {
                 "/api/v1/widgets/wrexham/matches",
                 "/api/v1/widgets/framed",
                 "/api/v1/widgets/travel",
                 "/api/v1/widgets/rss/picture-of-the-day",
+                "/api/v1/widgets/games/particle",
             },
         ),
         (
@@ -122,8 +131,9 @@ def test_configured_runtime_mode_passes_startup_validation(mode: RuntimeMode) ->
                 "/api/v1/widgets/framed",
                 "/api/v1/widgets/travel",
                 "/api/v1/widgets/rss/picture-of-the-day",
+                "/api/v1/widgets/games/particle",
             },
-            {"/api/v1/suggest", "/api/v1/rss/picture-of-the-day"},
+            {"/api/v1/suggest", "/api/v1/rss/picture-of-the-day", "/api/v1/games/particle"},
         ),
     ],
 )
@@ -201,6 +211,7 @@ def test_regular_mode_serves_regular_api(mocker: MockerFixture) -> None:
     mocker.patch.object(main, "_close_metrics_client", side_effect=close_metrics_client)
     regular_start = mocker.patch.object(main, "_start_regular_services", side_effect=start_regular)
     mocker.patch.object(main, "_start_rss_services")
+    mocker.patch.object(main, "_start_games_services")
     governance_start = mocker.patch.object(main, "_start_governance", side_effect=start_governance)
 
     app = create_app(RuntimeMode.REGULAR)
@@ -242,6 +253,7 @@ def test_widget_mode_serves_only_widgets(mocker: MockerFixture) -> None:
     # _start_widget_services runs for real so widget startup/shutdown is exercised.
     regular_start = mocker.patch.object(main, "_start_regular_services")
     mocker.patch.object(main, "_start_rss_services")
+    mocker.patch.object(main, "_start_games_services")
     governance_start = mocker.patch.object(main, "_start_governance")
 
     app = create_app(RuntimeMode.WIDGET)
@@ -305,6 +317,7 @@ def test_picture_of_the_day_is_identical_in_widget_and_regular_modes(
     mocker.patch.object(main, "_start_regular_services")
     mocker.patch.object(main, "_start_widget_services")
     mocker.patch.object(main, "_start_rss_services")
+    mocker.patch.object(main, "_start_games_services")
     mocker.patch.object(main, "_start_governance")
 
     headers = {"Accept-Language": accept_language} if accept_language else {}
@@ -325,6 +338,50 @@ def test_picture_of_the_day_is_identical_in_widget_and_regular_modes(
     assert widget_response.headers.get("cache-control") == regular_response.headers.get(
         "cache-control"
     )
+
+
+def test_particle_is_identical_in_widget_and_regular_modes(mocker: MockerFixture) -> None:
+    """Widget mode's Particle game route matches the regular route it's replacing.
+
+    TODO(DISCO-4604): Remove once the regular alias is removed.
+    """
+    import merino.main as main
+    from merino.providers.games import get_particle_provider
+    from merino.providers.games.particle.backends.protocol import Particle
+    from merino.providers.games.particle.provider import Provider as ParticleProvider
+
+    async def noop() -> None:
+        pass
+
+    provider = mocker.AsyncMock(spec=ParticleProvider)
+    provider.get_game_url.return_value = Particle(url="https://cdn.test/particle/")
+
+    mocker.patch.object(main, "configure_logging")
+    mocker.patch.object(main, "configure_sentry")
+    mocker.patch.object(main, "configure_metrics", side_effect=noop)
+    mocker.patch.object(main, "_close_metrics_client", side_effect=noop)
+    mocker.patch.object(main, "_start_regular_services")
+    mocker.patch.object(main, "_start_widget_services")
+    mocker.patch.object(main, "_start_rss_services")
+    mocker.patch.object(main, "_start_games_services")
+    mocker.patch.object(main, "_start_governance")
+
+    responses = []
+    for mode, path in [
+        (RuntimeMode.WIDGET, "/api/v1/widgets/games/particle"),
+        (RuntimeMode.REGULAR, "/api/v1/games/particle"),
+    ]:
+        app = create_app(mode)
+        app.dependency_overrides[get_particle_provider] = lambda: provider
+        with TestClient(app) as client:
+            responses.append(client.get(path))
+
+    widget_response, regular_response = responses
+    assert widget_response.status_code == regular_response.status_code == 200
+    assert (
+        widget_response.json() == regular_response.json() == {"url": "https://cdn.test/particle/"}
+    )
+    assert widget_response.headers["cache-control"] == regular_response.headers["cache-control"]
 
 
 @pytest.mark.asyncio
@@ -353,6 +410,7 @@ async def test_cleanup_callbacks_ignore_non_awaitable_return_values() -> None:
                 "sentry_start",
                 "metrics_start",
                 "rss_start",
+                "games_start",
                 "regular_start",
                 "widget_start",
                 "governance_start",
@@ -370,6 +428,7 @@ async def test_cleanup_callbacks_ignore_non_awaitable_return_values() -> None:
                 "sentry_start",
                 "metrics_start",
                 "rss_start",
+                "games_start",
                 "regular_start",
                 "governance_start",
                 "governance_shutdown",
@@ -385,6 +444,7 @@ async def test_cleanup_callbacks_ignore_non_awaitable_return_values() -> None:
                 "sentry_start",
                 "metrics_start",
                 "rss_start",
+                "games_start",
                 "widget_start",
                 "governance_start",
                 "governance_shutdown",
@@ -433,6 +493,9 @@ def test_lifespan_starts_and_stops_services_by_mode(
         events.append("rss_start")
         cleanup_callbacks.append(record("rss_shutdown"))
 
+    async def start_games() -> None:
+        events.append("games_start")
+
     mocker.patch.object(main, "configure_logging", side_effect=record("logging_start"))
     mocker.patch.object(main, "configure_sentry", side_effect=record("sentry_start"))
     mocker.patch.object(main, "configure_metrics", side_effect=configure_metrics)
@@ -441,6 +504,7 @@ def test_lifespan_starts_and_stops_services_by_mode(
     mocker.patch.object(main, "_start_governance", side_effect=start_governance)
     mocker.patch.object(main, "_start_widget_services", side_effect=start_widgets)
     mocker.patch.object(main, "_start_rss_services", side_effect=start_rss)
+    mocker.patch.object(main, "_start_games_services", side_effect=start_games)
 
     with TestClient(create_app(mode)):
         pass
