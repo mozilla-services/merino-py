@@ -10,7 +10,7 @@ from functools import cache
 from pathlib import Path
 
 from fastapi import APIRouter, Request
-from fastapi.openapi.docs import get_swagger_ui_html
+from fastapi.openapi.docs import get_redoc_html, get_swagger_ui_html
 from fastapi.responses import HTMLResponse, Response
 
 SCHEMA_PATH: Path = Path(__file__).resolve().parent.parent / "data" / "openapi.json"
@@ -37,4 +37,13 @@ async def swagger_ui(request: Request) -> HTMLResponse:
     return get_swagger_ui_html(
         openapi_url=OPENAPI_URL,
         title=f"{request.app.title} - Swagger UI",
+    )
+
+
+@router.get("/redoc", include_in_schema=False)
+async def redoc(request: Request) -> HTMLResponse:
+    """Serve ReDoc for the committed OpenAPI schema."""
+    return get_redoc_html(
+        openapi_url=OPENAPI_URL,
+        title=f"{request.app.title} - ReDoc",
     )

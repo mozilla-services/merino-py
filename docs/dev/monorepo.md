@@ -111,9 +111,9 @@ moon run ':#quality'
 
 ### OpenAPI schema
 
-Every Merino runtime mode serves the same API docs (`/docs` and `/openapi.json`) from a committed
-schema, `apps/merino/merino/data/openapi.json`. The schema is generated from the `ALL` runtime
-mode, so it covers every endpoint. After changing an endpoint, its parameters, its response
+Every Merino runtime mode serves the same API docs (`/docs`, `/redoc`, `/openapi.json`) from a
+committed schema, `apps/merino/merino/data/openapi.json`. The schema is generated from the `ALL`
+runtime mode, so it covers every endpoint. After changing an endpoint, its parameters, its response
 models, or its tags, regenerate the schema and commit the result:
 
 ```bash

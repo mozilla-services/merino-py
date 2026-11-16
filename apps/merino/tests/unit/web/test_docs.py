@@ -23,6 +23,15 @@ def test_docs_is_mounted_in_every_mode(client: TestClient) -> None:
     assert "/openapi.json" in response.text
 
 
+def test_redoc_is_mounted_in_every_mode(client: TestClient) -> None:
+    """Every runtime mode serves ReDoc, pointed at /openapi.json."""
+    response = client.get("/redoc")
+
+    assert response.status_code == 200
+    assert "ReDoc" in response.text
+    assert "/openapi.json" in response.text
+
+
 def test_openapi_serves_committed_schema_in_every_mode(client: TestClient) -> None:
     """Every runtime mode serves the committed schema, byte for byte."""
     response = client.get("/openapi.json")
