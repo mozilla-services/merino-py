@@ -1,0 +1,10 @@
+---
+source: src/domain/uri.rs
+expression: "messages.join(\"\\n\")"
+---
+"spotify.com" => expected kind:key, e.g. domain:spotify.com
+":apple.com" => expected kind:key, e.g. domain:spotify.com
+"stocks:AAPL" => unknown kind, expected one of: domain, airline, sports
+"domain:" => invalid domain key: must not be empty
+"airline:DAL" => invalid airline key: must be a two-character IATA code with at least one ASCII letter and at most one digit
+"sports:nfl" => invalid sports key: must be league:team

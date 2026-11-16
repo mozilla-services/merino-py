@@ -11,6 +11,8 @@ anyhow = "1"
 axum = "0.8"
 clap = { version = "4.6", features = ["derive", "env"] }
 config = { version = "0.15", default-features = false, features = ["toml"] }
+idna = "1"
+psl = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "2"
@@ -23,6 +25,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter", "json", "fmt"]
 [dev-dependencies]
 http-body-util = "0.1"
 insta = { version = "1.49", features = ["json", "redactions"] }
+proptest = "1"
 # Plain HTTP to fake-gcs-server only, so no TLS backend.
 reqwest = { version = "0.13", default-features = false, features = ["json", "query"] }
 # PostgreSQL client for the integration tests. Moves to [dependencies], with TLS, once the service

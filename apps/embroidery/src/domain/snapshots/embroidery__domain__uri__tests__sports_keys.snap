@@ -1,0 +1,14 @@
+---
+source: src/domain/uri.rs
+expression: "table(Kind::Sports,\n&[\"nfl:atl\", \"NFL:ATL\", \"mls:inter-miami\", \"nfl\", \"nfl:\", \":atl\", \"nfl:atl:x\",\n\"nfl:at l\", \"nfl:atl_\", \"nfl:atlé\",],)"
+---
+"nfl:atl" => nfl:atl
+"NFL:ATL" => nfl:atl
+"mls:inter-miami" => mls:inter-miami
+"nfl" => error: invalid sports key: must be league:team
+"nfl:" => error: invalid sports key: must be league:team
+":atl" => error: invalid sports key: must be league:team
+"nfl:atl:x" => error: invalid sports key: must be league:team
+"nfl:at l" => error: invalid sports key: league and team may use only a-z, 0-9 and -
+"nfl:atl_" => error: invalid sports key: league and team may use only a-z, 0-9 and -
+"nfl:atlé" => error: invalid sports key: league and team may use only a-z, 0-9 and -

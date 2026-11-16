@@ -1,0 +1,35 @@
+---
+source: src/domain/uri.rs
+expression: "table(Kind::Domain,\n&[\"example.com\", \"WWW.Example.com.\", \"www.bbc.co.uk\", \"www.media.inaf.it\",\n\"www.www.example.com\", \"www.com\", \"maps.google.com\", \"bücher.de\",\n\"xn--bcher-kva.de\", \"\", \".\", \"www\", \"www.\", \"localhost\", \"startsiden.no/sok\",\n\"https://example.com\", \"example.com:443\", \"user@example.com\",\n\"example.com?q=1\", \"example.com#top\", \"exa mple.com\", \"a..b\", \"example.com..\",\n&format!(\"{}.com\", \"a\".repeat(64)),\n&format!(\"{}.com\", vec![\"a\".repeat(63); 4].join(\".\")), \"127.0.0.1\",\n\"169.254.169.254\", \"127.1\", \"0x7f.0.0.1\", \"2130706433\", \"[::1]\",],)"
+---
+"example.com" => example.com
+"WWW.Example.com." => example.com
+"www.bbc.co.uk" => bbc.co.uk
+"www.media.inaf.it" => www.media.inaf.it
+"www.www.example.com" => www.www.example.com
+"www.com" => www.com
+"maps.google.com" => maps.google.com
+"bücher.de" => xn--bcher-kva.de
+"xn--bcher-kva.de" => xn--bcher-kva.de
+"" => error: invalid domain key: must not be empty
+"." => error: invalid domain key: must not be empty
+"www" => error: invalid domain key: must have at least two labels
+"www." => error: invalid domain key: must have at least two labels
+"localhost" => error: invalid domain key: must have at least two labels
+"startsiden.no/sok" => error: invalid domain key: must be a host name, without scheme, port, path, query or fragment
+"https://example.com" => error: invalid domain key: must be a host name, without scheme, port, path, query or fragment
+"example.com:443" => error: invalid domain key: must be a host name, without scheme, port, path, query or fragment
+"user@example.com" => error: invalid domain key: must be a host name, without scheme, port, path, query or fragment
+"example.com?q=1" => error: invalid domain key: must be a host name, without scheme, port, path, query or fragment
+"example.com#top" => error: invalid domain key: must be a host name, without scheme, port, path, query or fragment
+"exa mple.com" => error: invalid domain key: not a valid host name
+"a..b" => error: invalid domain key: every label must be 1 to 63 bytes
+"example.com.." => error: invalid domain key: every label must be 1 to 63 bytes
+"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.com" => error: invalid domain key: every label must be 1 to 63 bytes
+"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.com" => error: invalid domain key: must be at most 253 bytes
+"127.0.0.1" => error: invalid domain key: must not be an IP address
+"169.254.169.254" => error: invalid domain key: must not be an IP address
+"127.1" => error: invalid domain key: must not be an IP address
+"0x7f.0.0.1" => error: invalid domain key: must not be an IP address
+"2130706433" => error: invalid domain key: must not be an IP address
+"[::1]" => error: invalid domain key: must not be an IP address
