@@ -229,3 +229,11 @@ cdn_hostname_yahoo_horoscope = "prod-widgets-yahoo-horoscope.merino.prod.webserv
 cdn_hostname_yahoo_solitaire = "prod-widgets-yahoo-solitaire.merino.prod.webservices.mozgcp.net"
 # GCP project name where the GCS buckets live.
 gcp_project = "moz-fx-merino-prod-5de4"
+
+
+[production.jobs.wikipedia_indexer]
+# MERINO_JOBS__WIKIPEDIA_INDEXER__FOLLOWER_SYNC_TIMEOUT
+follower_sync_timeout = 43200 # 12 hours
+
+# MERINO_JOBS__WIKIPEDIA_INDEXER__FOLLOWER_DISCOVERY_PERIOD
+follower_discovery_period = 300
