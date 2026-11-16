@@ -661,6 +661,7 @@
         "summary": "Get picture of the day",
         "description": "Get the picture of the day, localized to the client's Accept-Language when available.",
         "operationId": "get_picture_of_the_day_api_v1_rss_picture_of_the_day_get",
+        "deprecated": true,
         "parameters": [
           {
             "name": "accept-language",
@@ -723,7 +724,8 @@
               }
             }
           }
-        }
+        },
+        "deprecated": true
       }
     },
     "/api/v1/widgets/wrexham/matches": {
@@ -947,6 +949,79 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/widgets/rss/picture-of-the-day": {
+      "get": {
+        "tags": [
+          "widgets"
+        ],
+        "summary": "Get picture of the day",
+        "description": "Get the picture of the day, localized to the client's Accept-Language when available.",
+        "operationId": "get_picture_of_the_day_api_v1_widgets_rss_picture_of_the_day_get",
+        "parameters": [
+          {
+            "name": "accept-language",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 100
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Accept-Language"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PictureOfTheDay"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/widgets/games/particle": {
+      "get": {
+        "tags": [
+          "widgets"
+        ],
+        "summary": "Particle game for New Tab",
+        "description": "Return a JSON object containing the public URL for the Particle game.",
+        "operationId": "get_game_particle_api_v1_widgets_games_particle_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Particle"
                 }
               }
             }
