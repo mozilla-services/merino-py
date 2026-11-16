@@ -52,27 +52,84 @@ tasks:
       - quality
       - ci
 
+  # The test tasks copy nextest's JUnit report to the path the CI report packaging reads, the same
+  # one the Python tasks write. The EXIT trap copies it on failure too, and keeps cargo's exit code.
+  # Both copies of the report are removed first, so a build failure can't leave the previous run's
+  # results in place.
   unit-test:
-    description: Run the tests for this project
-    command: cargo
-    args:
-      - test
-      - --locked
+    description: Run the unit tests in src/ for this project, without external services
+    script: >-
+      rm -f target/nextest/unit/junit.xml
+      $workspaceRoot/workspace/test-results/moon/$project/unit__results.xml &&
+      mkdir -p $workspaceRoot/workspace/test-results/moon/$project &&
+      trap 'cp target/nextest/unit/junit.xml
+      $workspaceRoot/workspace/test-results/moon/$project/unit__results.xml 2>/dev/null' EXIT &&
+      cargo nextest run --locked --profile unit --lib --bins
     inputs:
       - "@group(sources)"
-      - "@group(tests)"
       - "@group(configs)"
+      - .config/nextest.toml
+    outputs:
+      - /workspace/test-results/moon/$project/unit__results.xml
     tags:
       - test
       - ci
     options:
       outputStyle: stream
 
+  # The suite starts the containers it needs with testcontainers, so it needs a running Docker.
+  integration-test:
+    description: Run the integration tests in tests/ for this project
+    script: >-
+      rm -f target/nextest/integration/junit.xml
+      $workspaceRoot/workspace/test-results/moon/$project/integration__results.xml &&
+      mkdir -p $workspaceRoot/workspace/test-results/moon/$project &&
+      trap 'cp target/nextest/integration/junit.xml
+      $workspaceRoot/workspace/test-results/moon/$project/integration__results.xml 2>/dev/null'
+      EXIT &&
+      cargo nextest run --locked --profile integration --test '*'
+    inputs:
+      - "@group(sources)"
+      - "@group(tests)"
+      - "@group(configs)"
+      - .config/nextest.toml
+    outputs:
+      - /workspace/test-results/moon/$project/integration__results.xml
+    tags:
+      - test
+      - ci
+    options:
+      outputStyle: stream
+      # The result depends on Docker and the pulled images, which moon can't hash.
+      cache: false
+
+  coverage:
+    description: Report line coverage across the unit and integration tests, without a gate
+    # `main.rs` only wires the binary together; the integration tests cover the same code through
+    # `router()`.
+    script: >-
+      mkdir -p $workspaceRoot/workspace/test-results/moon/$project &&
+      cargo llvm-cov nextest --locked --json
+      --ignore-filename-regex 'src/main\.rs$'
+      --output-path $workspaceRoot/workspace/test-results/moon/$project/coverage.json
+    inputs:
+      - "@group(sources)"
+      - "@group(tests)"
+      - "@group(configs)"
+      - .config/nextest.toml
+    outputs:
+      - /workspace/test-results/moon/$project/coverage.json
+    tags:
+      - coverage
+    options:
+      cache: false
+
   test:
     description: Run all tests for this project
     command: noop
     deps:
       - unit-test
+      - integration-test
     tags:
       - test
       - ci

@@ -127,7 +127,7 @@ jobs:
         run: |
           prefix="${GITHUB_RUN_NUMBER}__$(date +%s)__${REPOSITORY_NAME}__${GITHUB_WORKFLOW}__"
           mkdir -p workspace/unit-test-results workspace/integration-test-results
-          for project in merino merino-common fleece; do
+          for project in merino merino-common fleece embroidery; do
             for suite in unit integration; do
               name="$suite"
               if [ "$project" != merino ]; then name="$project-$suite"; fi

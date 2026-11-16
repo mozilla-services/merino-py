@@ -15,5 +15,8 @@ vcs:
 
 # uv remains responsible for installing and locking Python dependencies. Moon
 # orchestrates uv commands but must not try to manage the environment itself.
+# Rust is the exception: its install step only installs the Cargo tools in `rust.bins`
+# (toolchains.yml).
 pipeline:
-  installDependencies: false
+  installDependencies:
+    - rust

@@ -1,0 +1,18 @@
+[profile.default]
+slow-timeout = { period = "30s", terminate-after = 4 }
+
+# Shared by the moon test tasks, locally and in CI.
+[profile.ci]
+fail-fast = false
+# A flaky test fails visibly instead of passing on retry.
+retries = 0
+
+# One profile per suite: moon runs both suites in parallel, and each profile writes its JUnit
+# report to its own target/nextest/<profile>/junit.xml.
+[profile.unit]
+inherits = "ci"
+junit.path = "junit.xml"
+
+[profile.integration]
+inherits = "ci"
+junit.path = "junit.xml"

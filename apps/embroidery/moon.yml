@@ -17,6 +17,15 @@ tasks:
     env:
       EMBROIDERY_ENV: testing
 
+  # The integration tests start their own containers with testcontainers; they need only Docker.
+  integration-test:
+    env:
+      EMBROIDERY_ENV: testing
+
+  coverage:
+    env:
+      EMBROIDERY_ENV: testing
+
   docker-build:
     args:
       - --tag

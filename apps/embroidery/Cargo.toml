@@ -23,7 +23,15 @@ tracing-subscriber = { version = "0.3", features = ["env-filter", "json", "fmt"]
 [dev-dependencies]
 http-body-util = "0.1"
 insta = { version = "1.49", features = ["json", "redactions"] }
+# Plain HTTP to fake-gcs-server only, so no TLS backend.
+reqwest = { version = "0.13", default-features = false, features = ["json", "query"] }
+# PostgreSQL client for the integration tests. Moves to [dependencies], with TLS, once the service
+# has a schema.
+sqlx = { version = "0.9", default-features = false, features = ["runtime-tokio", "postgres"] }
 tempfile = "3.27.0"
+# Without default features: the Docker socket needs no TLS, and the HTTP readiness check runs
+# against plain-HTTP fake-gcs-server.
+testcontainers = { version = "0.28", default-features = false, features = ["http_wait_plain"] }
 tokio = { version = "1.54", features = ["io-util"] }
 tower = { version = "0.5", features = ["util"] }
 
