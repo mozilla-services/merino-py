@@ -46,11 +46,7 @@ from merino.providers.games.particle.provider import Provider as ParticleProvide
 from merino.providers.manifest import get_provider as get_manifest_provider
 from merino.providers.manifest.backends.protocol import ManifestData
 from merino.providers.manifest.provider import Provider as ManifestProvider
-from merino.providers.rss import get_wikimedia_potd_provider
 from merino.providers.rss.wikimedia_potd.backends.protocol import PictureOfTheDay
-from merino.providers.rss.wikimedia_potd.provider import (
-    WikimediaPictureOfTheDayProvider,
-)
 from merino.providers.suggest import get_providers as get_suggest_providers
 from merino.providers.suggest import get_weather_provider
 from merino.providers.suggest.adm.provider import AMP_FUZZY_ENABLED
@@ -89,6 +85,7 @@ from merino.utils.query_processing.query_patterns import (
     build_query_pattern_matcher,
     emit_query_pattern_metrics,
 )
+from merino.web import api_v1_widgets
 from merino.web.models_v1 import ProviderResponse, SuggestResponse
 
 logger = logging.getLogger(__name__)
@@ -684,38 +681,19 @@ async def get_hourly_forecasts(
         )
 
 
-@router.get(
+# TODO(DISCO-4604): Remove this alias once the HTTP rewrite rule that sends this path to the
+# widget workload is deployed. The endpoint lives on the widgets router at
+# /api/v1/widgets/rss/picture-of-the-day; this keeps the old path serving the same handler so
+# traffic reaching the regular workload before the rewrite doesn't error out.
+router.add_api_route(
     "/rss/picture-of-the-day",
+    api_v1_widgets.get_picture_of_the_day,
+    methods=["GET"],
     tags=["rss"],
     summary="Get picture of the day",
     response_model=PictureOfTheDay,
+    deprecated=True,
 )
-async def get_picture_of_the_day(
-    request: Request,
-    accept_language: Annotated[str | None, Header(max_length=HEADER_CHARACTER_MAX)] = None,
-    provider: WikimediaPictureOfTheDayProvider = Depends(get_wikimedia_potd_provider),
-) -> Response:
-    """Get the picture of the day, localized to the client's Accept-Language when available."""
-    potd = None
-    try:
-        languages = get_accepted_languages(accept_language)
-        potd = await provider.get_picture_of_the_day(languages)
-    except Exception as ex:
-        logger.info(f"Something went wrong when fetching potd: {ex.__class__.__name__}")
-
-    # localized_descriptions is a server-side selection map used to swap `description` into
-    # the client's language; it is not part of the client-facing contract, so exclude it here
-    # (but keep it on the model and in the GCS manifest, which localization reads back from).
-    # The nested previous day's picture carries the same map and is excluded the same way.
-    return JSONResponse(
-        content=jsonable_encoder(
-            potd,
-            exclude={
-                "localized_descriptions": True,
-                "previous": {"localized_descriptions": True},
-            },
-        ),
-    )
 
 
 # Module-level variable as retrieving from settings on each

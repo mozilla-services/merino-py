@@ -108,6 +108,13 @@ def create_lifespan(mode: RuntimeMode | str):
             await configure_metrics()
             cleanup_callbacks.append(_close_metrics_client)
 
+            # TODO(DISCO-4604): Start RSS only for WIDGETS once the regular
+            # /api/v1/rss/picture-of-the-day alias is removed.
+            if mode_enables(runtime_mode, RuntimeFeature.REGULAR_API) or mode_enables(
+                runtime_mode, RuntimeFeature.WIDGETS
+            ):
+                await _start_rss_services(cleanup_callbacks)
+
             if mode_enables(runtime_mode, RuntimeFeature.REGULAR_API):
                 await _start_regular_services(cleanup_callbacks)
 
@@ -129,7 +136,7 @@ async def _start_regular_services(cleanup_callbacks: list[CleanupCallback]) -> N
     """Initialize regular Merino services and register cleanup callbacks."""
     from merino import curated_recommendations
     from merino.message_handlers import search_terms
-    from merino.providers import games, manifest, rss, suggest
+    from merino.providers import games, manifest, suggest
 
     await suggest.init_providers()
     cleanup_callbacks.append(suggest.shutdown_providers)
@@ -140,11 +147,19 @@ async def _start_regular_services(cleanup_callbacks: list[CleanupCallback]) -> N
 
     await manifest.init_provider()
 
-    await rss.init_providers()
-    cleanup_callbacks.append(rss.shutdown_providers)
-
     curated_recommendations.init_provider()
     await games.init_providers()
+
+
+async def _start_rss_services(cleanup_callbacks: list[CleanupCallback]) -> None:
+    """Initialize RSS providers (e.g. picture of the day) and register cleanup callbacks.
+
+    These serve both the regular and widget APIs, so they start once for either mode.
+    """
+    from merino.providers import rss
+
+    await rss.init_providers()
+    cleanup_callbacks.append(rss.shutdown_providers)
 
 
 async def _start_widget_services(cleanup_callbacks: list[CleanupCallback]) -> None:
