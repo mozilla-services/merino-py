@@ -21,6 +21,12 @@ subscription = "projects/moz-fx-merino-prod-5de4/subscriptions/merino-fleece-san
 # Must be writable by the container's unprivileged `app` user (uid 10001)
 heartbeat_path = "/tmp/fleece/heartbeat"
 
+[production.pii]
+# MERINO_FLEECE_PII__MODEL
+# SpaCy pre-trained NLP model used for NER detection.
+# Allowed values: "en_core_web_sm", "en_core_web_md", "en_core_web_lg".
+model = "en_core_web_md"
+
 [production.sanitize]
 # MERINO_FLEECE_SANITIZE__LOG_SEARCH_TERMS
 # Whether to emit the `web.suggest.sanitized` data log for search terms that

@@ -10,6 +10,12 @@ dynaconf_merge = true
 level = "DEBUG"
 format = "mozlog"
 
+[stage.pii]
+# MERINO_FLEECE_PII__MODEL
+# SpaCy pre-trained NLP model used for NER detection.
+# Allowed values: "en_core_web_sm", "en_core_web_md", "en_core_web_lg".
+model = "en_core_web_md"
+
 [stage.sanitize]
 # MERINO_FLEECE_SANITIZE__LOG_SEARCH_TERMS
 # Exercise the `web.suggest.sanitized` data log end to end in stage before it is

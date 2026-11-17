@@ -24,11 +24,11 @@ COPY apps/merino/pyproject.toml ./apps/merino/pyproject.toml
 COPY tools/load-tests/pyproject.toml ./tools/load-tests/pyproject.toml
 
 # Install app dependencies. Clean up build tools after.
-# `en_core_web_lg` is also installed by default.
+# `en_core_web_md` is also installed by default (see DISCO-4606).
 RUN apt-get update && \
     apt-get install --yes build-essential && \
     uv sync --frozen --no-cache --no-dev --package merino-common --package merino-fleece && \
-    uv run --no-project -- spacy download en_core_web_lg && \
+    uv run --no-project -- spacy download en_core_web_md && \
     apt-get remove --yes build-essential && \
     apt-get -q --yes autoremove && \
     apt-get clean && \
