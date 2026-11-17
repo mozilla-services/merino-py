@@ -62,3 +62,33 @@ moon run embroidery:format-check embroidery:lint embroidery:test
 ```
 
 `moon run :lint` and `moon run :test` include Embroidery alongside the Python projects.
+
+## Tests
+
+The tests run with [cargo-nextest](https://nexte.st). Moon installs it and cargo-llvm-cov the
+first time it runs a Rust task, so Docker, rustup and moon are the only prerequisites.
+
+| Suite | Location | Needs |
+| --- | --- | --- |
+| Unit | `#[cfg(test)]` modules in `src/` | nothing |
+| Integration | `tests/*.rs` | Docker, for PostgreSQL 18 and fake-gcs-server containers |
+
+```bash
+moon run embroidery:test          # runs both suites
+moon run embroidery:unit-test     # no Docker needed
+moon run embroidery:coverage      # writes workspace/test-results/moon/embroidery/coverage.json
+```
+
+Every integration test starts its own containers with
+[testcontainers](https://rust.testcontainers.org): `TestDb::start()` for PostgreSQL and
+`TestBucket::create()` for fake-gcs-server, both in `tests/common`. Each waits until its server
+accepts requests and removes the container when the test ends, so tests run in parallel without
+sharing state, on random host ports that don't clash with a local PostgreSQL or
+`dev/docker-compose.yaml`.
+
+A single integration test runs without moon or extra setup:
+
+```bash
+cd apps/embroidery
+cargo nextest run --test test_services bucket_reads_back_written_object
+```

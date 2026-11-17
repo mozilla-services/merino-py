@@ -43,8 +43,15 @@ the other subcommands run as CronJobs and Jobs.
 
 ## Testing
 
-- Unit tests next to the code. Router tests through `router(state, timeout)` with
-  `tower::ServiceExt::oneshot`.
+- Unit tests live next to the code in `#[cfg(test)]` modules and need no external service. Use
+  in-memory fakes where a port is involved.
+- Integration tests live in `tests/*.rs` and run against real PostgreSQL and fake-gcs-server, not
+  test doubles. `common::TestDb::start()` and `common::TestBucket::create()` start a container per
+  test with testcontainers. Never share rows or objects between tests.
+- Router tests go through `router(state, timeout)` with `tower::ServiceExt::oneshot`, so they
+  test the production middleware stack.
+- Tests run with cargo-nextest, one process per test. Moon installs it (and cargo-llvm-cov) on the
+  first Rust task.
 - Test error paths, not just happy paths.
 - Tests never mutate the process environment (it's `unsafe` in edition 2024 and `unsafe_code` is
   forbidden). Pass explicit inputs, as `Config::load_from` does.
@@ -57,6 +64,9 @@ A change is done when all of these pass, from the repository root:
 ```
 moon run embroidery:format-check embroidery:lint embroidery:test
 ```
+
+`embroidery:test` needs a running Docker for the integration tests. Without Docker, run
+`moon run embroidery:unit-test`.
 
 Clippy warnings fail CI. Fix them rather than adding `allow`; when an exception is justified, use
 `#[expect(..., reason = "...")]`.
