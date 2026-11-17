@@ -1775,9 +1775,14 @@ export_base_url = "https://dumps.wikimedia.org/other/cirrus_search_index/"
 
 # MERINO_JOBS__WIKIPEDIA_INDEXER__BLOCKLIST_FILE_URL
 # Blocklist file as CSV. Contains a list of the categories for articles that we want to block.
+# Read by the article blocklist job to build the article blocklist the indexer consumes.
 blocklist_file_url = "https://raw.githubusercontent.com/mozilla/search-terms-sanitization/7ab819c7515c526e6a407b08ba8e78d3bdb7f4e9/non_sensitive/wikipedia-content-moderation/blocklist_cats.csv"
 
 [default.jobs.wikipedia_article_blocklist]
+# The location of the article blocklist CSV. The article blocklist job writes it and the
+# Wikipedia indexer job reads `{gcs_storage_bucket}/{destination_prefix}/latest.csv` to
+# block articles by their Wikidata QID.
+
 # MERINO_JOBS__WIKIPEDIA_ARTICLE_BLOCKLIST__GCS_STORAGE_BUCKET
 # GCS bucket where the article blocklist CSV is written.
 gcs_storage_bucket = ""
@@ -1785,6 +1790,10 @@ gcs_storage_bucket = ""
 # MERINO_JOBS__WIKIPEDIA_ARTICLE_BLOCKLIST__GCS_STORAGE_PROJECT
 # GCP project name where the GCS storage bucket lives.
 gcs_storage_project = ""
+
+# MERINO_JOBS__WIKIPEDIA_ARTICLE_BLOCKLIST__DESTINATION_PREFIX
+# Object prefix (folders) in the GCS bucket where the article blocklist CSV is written.
+destination_prefix = ""
 
 [default.jobs.navigational_suggestions]
 # MERINO_JOBS__NAVIGATIONAL_SUGGESTIONS__SOURCE_GCP_PROJECT

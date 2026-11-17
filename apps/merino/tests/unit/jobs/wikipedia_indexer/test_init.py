@@ -21,7 +21,9 @@ def fixture_collaborators(mocker):
         "adapter": mocker.patch(f"{MODULE}.ElasticSearchAdapter"),
         "file_manager": file_manager,
         "indexer": mocker.patch(f"{MODULE}.Indexer"),
-        "create_blocklist": mocker.patch(f"{MODULE}.create_blocklist", return_value={"meme"}),
+        "load_article_blocklist": mocker.patch(
+            f"{MODULE}.load_article_blocklist", return_value={"Q1"}
+        ),
     }
 
 
@@ -40,7 +42,9 @@ def _index(**overrides):
         "follower_sync_timeout": 3600,
         "follower_sync_poll_interval": 15,
         "follower_discovery_period": 60,
-        "blocklist_file_url": "http://blocklist/cats.csv",
+        "article_blocklist_bucket": "blocklist-bucket",
+        "article_blocklist_prefix": "article_blocklist",
+        "article_blocklist_project": "blocklist-project",
         "index_version": "v1",
         "total_docs": 100,
         "gcs_path": "bucket/prefix",
@@ -66,15 +70,17 @@ def test_index_builds_the_indexer_and_runs_it(collaborators):
     """Verify the command wires its collaborators together and starts indexing."""
     _index()
 
-    collaborators["create_blocklist"].assert_called_once_with("http://blocklist/cats.csv")
+    collaborators["load_article_blocklist"].assert_called_once_with(
+        "blocklist-bucket", "article_blocklist", "blocklist-project"
+    )
     collaborators["file_manager"].assert_called_once_with("bucket/prefix", "a-project", "", "en")
 
     collaborators["indexer"].assert_called_once()
-    version, categories, _titles, file_manager, elasticsearch = collaborators[
+    version, articles, _titles, file_manager, elasticsearch = collaborators[
         "indexer"
     ].call_args.args
     assert version == "v1"
-    assert categories == {"meme"}
+    assert articles == {"Q1"}
     assert file_manager is collaborators["file_manager"].return_value
     assert elasticsearch is collaborators["adapter"].return_value
 
@@ -82,6 +88,24 @@ def test_index_builds_the_indexer_and_runs_it(collaborators):
     collaborators["indexer"].return_value.index_from_export.assert_called_once_with(
         100, "enwiki-{version}"
     )
+
+
+@pytest.mark.parametrize(
+    "overrides",
+    [
+        {"article_blocklist_bucket": ""},
+        {"article_blocklist_prefix": ""},
+        {"article_blocklist_project": ""},
+    ],
+    ids=["missing-bucket", "missing-prefix", "missing-project"],
+)
+def test_index_raises_without_article_blocklist_settings(collaborators, overrides):
+    """Verify the command refuses to index without an article blocklist to filter with."""
+    with pytest.raises(ValueError, match="Article blocklist GCS values must be set"):
+        _index(**overrides)
+
+    collaborators["load_article_blocklist"].assert_not_called()
+    collaborators["indexer"].assert_not_called()
 
 
 def test_index_passes_the_follower_sync_settings_to_the_indexer(collaborators):

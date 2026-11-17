@@ -8,7 +8,10 @@ import typer
 from merino.configs import settings as config
 from merino.jobs.wikipedia_article_blocklist.generator import ArticleBlocklistGenerator
 from merino.jobs.wikipedia_indexer.filemanager import FileManager
-from merino.jobs.wikipedia_indexer.utils import create_blocklist
+from merino.jobs.wikipedia_indexer.utils import (
+    create_blocklist,
+    latest_article_blocklist_blob,
+)
 from merino.utils.gcs import initialize_storage_client
 
 logger = logging.getLogger(__name__)
@@ -50,7 +53,7 @@ def generate(
         help="GCP project of the GCS bucket to write the article blocklist CSV to",
     ),
     destination_prefix: str = typer.Option(
-        "",
+        job_settings.destination_prefix,
         "--destination-prefix",
         help="Object prefix (folders) in the GCS bucket to write the article blocklist CSV to",
     ),
@@ -75,6 +78,6 @@ def generate(
     bucket = client.bucket(gcs_storage_bucket)
     blob = bucket.blob(f"{destination_prefix}/{timestamp}.csv")
     blob.upload_from_string(content, content_type="text/csv")
-    bucket.copy_blob(blob, bucket, f"{destination_prefix}/latest.csv")
+    bucket.copy_blob(blob, bucket, latest_article_blocklist_blob(destination_prefix))
 
     logger.info("Uploaded Wikipedia article blocklist", extra={"blob": blob.name})

@@ -9,13 +9,15 @@ import typer
 from merino.configs import settings as config
 from merino.jobs.wikipedia_indexer.filemanager import FileManager
 from merino.jobs.wikipedia_indexer.indexer import Indexer
-from merino.jobs.wikipedia_indexer.utils import create_blocklist
+from merino.jobs.wikipedia_indexer.utils import load_article_blocklist
 from merino.search.elastic import ElasticSearchAdapter
 from merino.utils.blocklists import WIKIPEDIA_TITLE_BLOCKLIST
 
 logger = logging.getLogger(__name__)
 
 job_settings = config.jobs.wikipedia_indexer
+# The article blocklist job writes the blocklist the indexer reads, so both share its location.
+article_blocklist_settings = config.jobs.wikipedia_article_blocklist
 
 
 # Shared options
@@ -53,13 +55,30 @@ def index(
     follower_sync_timeout: float = job_settings.follower_sync_timeout,
     follower_sync_poll_interval: float = job_settings.follower_sync_poll_interval,
     follower_discovery_period: float = job_settings.follower_discovery_period,
-    blocklist_file_url: str = job_settings.blocklist_file_url,
+    article_blocklist_bucket: str = typer.Option(
+        article_blocklist_settings.gcs_storage_bucket,
+        "--article-blocklist-bucket",
+        help="GCS bucket holding the article blocklist CSV",
+    ),
+    article_blocklist_prefix: str = typer.Option(
+        article_blocklist_settings.destination_prefix,
+        "--article-blocklist-prefix",
+        help="Object prefix (folders) in the GCS bucket holding the article blocklist CSV",
+    ),
+    article_blocklist_project: str = typer.Option(
+        article_blocklist_settings.gcs_storage_project,
+        "--article-blocklist-project",
+        help="GCP project of the GCS bucket holding the article blocklist CSV",
+    ),
     index_version: str = version_option,
     total_docs: int = job_settings.total_docs,
     gcs_path: str = gcs_path_option,
     gcp_project: str = gcp_project_option,
 ):
     """Index file from GCS to Elasticsearch"""
+    if not all((article_blocklist_bucket, article_blocklist_prefix, article_blocklist_project)):
+        raise ValueError("Article blocklist GCS values must be set")
+
     elasticsearch = ElasticSearchAdapter(
         url=elasticsearch_url,
         api_key=elasticsearch_api_key,
@@ -67,9 +86,10 @@ def index(
         create_index_timeout=elasticsearch_create_index_timeout,
     )
 
-    blocklist = create_blocklist(
-        blocklist_file_url
-    )  # TODO Re-using same blocklist for now until we figure something else out
+
+    article_blocklist = load_article_blocklist(
+        article_blocklist_bucket, article_blocklist_prefix, article_blocklist_project
+    )
 
     logger.info(f"Starting Wikipedia indexing for language: {language}")
 
@@ -80,7 +100,7 @@ def index(
 
     indexer = Indexer(
         index_version,
-        blocklist,
+        article_blocklist,
         WIKIPEDIA_TITLE_BLOCKLIST,
         file_manager,
         elasticsearch,

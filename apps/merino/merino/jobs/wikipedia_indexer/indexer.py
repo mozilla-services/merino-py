@@ -55,13 +55,13 @@ class Indexer:
     index_version: str
     file_manager: FileManager
     elasticsearch: ElasticSearchAdapter
-    category_blocklist: set[str]
+    article_blocklist: set[str]
     title_blocklist: set[str]
 
     def __init__(
         self,
         index_version: str,
-        category_blocklist: set[str],
+        article_blocklist: set[str],
         title_blocklist: set[str],
         file_manager: FileManager,
         elasticsearch: ElasticSearchAdapter,
@@ -84,7 +84,8 @@ class Indexer:
         self.file_manager = file_manager
         self.elasticsearch = elasticsearch
         self.suggestion_builder = Builder(index_version)
-        self.category_blocklist = category_blocklist
+        # Wikidata QIDs of blocked articles
+        self.article_blocklist = article_blocklist
         self.title_blocklist = {entry.lower() for entry in title_blocklist}
 
     def index_from_export(self, total_docs: int, elasticsearch_alias: str):
@@ -291,14 +292,14 @@ class Indexer:
 
     def _should_filter(self, doc: Dict[str, Any]) -> bool:
         """Return True if we want to filter out this document and not index it.
-        Checks for redirects, matching categories, or title in the category and title blocklists.
+        Checks for redirects, the article's QID in the article blocklist, or its title in the
+        title blocklist.
         """
-        categories: set[str] = set(doc.get("category", []))
         title: str = doc.get("title", "")
         should_filter_redirect: bool = doc.get("page_type") == REDIRECT_PAGE_TYPE
-        should_filter_category: bool = not self.category_blocklist.isdisjoint(categories)
+        should_filter_article: bool = doc.get("wikibase_item") in self.article_blocklist
         should_filter_title: bool = title.lower() in self.title_blocklist if title != "" else True
-        return should_filter_redirect or should_filter_category or should_filter_title
+        return should_filter_redirect or should_filter_article or should_filter_title
 
     def _enqueue(self, index_name: str, tpl: tuple[Mapping[str, Any], ...]):
         op, doc = self._parse_tuple(index_name, tpl)

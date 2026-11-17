@@ -6,6 +6,8 @@ from logging import Logger
 
 import requests
 
+from merino.utils.gcs import initialize_storage_client
+
 # Timeout for downloading the category blocklist.
 BLOCKLIST_TIMEOUT = 60
 
@@ -52,3 +54,28 @@ def create_blocklist(blocklist_file_url: str) -> set[str]:
     resp.raise_for_status()
     csv_reader = csv.DictReader(StringIO(resp.text), delimiter=",")
     return set(row["name"] for row in csv_reader)
+
+
+# Object name, under the destination prefix, of the newest article blocklist.
+LATEST_ARTICLE_BLOCKLIST = "latest.csv"
+
+
+def latest_article_blocklist_blob(prefix: str) -> str:
+    """Return the object name of the newest article blocklist under `prefix`."""
+    return f"{prefix}/{LATEST_ARTICLE_BLOCKLIST}"
+
+
+def load_article_blocklist(gcs_bucket: str, prefix: str, gcp_project: str) -> set[str]:
+    """Load the Wikidata QIDs of blocked articles from the newest article blocklist on GCS.
+
+    Reads `{gcs_bucket}/{prefix}/latest.csv`, as written by the article blocklist job.
+    Raises a `RuntimeError` if the blocklist holds no QIDs, rather than letting the
+    indexer publish an unfiltered index.
+    """
+    blob_name = latest_article_blocklist_blob(prefix)
+    client = initialize_storage_client(destination_gcp_project=gcp_project)
+    text = client.bucket(gcs_bucket).blob(blob_name).download_as_text()
+    qids = {row["qid"] for row in csv.DictReader(StringIO(text)) if row.get("qid")}
+    if not qids:
+        raise RuntimeError(f"Article blocklist at {gcs_bucket}/{blob_name} contains no QIDs")
+    return qids

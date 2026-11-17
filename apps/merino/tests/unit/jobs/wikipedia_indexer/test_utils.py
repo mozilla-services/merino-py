@@ -9,7 +9,11 @@ from pytest import LogCaptureFixture
 from merino.jobs.wikipedia_indexer.utils import (
     ProgressReporter,
     create_blocklist,
+    latest_article_blocklist_blob,
+    load_article_blocklist,
 )
+
+UTILS_MODULE = "merino.jobs.wikipedia_indexer.utils"
 
 
 @pytest.fixture()
@@ -43,6 +47,49 @@ def test_create_blocklist_raises_on_http_error(requests_mock):
 
     with pytest.raises(requests.HTTPError):
         create_blocklist(blocklist_file_url=url)
+
+
+@pytest.fixture(name="storage_client")
+def fixture_storage_client(mocker):
+    """Patch the GCS client the article blocklist is downloaded with."""
+    return mocker.patch(f"{UTILS_MODULE}.initialize_storage_client")
+
+
+def _serve_csv(storage_client, text: str):
+    """Make the patched client return `text` for any blob download."""
+    blob = storage_client.return_value.bucket.return_value.blob.return_value
+    blob.download_as_text.return_value = text
+
+
+def test_load_article_blocklist_returns_qids(storage_client):
+    """Verify the QID column of the latest blocklist is read, skipping rows without a QID."""
+    _serve_csv(
+        storage_client,
+        'title,qid\r\nBlocked,Q1\r\n"Paris, France",Q90\r\nNo QID,\r\n',
+    )
+
+    qids = load_article_blocklist("bucket", "exports/article_blocklist", "a-project")
+
+    assert qids == {"Q1", "Q90"}
+    storage_client.assert_called_once_with(destination_gcp_project="a-project")
+    client = storage_client.return_value
+    client.bucket.assert_called_once_with("bucket")
+    client.bucket.return_value.blob.assert_called_once_with("exports/article_blocklist/latest.csv")
+
+
+def test_load_article_blocklist_raises_when_empty(storage_client):
+    """Verify an empty blocklist fails rather than letting every article through."""
+    _serve_csv(storage_client, "title,qid\r\n")
+
+    with pytest.raises(RuntimeError, match="contains no QIDs"):
+        load_article_blocklist("bucket", "prefix", "a-project")
+
+
+def test_latest_article_blocklist_blob():
+    """Verify the writer and the reader agree on where the newest blocklist lives."""
+    assert latest_article_blocklist_blob("exports/article_blocklist") == (
+        "exports/article_blocklist/latest.csv"
+    )
 
 
 @pytest.mark.parametrize(
