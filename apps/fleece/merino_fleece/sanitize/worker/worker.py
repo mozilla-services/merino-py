@@ -34,7 +34,7 @@ MAX_PULL_LIMIT = 1000
 
 # A pessimistic ceiling on how long sanitizing one message takes. Measured: a full
 # 512-term batch runs ~161ms on `en_core_web_sm`, leaving roughly 6x headroom for the
-# larger `en_core_web_lg` that deployed environments load.
+# larger `en_core_web_md` that deployed environments load.
 SLOW_BATCH_S = 1.0
 
 # Messages handled concurrently per NER thread. At 2, one batch per thread is in NER while
