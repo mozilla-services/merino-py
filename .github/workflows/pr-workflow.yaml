@@ -7,4 +7,33 @@ permissions:
 
 jobs:
   moon-ci:
+    name: Checks and tests
     uses: ./.github/workflows/moon-ci.yaml
+    with:
+      build-images: false
+
+  images:
+    name: Image builds
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      # Moon compares the merge commit against the PR base.
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup-moon
+      - name: Prepare build metadata
+        run: bash .github/scripts/write-version.sh
+      - name: Build affected images
+        env:
+          MOON_BASE: ${{ github.event.pull_request.base.sha }}
+          MOON_HEAD: ${{ github.sha }}
+        run: moon ci :docker-build --downstream none
+      - name: Upload Moon image build report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v6
+        with:
+          name: moon-image-report
+          path: .moon/cache/ciReport.json
+          include-hidden-files: true
+          if-no-files-found: ignore
