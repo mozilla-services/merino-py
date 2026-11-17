@@ -6,7 +6,7 @@ inheritance: true
 
 # --- Reviews -----------------------------------------------------------------
 reviews:
-  profile: chill
+  profile: assertive
   review_details: true
   high_level_summary_in_walkthrough: true
   high_level_summary_instructions: "Give a brief description of the changes in 50 words or less."
