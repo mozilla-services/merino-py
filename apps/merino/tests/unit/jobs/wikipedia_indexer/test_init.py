@@ -8,7 +8,7 @@ import logging
 
 import pytest
 
-from merino.jobs.wikipedia_indexer import copy_export, index
+from merino.jobs.wikipedia_indexer import RunMode, copy_export, index
 
 MODULE = "merino.jobs.wikipedia_indexer"
 
@@ -55,6 +55,7 @@ def _index(**overrides):
         "total_docs": 100,
         "gcs_path": "bucket/prefix",
         "gcp_project": "a-project",
+        "mode": RunMode.BOTH,
     }
     kwargs.update(overrides)
     return index(**kwargs)
@@ -175,6 +176,53 @@ def test_index_default_blocked_titles_destination_ignores_prefix_slashes(collabo
 
     destination = collaborators["upload_blocked_titles"].call_args.args[2]
     assert destination == "article_blocklist/blocked_titles"
+
+
+def test_index_blocklist_only_uploads_titles_without_indexing(collaborators):
+    """Verify `blocklist-only` scans the export for blocked titles and never indexes."""
+    indexer = collaborators["indexer"].return_value
+
+    _index(mode=RunMode.BLOCKLIST_ONLY)
+
+    indexer.collect_blocked_titles.assert_called_once_with(100)
+    indexer.index_from_export.assert_not_called()
+    collaborators["upload_blocked_titles"].assert_called_once_with(
+        indexer.blocked_titles,
+        "blocklist-bucket",
+        "article_blocklist/blocked_titles",
+        "blocklist-project",
+        "en",
+    )
+
+
+def test_index_index_only_indexes_without_uploading_titles(collaborators):
+    """Verify `index-only` builds the index and skips the blocked titles upload."""
+    indexer = collaborators["indexer"].return_value
+
+    _index(mode=RunMode.INDEX_ONLY)
+
+    indexer.index_from_export.assert_called_once_with(100, "enwiki-{version}")
+    indexer.collect_blocked_titles.assert_not_called()
+    collaborators["upload_blocked_titles"].assert_not_called()
+
+
+def test_index_both_indexes_and_uploads_titles(collaborators):
+    """Verify `both` builds the index from the same scan it uploads the titles of."""
+    indexer = collaborators["indexer"].return_value
+
+    _index(mode=RunMode.BOTH)
+
+    indexer.index_from_export.assert_called_once_with(100, "enwiki-{version}")
+    indexer.collect_blocked_titles.assert_not_called()
+    collaborators["upload_blocked_titles"].assert_called_once()
+
+
+def test_index_blocklist_only_fails_when_the_upload_fails(collaborators):
+    """Verify `blocklist-only` fails on an upload error, since uploading is all it does."""
+    collaborators["upload_blocked_titles"].side_effect = Exception("forbidden")
+
+    with pytest.raises(Exception, match="forbidden"):
+        _index(mode=RunMode.BLOCKLIST_ONLY)
 
 
 def test_index_skips_the_upload_when_indexing_fails(collaborators):

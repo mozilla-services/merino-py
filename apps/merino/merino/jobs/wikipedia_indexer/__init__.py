@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+from enum import StrEnum
 from typing import Annotated
 
 import typer
@@ -39,6 +40,17 @@ gcp_project_option = typer.Option(
 
 
 version_option = typer.Option(job_settings.index_version, "--version", help="Version of the index")
+
+
+class RunMode(StrEnum):
+    """What a run of the `index` command produces."""
+
+    # Scan the export for articles in the article blocklist and upload their titles.
+    BLOCKLIST_ONLY = "blocklist-only"
+    # Build and publish the index, without uploading the blocked titles.
+    INDEX_ONLY = "index-only"
+    # Build and publish the index, then upload the titles it blocked.
+    BOTH = "both"
 
 
 indexer_cmd = typer.Typer(
@@ -83,8 +95,17 @@ def index(
     total_docs: int = job_settings.total_docs,
     gcs_path: str = gcs_path_option,
     gcp_project: str = gcp_project_option,
+    mode: RunMode = typer.Option(
+        RunMode.BOTH,
+        "--mode",
+        help=(
+            "What to produce: `index-only` builds and publishes the index, `blocklist-only` "
+            "uploads the titles of the articles in the article blocklist without indexing, "
+            "`both` does both"
+        ),
+    ),
 ):
-    """Index file from GCS to Elasticsearch"""
+    """Index file from GCS to Elasticsearch and/or upload the blocked titles"""
     if not all((article_blocklist_bucket, article_blocklist_prefix, article_blocklist_project)):
         raise ValueError("Article blocklist GCS values must be set")
 
@@ -116,7 +137,13 @@ def index(
         follower_sync_poll_interval=follower_sync_poll_interval,
         follower_discovery_period=follower_discovery_period,
     )
-    indexer.index_from_export(total_docs, elasticsearch_alias)
+    if mode is RunMode.BLOCKLIST_ONLY:
+        indexer.collect_blocked_titles(total_docs)
+    else:
+        indexer.index_from_export(total_docs, elasticsearch_alias)
+
+    if mode is RunMode.INDEX_ONLY:
+        return
 
     # upload blocklist titles, next to the article blocklist
     destination = (
@@ -131,6 +158,9 @@ def index(
             language,
         )
     except Exception:
+        if mode is RunMode.BLOCKLIST_ONLY:
+            # Uploading is all this mode does, so a failure must fail the job.
+            raise
         logger.exception(
             "Failed to upload blocked titles",
             extra={

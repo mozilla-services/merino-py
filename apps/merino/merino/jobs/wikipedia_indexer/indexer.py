@@ -6,7 +6,7 @@ import time
 from itertools import islice
 from typing import Any, Mapping
 
-from merino.jobs.wikipedia_indexer.filemanager import FileManager
+from merino.jobs.wikipedia_indexer.filemanager import FileManager, Snapshot
 from merino.jobs.wikipedia_indexer.settings import get_settings_for_version
 from merino.jobs.wikipedia_indexer.settings.v1 import (
     get_suggest_mapping,
@@ -113,38 +113,7 @@ class Indexer:
             active_policy_applied = False
             try:
                 logger.info("Start indexing", extra={"index": build_index})
-                reporter = ProgressReporter(
-                    logger, "Indexing", latest.name, build_index, total_docs
-                )
-                indexed = 0
-                blocked = 0
-                # Start from a clean list so a reused Indexer only reports this run.
-                self.blocked_titles = []
-                gcs_stream = self.file_manager.stream_from_gcs(latest)
-                # The following will chunk `gcs_stream` into a sequence of pairs of
-                # (`operator`, `document`), where the first element as the operator
-                # (i.e. `index`), the second element as the document data for the
-                # operator
-                while pair := tuple(islice(gcs_stream, 2)):
-                    operator, document = pair
-                    op = json.loads(operator)
-                    doc = json.loads(document)
-
-                    blocklisted = self._is_blocklisted_article(doc)
-                    if blocklisted and (title := doc.get("title")):
-                        self.blocked_titles.append(title)
-
-                    if self._should_filter(doc, blocklisted):
-                        blocked += 1
-                    else:
-                        self._enqueue(build_index, (op, doc))
-                        indexed += self._index_docs(False)
-
-                    # report percent completed
-                    reporter.report(indexed, blocked)
-
-                # Flush queue after enumerating the export to clear the queue
-                self._index_docs(True)
+                self._scan_export(latest, total_docs, build_index)
                 logger.info(
                     "Completed indexing",
                     extra={"latest_name": latest.name, "index": build_index},
@@ -297,6 +266,72 @@ class Indexer:
             logger.info("Discarded unpublished index", extra={"index": index_name})
         except Exception:
             logger.exception("Failed to discard unpublished index", extra={"index": index_name})
+
+    def collect_blocked_titles(self, total_docs: int) -> None:
+        """Scan the latest export and record the titles of the articles in the article
+        blocklist in `blocked_titles`, without creating or touching any index.
+        """
+        language = self.file_manager.language
+        latest = self.file_manager.get_latest_gcs()
+        if latest is None:
+            raise RuntimeError(f"No exports available on GCS for {language}")
+
+        logger.info("Start collecting blocked titles", extra={"export": latest.name})
+        self._scan_export(latest, total_docs, build_index=None)
+        logger.info(
+            "Completed collecting blocked titles",
+            extra={"export": latest.name, "blocked_titles": len(self.blocked_titles)},
+        )
+
+    def _scan_export(self, latest: Snapshot, total_docs: int, build_index: str | None) -> None:
+        """Read every document of `latest` once, recording the titles of the articles in the
+        article blocklist in `blocked_titles`.
+
+        When `build_index` is set, the documents that pass the filters are also indexed into
+        it. When it is None, nothing is indexed and Elasticsearch is never called.
+        """
+        reporter = ProgressReporter(
+            logger,
+            "Indexing" if build_index else "Collecting blocked titles",
+            latest.name,
+            build_index or "blocked titles",
+            total_docs,
+        )
+        indexed = 0
+        skipped = 0
+        # Start from a clean list so a reused Indexer only reports this run.
+        self.blocked_titles = []
+        gcs_stream = self.file_manager.stream_from_gcs(latest)
+        # The following will chunk `gcs_stream` into a sequence of pairs of
+        # (`operator`, `document`), where the first element as the operator
+        # (i.e. `index`), the second element as the document data for the
+        # operator
+        while pair := tuple(islice(gcs_stream, 2)):
+            operator, document = pair
+            doc = json.loads(document)
+
+            blocklisted = self._record_if_blocklisted(doc)
+
+            if build_index is None or self._should_filter(doc, blocklisted):
+                # Without an index to write to, every document is only scanned.
+                skipped += 1
+            else:
+                self._enqueue(build_index, (json.loads(operator), doc))
+                indexed += self._index_docs(False)
+
+            # report percent completed
+            reporter.report(indexed, skipped)
+
+        if build_index is not None:
+            # Flush queue after enumerating the export to clear the queue
+            self._index_docs(True)
+
+    def _record_if_blocklisted(self, doc: dict[str, Any]) -> bool:
+        """Return True if the document is in the article blocklist, recording its title."""
+        blocklisted = self._is_blocklisted_article(doc)
+        if blocklisted and (title := doc.get("title")):
+            self.blocked_titles.append(title)
+        return blocklisted
 
     def _should_filter(self, doc: dict[str, Any], blocklisted: bool) -> bool:
         """Return True if we want to filter out this document and not index it.

@@ -525,6 +525,46 @@ def test_index_from_export_records_titles_blocked_by_article_blocklist(
     assert indexer.blocked_titles == ["Hercule Poirot", "Poirot"]
 
 
+def test_collect_blocked_titles_records_titles_without_indexing(
+    indexer,
+    file_manager,
+    es_adapter,
+):
+    """Test that collecting blocked titles records the same titles as indexing would,
+    without making any Elasticsearch call.
+    """
+    file_manager.get_latest_gcs.return_value = SNAPSHOT
+    documents = [
+        {"title": "Paris", "page_type": "primary", "wikibase_item": "Q1"},
+        {"title": "Hercule Poirot", "page_type": "primary", "wikibase_item": "Q2"},
+        {"title": "Poirot", "page_type": "redirect", "wikibase_item": "Q2"},
+        {"title": "Paris, France", "page_type": "redirect"},
+        {"title": "Bad Things", "page_type": "primary", "wikibase_item": "Q5"},
+    ]
+    inputs = []
+    for i, document in enumerate(documents):
+        inputs.append(json.dumps({"index": {"_type": "doc", "_id": str(i)}}))
+        inputs.append(json.dumps({**document, "page_id": i, "category": []}))
+    file_manager.stream_from_gcs.return_value = (input for input in inputs)
+    indexer.blocked_titles = ["Left over from an earlier run"]
+
+    indexer.collect_blocked_titles(len(documents))
+
+    assert indexer.blocked_titles == ["Hercule Poirot", "Poirot"]
+    file_manager.stream_from_gcs.assert_called_once_with(SNAPSHOT)
+    assert es_adapter.method_calls == []
+
+
+def test_collect_blocked_titles_raises_without_export(indexer, file_manager, es_adapter):
+    """Test that collecting blocked titles fails when no export is available on GCS."""
+    file_manager.get_latest_gcs.return_value = None
+
+    with pytest.raises(RuntimeError, match="No exports available on GCS for en"):
+        indexer.collect_blocked_titles(1)
+
+    file_manager.stream_from_gcs.assert_not_called()
+
+
 def test_index_from_export_resets_blocked_titles_between_runs(
     indexer,
     file_manager,
