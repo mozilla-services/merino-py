@@ -79,6 +79,17 @@ def test_generate_uploads_timestamped_csv_and_copies_it_to_latest(collaborators)
     )
 
 
+def test_generate_ignores_slashes_around_the_destination_prefix(collaborators):
+    """Verify a slashed prefix writes to the same objects the indexer reads."""
+    _generate(destination_prefix="/exports/article_blocklist/")
+
+    bucket = collaborators["storage_client"].return_value.bucket.return_value
+    bucket.blob.assert_called_once_with("exports/article_blocklist/20260316120000.csv")
+    bucket.copy_blob.assert_called_once_with(
+        bucket.blob.return_value, bucket, "exports/article_blocklist/latest.csv"
+    )
+
+
 def test_generate_raises_when_upload_fails(collaborators):
     """Verify an upload failure fails the job instead of being swallowed."""
     bucket = collaborators["storage_client"].return_value.bucket.return_value

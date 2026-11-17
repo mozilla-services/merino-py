@@ -9,7 +9,11 @@ import typer
 from merino.configs import settings as config
 from merino.jobs.wikipedia_indexer.filemanager import FileManager
 from merino.jobs.wikipedia_indexer.indexer import Indexer
-from merino.jobs.wikipedia_indexer.utils import load_article_blocklist
+from merino.jobs.wikipedia_indexer.utils import (
+    BLOCKED_TITLES_DIR,
+    load_article_blocklist,
+    upload_blocked_titles,
+)
 from merino.search.elastic import ElasticSearchAdapter
 from merino.utils.blocklists import WIKIPEDIA_TITLE_BLOCKLIST
 
@@ -70,6 +74,11 @@ def index(
         "--article-blocklist-project",
         help="GCP project of the GCS bucket holding the article blocklist CSV",
     ),
+    blocked_titles_destination: str = typer.Option(
+        job_settings.blocked_titles_destination,
+        "--blocked-titles-destination",
+        help="Object prefix (folders) where each run uploads the titles it blocked",
+    ),
     index_version: str = version_option,
     total_docs: int = job_settings.total_docs,
     gcs_path: str = gcs_path_option,
@@ -85,7 +94,6 @@ def index(
         request_timeout=elasticsearch_request_timeout,
         create_index_timeout=elasticsearch_create_index_timeout,
     )
-
 
     article_blocklist = load_article_blocklist(
         article_blocklist_bucket, article_blocklist_prefix, article_blocklist_project
@@ -109,6 +117,33 @@ def index(
         follower_discovery_period=follower_discovery_period,
     )
     indexer.index_from_export(total_docs, elasticsearch_alias)
+
+    # upload blocklist titles, next to the article blocklist
+    destination = (
+        blocked_titles_destination or f"{article_blocklist_prefix.strip('/')}/{BLOCKED_TITLES_DIR}"
+    )
+    try:
+        blob_name = upload_blocked_titles(
+            indexer.blocked_titles,
+            article_blocklist_bucket,
+            destination,
+            article_blocklist_project,
+            language,
+        )
+    except Exception:
+        logger.exception(
+            "Failed to upload blocked titles",
+            extra={
+                "bucket": article_blocklist_bucket,
+                "destination": destination,
+                "blocked_titles": len(indexer.blocked_titles),
+            },
+        )
+    else:
+        logger.info(
+            "Uploaded blocked titles",
+            extra={"blob": blob_name, "blocked_titles": len(indexer.blocked_titles)},
+        )
 
 
 @indexer_cmd.command()

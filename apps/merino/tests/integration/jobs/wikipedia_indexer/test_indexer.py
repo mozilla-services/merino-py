@@ -490,6 +490,71 @@ def test_index_from_export_with_title_blocklist_content_filter(
     es_adapter.bulk.assert_called_once()
 
 
+def test_index_from_export_records_titles_blocked_by_article_blocklist(
+    indexer,
+    file_manager,
+    es_adapter,
+):
+    """Test that only documents dropped for their QID have their title recorded,
+    including redirects carrying a blocked QID.
+    """
+    file_manager.get_latest_gcs.return_value = SNAPSHOT
+    es_adapter.bulk.return_value = {"acknowledged": True, "errors": False, "items": [{}]}
+    es_adapter.index_exists.return_value = False
+    es_adapter.create_index.return_value = True
+    es_adapter.alias_exists.return_value = False
+
+    documents = [
+        # Indexed.
+        {"title": "Paris", "page_type": "primary", "wikibase_item": "Q1"},
+        # Dropped for their QID, so recorded.
+        {"title": "Hercule Poirot", "page_type": "primary", "wikibase_item": "Q2"},
+        {"title": "Poirot", "page_type": "redirect", "wikibase_item": "Q2"},
+        # Dropped for other reasons, so not recorded.
+        {"title": "Paris, France", "page_type": "redirect"},
+        {"title": "Bad Things", "page_type": "primary", "wikibase_item": "Q5"},
+    ]
+    inputs = []
+    for i, document in enumerate(documents):
+        inputs.append(json.dumps({"index": {"_type": "doc", "_id": str(i)}}))
+        inputs.append(json.dumps({**document, "page_id": i, "category": []}))
+    file_manager.stream_from_gcs.return_value = (input for input in inputs)
+
+    indexer.index_from_export(1, "enwiki")
+
+    assert indexer.blocked_titles == ["Hercule Poirot", "Poirot"]
+
+
+def test_index_from_export_resets_blocked_titles_between_runs(
+    indexer,
+    file_manager,
+    es_adapter,
+):
+    """Test that a reused Indexer only reports the titles blocked by its latest run."""
+    file_manager.get_latest_gcs.return_value = SNAPSHOT
+    es_adapter.bulk.return_value = {"acknowledged": True, "errors": False, "items": [{}]}
+    es_adapter.index_exists.return_value = False
+    es_adapter.create_index.return_value = True
+    es_adapter.alias_exists.return_value = False
+
+    def export(title: str, qid: str) -> list[str]:
+        """Return the lines of an export holding a single document."""
+        return [
+            json.dumps({"index": {"_type": "doc", "_id": "1"}}),
+            json.dumps({"title": title, "page_id": 1, "category": [], "wikibase_item": qid}),
+        ]
+
+    file_manager.stream_from_gcs.side_effect = [
+        iter(export("Hercule Poirot", "Q2")),
+        iter(export("Paris", "Q3")),
+    ]
+
+    indexer.index_from_export(1, "enwiki")
+    indexer.index_from_export(1, "enwiki")
+
+    assert indexer.blocked_titles == ["Paris"]
+
+
 def test_index_from_export_filters_redirects(
     indexer,
     file_manager,

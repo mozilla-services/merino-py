@@ -4,7 +4,7 @@ import json
 import logging
 import time
 from itertools import islice
-from typing import Any, Dict, Mapping
+from typing import Any, Mapping
 
 from merino.jobs.wikipedia_indexer.filemanager import FileManager
 from merino.jobs.wikipedia_indexer.settings import get_settings_for_version
@@ -57,6 +57,7 @@ class Indexer:
     elasticsearch: ElasticSearchAdapter
     article_blocklist: set[str]
     title_blocklist: set[str]
+    blocked_titles: list[str]
 
     def __init__(
         self,
@@ -87,6 +88,7 @@ class Indexer:
         # Wikidata QIDs of blocked articles
         self.article_blocklist = article_blocklist
         self.title_blocklist = {entry.lower() for entry in title_blocklist}
+        self.blocked_titles = []
 
     def index_from_export(self, total_docs: int, elasticsearch_alias: str):
         """Primary indexer method.
@@ -116,6 +118,8 @@ class Indexer:
                 )
                 indexed = 0
                 blocked = 0
+                # Start from a clean list so a reused Indexer only reports this run.
+                self.blocked_titles = []
                 gcs_stream = self.file_manager.stream_from_gcs(latest)
                 # The following will chunk `gcs_stream` into a sequence of pairs of
                 # (`operator`, `document`), where the first element as the operator
@@ -126,7 +130,11 @@ class Indexer:
                     op = json.loads(operator)
                     doc = json.loads(document)
 
-                    if self._should_filter(doc):
+                    blocklisted = self._is_blocklisted_article(doc)
+                    if blocklisted and (title := doc.get("title")):
+                        self.blocked_titles.append(title)
+
+                    if self._should_filter(doc, blocklisted):
                         blocked += 1
                     else:
                         self._enqueue(build_index, (op, doc))
@@ -290,16 +298,19 @@ class Indexer:
         except Exception:
             logger.exception("Failed to discard unpublished index", extra={"index": index_name})
 
-    def _should_filter(self, doc: Dict[str, Any]) -> bool:
+    def _should_filter(self, doc: dict[str, Any], blocklisted: bool) -> bool:
         """Return True if we want to filter out this document and not index it.
         Checks for redirects, the article's QID in the article blocklist, or its title in the
         title blocklist.
         """
         title: str = doc.get("title", "")
         should_filter_redirect: bool = doc.get("page_type") == REDIRECT_PAGE_TYPE
-        should_filter_article: bool = doc.get("wikibase_item") in self.article_blocklist
         should_filter_title: bool = title.lower() in self.title_blocklist if title != "" else True
-        return should_filter_redirect or should_filter_article or should_filter_title
+        return should_filter_redirect or blocklisted or should_filter_title
+
+    def _is_blocklisted_article(self, doc: dict[str, Any]) -> bool:
+        """Return True if the document's Wikidata QID is in the article blocklist."""
+        return doc.get("wikibase_item") in self.article_blocklist
 
     def _enqueue(self, index_name: str, tpl: tuple[Mapping[str, Any], ...]):
         op, doc = self._parse_tuple(index_name, tpl)

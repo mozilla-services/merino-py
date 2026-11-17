@@ -1778,6 +1778,10 @@ export_base_url = "https://dumps.wikimedia.org/other/cirrus_search_index/"
 # Read by the article blocklist job to build the article blocklist the indexer consumes.
 blocklist_file_url = "https://raw.githubusercontent.com/mozilla/search-terms-sanitization/7ab819c7515c526e6a407b08ba8e78d3bdb7f4e9/non_sensitive/wikipedia-content-moderation/blocklist_cats.csv"
 
+# MERINO_JOBS__WIKIPEDIA_INDEXER__BLOCKED_TITLES_DESTINATION
+# Object prefix (folders) where each run uploads the titles it blocked.
+blocked_titles_destination = ""
+
 [default.jobs.wikipedia_article_blocklist]
 # The location of the article blocklist CSV. The article blocklist job writes it and the
 # Wikipedia indexer job reads `{gcs_storage_bucket}/{destination_prefix}/latest.csv` to

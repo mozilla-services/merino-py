@@ -4,6 +4,8 @@
 
 """Unit tests for the wikipedia indexer CLI commands."""
 
+import logging
+
 import pytest
 
 from merino.jobs.wikipedia_indexer import copy_export, index
@@ -23,6 +25,9 @@ def fixture_collaborators(mocker):
         "indexer": mocker.patch(f"{MODULE}.Indexer"),
         "load_article_blocklist": mocker.patch(
             f"{MODULE}.load_article_blocklist", return_value={"Q1"}
+        ),
+        "upload_blocked_titles": mocker.patch(
+            f"{MODULE}.upload_blocked_titles", return_value="blocked_titles/en/1.csv"
         ),
     }
 
@@ -45,6 +50,7 @@ def _index(**overrides):
         "article_blocklist_bucket": "blocklist-bucket",
         "article_blocklist_prefix": "article_blocklist",
         "article_blocklist_project": "blocklist-project",
+        "blocked_titles_destination": "",
         "index_version": "v1",
         "total_docs": 100,
         "gcs_path": "bucket/prefix",
@@ -106,6 +112,79 @@ def test_index_raises_without_article_blocklist_settings(collaborators, override
 
     collaborators["load_article_blocklist"].assert_not_called()
     collaborators["indexer"].assert_not_called()
+
+
+def test_index_uploads_the_blocked_titles_after_indexing(collaborators, mocker):
+    """Verify the titles the run blocked are uploaded next to the article blocklist."""
+    order = mocker.Mock()
+    order.attach_mock(collaborators["indexer"].return_value.index_from_export, "index")
+    order.attach_mock(collaborators["upload_blocked_titles"], "upload")
+
+    _index(language="fr")
+
+    blocked_titles = collaborators["indexer"].return_value.blocked_titles
+    assert [c[0] for c in order.mock_calls] == ["index", "upload"]
+    collaborators["upload_blocked_titles"].assert_called_once_with(
+        blocked_titles,
+        "blocklist-bucket",
+        "article_blocklist/blocked_titles",
+        "blocklist-project",
+        "fr",
+    )
+
+
+def test_index_uploads_the_blocked_titles_to_the_requested_destination(collaborators):
+    """Verify a destination option overrides the default folder for the blocked titles."""
+    _index(blocked_titles_destination="offline_uploader/blocklists")
+
+    collaborators["upload_blocked_titles"].assert_called_once_with(
+        collaborators["indexer"].return_value.blocked_titles,
+        "blocklist-bucket",
+        "offline_uploader/blocklists",
+        "blocklist-project",
+        "en",
+    )
+
+
+def test_index_does_not_fail_when_the_blocked_titles_upload_fails(
+    collaborators, caplog, filter_caplog
+):
+    """Verify a failed upload is logged rather than failing a run whose index is already live."""
+    collaborators["upload_blocked_titles"].side_effect = Exception("forbidden")
+    caplog.set_level(logging.INFO)
+
+    _index()
+
+    collaborators["indexer"].return_value.index_from_export.assert_called_once()
+    records = filter_caplog(caplog.records, MODULE)
+    failures = [r for r in records if r.message == "Failed to upload blocked titles"]
+    assert len(failures) == 1
+    assert failures[0].levelno == logging.ERROR
+    assert failures[0].destination == "article_blocklist/blocked_titles"
+    assert not [r for r in records if r.message == "Uploaded blocked titles"]
+
+
+@pytest.mark.parametrize(
+    "prefix",
+    ["article_blocklist", "article_blocklist/", "/article_blocklist/"],
+    ids=["no-slashes", "trailing-slash", "leading-and-trailing-slashes"],
+)
+def test_index_default_blocked_titles_destination_ignores_prefix_slashes(collaborators, prefix):
+    """Verify the default destination has no empty path segments however the prefix is slashed."""
+    _index(article_blocklist_prefix=prefix)
+
+    destination = collaborators["upload_blocked_titles"].call_args.args[2]
+    assert destination == "article_blocklist/blocked_titles"
+
+
+def test_index_skips_the_upload_when_indexing_fails(collaborators):
+    """Verify a failed run doesn't publish a partial list of blocked titles."""
+    collaborators["indexer"].return_value.index_from_export.side_effect = RuntimeError("boom")
+
+    with pytest.raises(RuntimeError, match="boom"):
+        _index()
+
+    collaborators["upload_blocked_titles"].assert_not_called()
 
 
 def test_index_passes_the_follower_sync_settings_to_the_indexer(collaborators):

@@ -76,7 +76,7 @@ def generate(
 
     client = initialize_storage_client(destination_gcp_project=gcs_storage_project)
     bucket = client.bucket(gcs_storage_bucket)
-    blob = bucket.blob(f"{destination_prefix}/{timestamp}.csv")
+    blob = bucket.blob(f"{destination_prefix.strip('/')}/{timestamp}.csv")
     blob.upload_from_string(content, content_type="text/csv")
     bucket.copy_blob(blob, bucket, latest_article_blocklist_blob(destination_prefix))
 
