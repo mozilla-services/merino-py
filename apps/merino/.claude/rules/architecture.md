@@ -8,11 +8,11 @@
 
 3. **Jobs** (`apps/merino/merino/jobs/`) - Airflow data pipelines invoked via `merino-jobs` CLI. Jobs populate data that providers serve.
 
-4. **Games API** (`apps/merino/merino/providers/games/`), the backend of the `api/v1/widgets/games/*` endpoints defined in @apps/merino/merino/web/api_v1_widgets.py (with deprecated `api/v1/games/*` aliases in @apps/merino/merino/web/api_v1.py).
+4. **Games API** (`apps/merino/merino/providers/games/`), the backend of the `api/v1/widgets/games/*` endpoints defined in @apps/merino/merino/web/api_v1_widgets.py. The deprecated `api/v1/games/*` paths are no longer served by Merino or included in its API docs, but the load balancer still accepts them and rewrites them to `api/v1/widgets/games/*` for older Firefox versions.
 
 5. **Image Manifest API** (`apps/merino/merino/providers/manifest/`), the backend of the `api/v1/manifest` endpoint defined in @apps/merino/merino/web/api_v1.py.
 
-6. **RSS API** (`apps/merino/merino/providers/rss/`), the backend of the `api/v1/rss/*` endpoints defined in @apps/merino/merino/web/api_v1.py.
+6. **RSS API** (`apps/merino/merino/providers/rss/`), the backend of the `api/v1/widgets/rss/*` endpoints defined in @apps/merino/merino/web/api_v1_widgets.py. The deprecated `api/v1/rss/*` paths are no longer served by Merino or included in its API docs, but the load balancer still accepts them and rewrites them to `api/v1/widgets/rss/*` for older Firefox versions.
 
 ## Job-Provider Relationships
 
