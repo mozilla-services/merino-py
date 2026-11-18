@@ -11,13 +11,14 @@ from fastapi.testclient import TestClient
 from merino.configs import settings
 from merino.providers.games.particle.backends.protocol import Particle
 
-CACHE_CONTROL = f"private, max-age={settings.games_providers.particle.cache_ttl}"
+_TTL = settings.games_providers.particle.cache_ttl
+CACHE_CONTROL = f"public, max-age={_TTL}, s-maxage={_TTL}"
 
 PARTICLE_URL = "/api/v1/widgets/games/particle"
 
 
 def test_particle_returns_the_game_url(client: TestClient, particle_provider: Any) -> None:
-    """Serves the public game URL with a private Cache-Control header."""
+    """Serves the public game URL with a public Cache-Control header."""
     particle_provider.get_game_url.return_value = Particle(url="https://cdn.test/particle/")
 
     response = client.get(PARTICLE_URL)
@@ -30,23 +31,24 @@ def test_particle_returns_the_game_url(client: TestClient, particle_provider: An
 def test_particle_returns_null_when_no_game_is_available(
     client: TestClient, particle_provider: Any
 ) -> None:
-    """Serves a null body when the provider has no game data."""
+    """Serves an uncacheable null body when the provider has no game data."""
     particle_provider.get_game_url.return_value = None
 
     response = client.get(PARTICLE_URL)
 
     assert response.status_code == 200
     assert response.json() is None
-    assert response.headers["cache-control"] == CACHE_CONTROL
+    assert response.headers["cache-control"] == "no-store"
 
 
 def test_particle_returns_null_when_the_provider_fails(
     client: TestClient, particle_provider: Any
 ) -> None:
-    """Serves a null body instead of an error when fetching the game raises."""
+    """Serves an uncacheable null body instead of an error when fetching the game raises."""
     particle_provider.get_game_url.side_effect = RuntimeError("boom")
 
     response = client.get(PARTICLE_URL)
 
     assert response.status_code == 200
     assert response.json() is None
+    assert response.headers["cache-control"] == "no-store"

@@ -1306,6 +1306,7 @@ commons_api_url = "https://commons.wikimedia.org/w/api.php"
 # Each day's images are uploaded to a fresh dated path and never modified, so clients and
 # the CDN may cache them forever; hourly re-fetching was a major CDN cost driver (SREIN-1732).
 # Remediating a bad image requires publishing it at a new path via the manifest.
+# This is the cache-control on the GCS object itself.
 cache_control = "public, max-age=31536000, immutable"
 
 # MERINO_RSS_PROVIDERS__WIKIMEDIA_POTD__IMAGE_MAX_DIMENSION
@@ -1320,6 +1321,11 @@ image_max_dimension = 3840
 # New Tab image cache (img-getpocket.cdn.mozilla.net) uses for content thumbnails.
 image_webp_quality = 75
 
+# MERINO_RSS_PROVIDERS__WIKIMEDIA_POTD__CACHE_CONTROL_TTL_SEC
+# How long, in seconds, Fastly and browsers can cache responses from the picture of the day
+# endpoint. Unlike `cache_control` above, this applies to the API response, not GCS objects.
+cache_control_ttl_sec = 3600 # one hour
+
 [default.games_providers.particle]
 # MERINO_GAMES_PROVIDERS__PARTICLE__TYPE
 # The type of this provider, should be `particle`.
@@ -1331,8 +1337,8 @@ type = "particle"
 enabled = false
 
 # MERINO_GAMES_PROVIDERS__PARTICLE__CACHE_TTL
-# The amount of time in seconds for the max-age Cache-control header.
-cache_ttl = 86400 # one day
+# How long, in seconds, Fastly and browsers can cache responses from the Particle endpoint.
+cache_ttl = 3600 # one hour
 
 # MERINO_GAMES_PROVIDERS__PARTICLE__CACHE_CONTROL_HTML
 # HTML file needs a specific cache value set. All other particle files have
