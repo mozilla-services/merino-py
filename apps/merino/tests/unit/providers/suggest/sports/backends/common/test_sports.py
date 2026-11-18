@@ -1405,7 +1405,7 @@ async def test_ucl_update_teams(mock_client: AsyncClient, mocker: MockerFixture)
         side_effect=[teams_payload],
     )
     await ucl.update_teams(client=mock_client)
-    assert ucl.season == "2025"
+    assert ucl.season == "2026"
     assert set(ucl.teams.keys()) == {90000001, 90000002}
     assert get_data.call_count == 1
     assert "/Teams/ucl" in get_data.call_args_list[0].kwargs["url"]
@@ -1766,7 +1766,7 @@ async def test_ucl_update_events(
     ucl = UCL(settings=settings.providers.sports)
     teams_payload = soccer_teams_payload()
     ucl.load_teams_from_source(teams_payload)
-    ucl.season = "2025"  # set by update_teams normally
+    ucl.season = "2026"  # set by update_teams normally
     ucl.event_ttl = timedelta(weeks=2)
 
     schedules_payload = soccer_schedule_payload()
@@ -1813,7 +1813,7 @@ async def test_ucl_update_events(
 
     await ucl.update_events(client=mock_client)
     assert 90011111 in ucl.events and 90022222 not in ucl.events
-    assert "/SchedulesBasic/UCL/2025" in get_data.call_args_list[0].kwargs["url"]
+    assert "/SchedulesBasic/UCL/2026" in get_data.call_args_list[0].kwargs["url"]
 
 
 @freezegun.freeze_time("2025-09-22T00:00:00", tz_offset=0)

@@ -439,8 +439,13 @@ class UCL(Sport):
         )
 
     async def get_season(self, client: AsyncClient):
-        """Get the current season (which is just the current year)"""
-        self.season = str(datetime.now(tz=timezone.utc).year)
+        """Get the current season.
+
+        SportsData names soccer seasons by the year they end (2026-27 is "2027"),
+        and UCL seasons start in the summer.
+        """
+        now = datetime.now(tz=timezone.utc)
+        self.season = str(now.year + 1 if now.month >= 7 else now.year)
 
     async def get_team(self, id: int) -> Team | None:
         """Fetch a team from the thread locked source"""
