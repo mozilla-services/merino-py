@@ -21,7 +21,9 @@ tasks:
       - /.dockerignore
       - /.prototools
       - /moon.yml
-      - /.github/**/*
+      # These files control the build steps and their version metadata.
+      - /.github/workflows/moon-ci.yaml
+      - /.github/scripts/write-version.sh
       - project://^
     tags:
       - docker

@@ -2,6 +2,11 @@ name: moon-ci
 
 on:
   workflow_call:
+    inputs:
+      build-images:
+        description: Include image builds in the Moon graph
+        type: boolean
+        default: true
     outputs:
       merino:
         description: Whether a Merino image was built and uploaded
@@ -54,27 +59,55 @@ jobs:
       - name: Prepare build metadata
         run: |
           mdbook-mermaid install ./
-          printf '{"commit":"%s","version":"%s","source":"%s","build":"%s"}\n' \
-            "$GITHUB_SHA" "$GITHUB_REF_NAME" \
-            "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" \
-            "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" > version.json
-      - name: Run affected checks, tests, documentation, and image builds
+          bash .github/scripts/write-version.sh
+      - name: Run affected Moon tasks
+        id: moon
         env:
           MOON_BASE: ${{ github.event.pull_request.base.sha || github.event.before || 'origin/main' }}
           MOON_HEAD: ${{ github.sha }}
           MOON_FORCE: ${{ github.event_name == 'workflow_dispatch' || github.event.forced == true }}
+          BUILD_IMAGES: ${{ inputs.build-images }}
           # Rust warnings, including Clippy's, fail CI. Local task runs keep them as warnings so
           # work in progress still compiles.
           RUSTFLAGS: "-D warnings"
-        # Moon owns affected selection. Merino coverage runs whenever Merino is affected, reusing
-        # the unit and integration results from `:test`.
-        run: >-
-          moon ci ':#quality' :test merino:diff-coverage load-tests:validate docs:build
-          :docker-build --downstream none
+        # A single graph runs independent tasks concurrently and runs shared dependencies once.
+        run: |
+          targets=(':#quality' :test merino:diff-coverage load-tests:validate docs:build)
+          if [[ "$BUILD_IMAGES" == true ]]; then
+            targets+=(:docker-build)
+          fi
+          moon ci "${targets[@]}" --downstream none
+      - name: Summarize Moon tasks
+        if: ${{ !cancelled() && steps.moon.outcome != 'skipped' }}
+        env:
+          MOON_OUTCOME: ${{ steps.moon.outcome }}
+        run: |
+          report=.moon/cache/ciReport.json
+          if [[ ! -f "$report" ]]; then
+            message='Moon exited before writing a task report. See the Moon step log.'
+            if [[ "$MOON_OUTCOME" == success ]]; then
+              message='No affected Moon tasks ran.'
+            fi
+            printf '### Moon tasks\n\n%s\n' "$message" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          jq -er '
+            [.actions[] | select(.node.action == "run-task")]
+            | sort_by(.node.params.target)
+            | "### Moon tasks", "",
+              (if length == 0 then "No Moon tasks ran."
+               else "| Task | Status | Duration |", "| --- | --- | ---: |",
+                 (.[] | (.duration | if . == null then "n/a"
+                         else "\((.secs * 1000 + .nanos / 1e6 | round) / 1000) s" end) as $time
+                   | "| `\(.node.params.target)` | \(.status) | \($time) |")
+               end)
+          ' "$report" >> "$GITHUB_STEP_SUMMARY"
       - name: Package images for the existing publishers
         id: images
-        # Only main-workflow publishes; PRs still build images but skip the costly save and upload.
-        if: github.event_name != 'pull_request'
+        # The PR image job only validates builds, so it skips the save and upload.
+        if: inputs.build-images && github.event_name != 'pull_request'
+        shell: bash
         run: |
           for entry in 'merino app:build merino' 'fleece app-fleece:build merino-fleece' \
             'embroidery app-embroidery:build merino-embroidery' \
@@ -82,33 +115,39 @@ jobs:
             read -r project image artifact <<< "$entry"
             if docker image inspect "$image" > /dev/null 2>&1; then
               mkdir -p "workspace/images/$artifact"
-              docker save "$image" | gzip > "workspace/images/$artifact/image.tar.gz"
+              # The ubuntu-24.04 runner includes pigz for parallel gzip compression.
+              docker save "$image" | pigz > "workspace/images/$artifact/image.tar.gz"
               echo "$project=true" >> "$GITHUB_OUTPUT"
             fi
           done
+      # The image archives are already gzip-compressed for the publisher jobs.
       - uses: actions/upload-artifact@v6
         if: steps.images.outputs.merino == 'true'
         with:
           name: merino
           path: workspace/images/merino/image.tar.gz
+          compression-level: 0
           if-no-files-found: error
       - uses: actions/upload-artifact@v6
         if: steps.images.outputs.fleece == 'true'
         with:
           name: merino-fleece
           path: workspace/images/merino-fleece/image.tar.gz
+          compression-level: 0
           if-no-files-found: error
       - uses: actions/upload-artifact@v6
         if: steps.images.outputs.embroidery == 'true'
         with:
           name: merino-embroidery
           path: workspace/images/merino-embroidery/image.tar.gz
+          compression-level: 0
           if-no-files-found: error
       - uses: actions/upload-artifact@v6
         if: steps.images.outputs.load_tests == 'true'
         with:
           name: locust-image
           path: workspace/images/locust-image/image.tar.gz
+          compression-level: 0
           if-no-files-found: error
       - name: Check for built documentation
         id: docs

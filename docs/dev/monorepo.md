@@ -219,8 +219,8 @@ select Python tests.
 Coverage gates must run **without pytest filters** so they check complete suites. Affected
 selection is fine: it selects whole projects, so an affected Merino runs its complete unit and
 integration suites. CI runs `merino:diff-coverage` in the same `moon ci` call as `:test`, so the
-suites run once and the gates run whenever Merino is affected. CI renames the reports to the ETE metrics naming convention before
-uploading them from `main`.
+suites run once and the gates run whenever Merino is affected. CI renames the reports to the ETE
+metrics naming convention before uploading them from `main`.
 
 For a filtered investigation, use `moon run merino:unit-test -- -k query_normalization`. Its
 reports describe only that selection. Run the unfiltered task again before using its reports for
@@ -243,7 +243,7 @@ therefore affects every Python project by design.
 ## Docker builds
 
 Each deployable project owns a `docker-build` task. With Docker running, build one image or all
-three from the repository root:
+images from the repository root:
 
 ```bash
 moon run merino:docker-build      # app:build
@@ -262,9 +262,11 @@ PR and main CI use Moon's Docker task inputs to select images:
 | --- | --- |
 | Fleece code | Fleece |
 | Merino code | Merino and Locust |
+| Embroidery code | Embroidery |
 | Load-test code | Locust |
-| Shared package, workspace manifests, or lockfile | All three |
-| Docker/Moon/CI configuration | Affected images; shared configuration rebuilds all three |
+| Merino common package | Merino, Fleece, and Locust |
+| Python workspace manifests, `uv.lock`, or CI image build configuration | Merino, Fleece, and Locust |
+| Unrelated `.github/` files | None |
 | Documentation only | None |
 
 Service Dockerfiles copy their own project, shared code, and required runtime files. They also
@@ -275,5 +277,11 @@ For PRs, selection compares the checked-out merge commit with the PR base. For p
 the previous tip with the new tip. Manually running `main-workflow` builds all images, which can
 recover a failed release or refresh external base images.
 
-Pull requests build affected images but do not upload them. On `main`, image publication requires
-the whole `moon-ci` job to pass: quality checks, tests, and both coverage gates.
+Pull requests run **Checks and tests** and **Image builds** in parallel. The first job runs quality
+checks, tests, coverage gates, load-test validation, and the documentation build. The second job
+builds affected images. On `main`, one Moon graph runs all of those tasks and must pass before
+image publication.
+
+The run summary lists the checks-and-tests tasks with their status and duration. Expand either
+job for task logs. The `moon-reports` artifact includes the task report and test results. On pull
+requests, the `moon-image-report` artifact includes the report for affected image builds.

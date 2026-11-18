@@ -36,16 +36,14 @@ jobs:
           workload_identity_provider: ${{ vars.GCPV2_GITHUB_WORKLOAD_IDENTITY_PROVIDER }}
       - name: Set up Google Cloud SDK
         uses: google-github-actions/setup-gcloud@v3
-      - name: Download Unit Test Artifacts
+      # moon-ci uploads `unit-test-results` and `integration-test-results` only when the matching
+      # suites ran. A pattern download succeeds with zero matches, unlike a download by name.
+      - name: Download Test Artifacts
         uses: actions/download-artifact@v7
         with:
-          name: unit-test-results
+          pattern: "*-test-results"
           path: ${{ inputs.source }}
-      - name: Download Integration Test Artifacts
-        uses: actions/download-artifact@v7
-        with:
-          name: integration-test-results
-          path: ${{ inputs.source }}
+          merge-multiple: true
       - name: Upload Artifacts to GCS
         run: |
           shopt -s nullglob
@@ -54,7 +52,8 @@ jobs:
             files=("${{ inputs.source }}"/*."${{ inputs.extension }}")
           fi
           if [ "${#files[@]}" -eq 0 ]; then
-            echo "No ${{ inputs.extension }} files found in ${{ inputs.source }}/"
-            exit 1
+            # Some changes produce no reports of the requested type.
+            echo "::notice::No ${{ inputs.extension }} files found in ${{ inputs.source }}/, skipping upload"
+            exit 0
           fi
           gcloud storage cp "${files[@]}" "${{ inputs.destination }}/"
