@@ -1,0 +1,15 @@
+---
+source: src/domain/uri.rs
+expression: "table(Kind::Airline,\n&[\"DL\", \"dl\", \"6e\", \"9C\", \"e9\", \"12\", \"\", \"D\", \"DAL\", \"D-\", \"ÄB\"],)"
+---
+"DL" => DL
+"dl" => DL
+"6e" => 6E
+"9C" => 9C
+"e9" => E9
+"12" => error: invalid airline key: must be a two-character IATA code with at least one ASCII letter and at most one digit
+"" => error: invalid airline key: must be a two-character IATA code with at least one ASCII letter and at most one digit
+"D" => error: invalid airline key: must be a two-character IATA code with at least one ASCII letter and at most one digit
+"DAL" => error: invalid airline key: must be a two-character IATA code with at least one ASCII letter and at most one digit
+"D-" => error: invalid airline key: must be a two-character IATA code with at least one ASCII letter and at most one digit
+"ÄB" => error: invalid airline key: must be a two-character IATA code with at least one ASCII letter and at most one digit
