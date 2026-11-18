@@ -40,11 +40,9 @@ from merino.curated_recommendations.provider import (
 )
 from merino.middleware import ScopeKey
 from merino.middleware.user_agent import UserAgent
-from merino.providers.games.particle.backends.protocol import Particle
 from merino.providers.manifest import get_provider as get_manifest_provider
 from merino.providers.manifest.backends.protocol import ManifestData
 from merino.providers.manifest.provider import Provider as ManifestProvider
-from merino.providers.rss.wikimedia_potd.backends.protocol import PictureOfTheDay
 from merino.providers.suggest import get_providers as get_suggest_providers
 from merino.providers.suggest import get_weather_provider
 from merino.providers.suggest.adm.provider import AMP_FUZZY_ENABLED
@@ -83,7 +81,6 @@ from merino.utils.query_processing.query_patterns import (
     build_query_pattern_matcher,
     emit_query_pattern_metrics,
 )
-from merino.web import api_v1_widgets
 from merino.web.models_v1 import ProviderResponse, SuggestResponse
 
 logger = logging.getLogger(__name__)
@@ -677,33 +674,3 @@ async def get_hourly_forecasts(
             content=jsonable_encoder(hourly_forecasts),
             headers={"Cache-Control": (f"private, max-age={ttl}")},
         )
-
-
-# TODO(DISCO-4604): Remove this alias once the HTTP rewrite rule that sends this path to the
-# widget workload is deployed. The endpoint lives on the widgets router at
-# /api/v1/widgets/rss/picture-of-the-day; this keeps the old path serving the same handler so
-# traffic reaching the regular workload before the rewrite doesn't error out.
-router.add_api_route(
-    "/rss/picture-of-the-day",
-    api_v1_widgets.get_picture_of_the_day,
-    methods=["GET"],
-    tags=["rss"],
-    summary="Get picture of the day",
-    response_model=PictureOfTheDay,
-    deprecated=True,
-)
-
-
-# TODO(DISCO-4604): Remove this alias once the HTTP rewrite rule that sends this path to the
-# widget workload is deployed. The endpoint lives on the widgets router at
-# /api/v1/widgets/games/particle; this keeps the old path serving the same handler so
-# traffic reaching the regular workload before the rewrite doesn't error out.
-router.add_api_route(
-    "/games/particle",
-    api_v1_widgets.get_game_particle,
-    methods=["GET"],
-    tags=["Games"],
-    summary="Particle game for New Tab",
-    response_model=Particle,
-    deprecated=True,
-)
