@@ -124,9 +124,6 @@ def index(
 
     file_manager = FileManager(gcs_path, gcp_project, "", language)
 
-    alias_key = f"{language}_es_alias"
-    elasticsearch_alias = job_settings[alias_key]
-
     indexer = Indexer(
         index_version,
         article_blocklist,
@@ -140,6 +137,8 @@ def index(
     if mode is RunMode.BLOCKLIST_ONLY:
         indexer.collect_blocked_titles(total_docs)
     else:
+        alias_key = f"{language}_es_alias"
+        elasticsearch_alias = job_settings[alias_key]
         indexer.index_from_export(total_docs, elasticsearch_alias)
 
     if mode is RunMode.INDEX_ONLY:
