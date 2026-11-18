@@ -8,9 +8,9 @@ The main domain components are as follows:
 
 - **Suggest API**, located in @apps/merino/merino/providers/suggest/, the backend of the `api/v1/suggest` endpoint defined in @apps/merino/merino/web/api_v1.py.
 - **Curated Recommendations API**, located in @apps/merino/merino/curated_recommendations/, the backend of the `api/v1/curated_recommendations/*` endpoints defined in @apps/merino/merino/web/api_v1.py.
-- **Games API**, located in @apps/merino/merino/providers/games, the backend of the `api/v1/widgets/games/*` endpoints defined in @apps/merino/merino/web/api_v1_widgets.py (with deprecated `api/v1/games/*` aliases in @apps/merino/merino/web/api_v1.py).
+- **Games API**, located in @apps/merino/merino/providers/games, the backend of the `api/v1/widgets/games/*` endpoints defined in @apps/merino/merino/web/api_v1_widgets.py. The deprecated `api/v1/games/*` paths are no longer served by Merino or included in its API docs, but the load balancer still accepts them and rewrites them to `api/v1/widgets/games/*` for older Firefox versions.
 - **Image Manifest API**, located in @apps/merino/merino/providers/manifest, the backend of the `api/v1/manifest` endpoint defined in @apps/merino/merino/web/api_v1.py.
-- **RSS API**, located in @apps/merino/merino/providers/rss, the backend of the `api/v1/rss/*` endpoints defined in @apps/merino/merino/web/api_v1.py.
+- **RSS API**, located in @apps/merino/merino/providers/rss, the backend of the `api/v1/widgets/rss/*` endpoints defined in @apps/merino/merino/web/api_v1_widgets.py. The deprecated `api/v1/rss/*` paths are no longer served by Merino or included in its API docs, but the load balancer still accepts them and rewrites them to `api/v1/widgets/rss/*` for older Firefox versions.
 - **Jobs**, located in @apps/merino/merino/jobs, a number of Python CLIs (via Typer CLI) that can be executed locally or via a job runner such as Apache Airflow.
 - **API docs**, located in @apps/merino/merino/web/docs.py, the `/docs`, `/redoc`, and `/openapi.json` routes, served in every runtime mode from the committed schema @apps/merino/merino/data/openapi.json.
 - **Dev scripts**, located in @apps/merino/dev, development scripts that are not part of the `merino` package, such as `export_openapi.py` (run via `moon run merino:openapi-export`).

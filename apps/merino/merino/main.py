@@ -110,18 +110,12 @@ def create_lifespan(mode: RuntimeMode | str):
             await configure_metrics()
             cleanup_callbacks.append(_close_metrics_client)
 
-            # TODO(DISCO-4604): Start RSS and games only for WIDGETS once the regular
-            # /api/v1/rss/picture-of-the-day and /api/v1/games/particle aliases are removed.
-            if mode_enables(runtime_mode, RuntimeFeature.REGULAR_API) or mode_enables(
-                runtime_mode, RuntimeFeature.WIDGETS
-            ):
-                await _start_rss_services(cleanup_callbacks)
-                await _start_games_services()
-
             if mode_enables(runtime_mode, RuntimeFeature.REGULAR_API):
                 await _start_regular_services(cleanup_callbacks)
 
             if mode_enables(runtime_mode, RuntimeFeature.WIDGETS):
+                await _start_rss_services(cleanup_callbacks)
+                await _start_games_services()
                 await _start_widget_services(cleanup_callbacks)
 
             # Started once for every mode, after the services, so circuit breakers in both the
@@ -154,9 +148,8 @@ async def _start_regular_services(cleanup_callbacks: list[CleanupCallback]) -> N
 
 
 async def _start_games_services() -> None:
-    """Initialize game providers (e.g. Particle).
+    """Initialize game providers (e.g. Particle) for the widget API.
 
-    These serve both the regular and widget APIs, so they start once for either mode.
     Games providers have no shutdown work.
     """
     from merino.providers import games
@@ -165,10 +158,7 @@ async def _start_games_services() -> None:
 
 
 async def _start_rss_services(cleanup_callbacks: list[CleanupCallback]) -> None:
-    """Initialize RSS providers (e.g. picture of the day) and register cleanup callbacks.
-
-    These serve both the regular and widget APIs, so they start once for either mode.
-    """
+    """Initialize RSS providers (e.g. picture of the day) and register cleanup callbacks."""
     from merino.providers import rss
 
     await rss.init_providers()
