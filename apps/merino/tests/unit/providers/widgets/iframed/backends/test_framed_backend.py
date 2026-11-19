@@ -14,7 +14,7 @@ from pytest import LogCaptureFixture
 from unittest.mock import AsyncMock, MagicMock, patch
 from typing import Any
 
-from merino.providers.widgets.iframed.backends.framed import FramedWidgetsBackend
+from merino.providers.widgets.iframed.backends.framed import _ASYNC_TASK_NAME_PREFIX, FramedWidgetsBackend
 from merino.providers.widgets.iframed.backends.protocol import (
     FramedWidgetGCS,
     FramedWidgetResponse,
@@ -178,6 +178,17 @@ class TestFetch:
 
         statsd_mock.increment.assert_called_once_with(
             "providers.widgets.framed.stale", tags={"widget": "test2"}
+        )
+
+class TestMetricsTimeoutHandler:
+    """Test the metrics_timeout_handler function."""
+
+    def test_metrics_timeout_handler(self, backend: FramedWidgetsBackend, statsd_mock):
+        task = MagicMock(spec=asyncio.Task)
+        task.get_name.return_value = f"{_ASYNC_TASK_NAME_PREFIX}test2"
+        backend.metrics_timeout_handler([task])
+        statsd_mock.increment.assert_called_once_with(
+            "providers.widgets.framed.query.timeout", tags={"widget": "test2"}
         )
 
 

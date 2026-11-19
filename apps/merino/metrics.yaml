@@ -646,12 +646,15 @@ providers/widgets/framed:
       The framed widgets backend refresh cron.
     alert_policy: []
 
-  providers.widgets.framed.{widget_id}.query.timeout:
+  providers.widgets.framed.query.timeout:
     description: |
       A counter incremented when a framed widget's GCS lookup does not finish
       within `fetch_widgets_timeout` and is cancelled.
     type: counter
-    labels: [] # widget id is part of the metric name
+    labels:
+      - name: widget
+        description: |
+          The id of the framed widget.
     scope: |
       The framed widgets backend refresh cron.
     alert_policy: []

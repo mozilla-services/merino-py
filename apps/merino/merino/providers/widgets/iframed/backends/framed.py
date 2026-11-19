@@ -5,7 +5,6 @@ import asyncio
 import logging
 import semver
 
-from functools import partial
 from pydantic import HttpUrl
 
 from google.cloud.storage import Client
@@ -22,6 +21,8 @@ logger = logging.getLogger(__name__)
 
 _fetch_widgets_timeout = settings.widgets.providers.framed.fetch_widgets_timeout
 _gcs_list_blobs_timeout = settings.widgets.providers.framed.gcs_list_blobs_timeout
+
+_ASYNC_TASK_NAME_PREFIX = "widgets.framed."
 
 
 class FramedWidgetsBackend:
@@ -52,7 +53,7 @@ class FramedWidgetsBackend:
         wrapped_tasks = [
             asyncio.create_task(
                 self._build_widget_response(widget),
-                name=f"widgets.framed.{widget.id}",
+                name=f"{_ASYNC_TASK_NAME_PREFIX}{widget.id}",
             )
             for widget in self.widgets_manifest
         ]
@@ -61,7 +62,7 @@ class FramedWidgetsBackend:
         await task_runner.gather(
             wrapped_tasks,
             timeout=_fetch_widgets_timeout,
-            timeout_cb=partial(task_runner.metrics_timeout_handler, self.metrics_client),
+            timeout_cb=self.metrics_timeout_handler,
         )
 
         # merge widgets manifest and wrapped tasks as tuples.
@@ -93,6 +94,15 @@ class FramedWidgetsBackend:
                 response.append(cached_widget)
 
         return response
+
+    def metrics_timeout_handler(self, tasks: list[asyncio.Task]) -> None:
+        """Timeout handler to record metrics for timed out tasks"""
+        for task in tasks:
+            widget_id = task.get_name().removeprefix(_ASYNC_TASK_NAME_PREFIX)
+
+            self.metrics_client.increment(
+                "providers.widgets.framed.query.timeout", tags={"widget": widget_id}
+            )
 
     async def _build_widget_response(self, widget: FramedWidgetGCS) -> FramedWidgetResponse | None:
         """Retrieve the latest semver for the given framed widget and returns a FramedWidgetResponse, or None in the case of error."""
