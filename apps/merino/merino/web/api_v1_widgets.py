@@ -244,7 +244,11 @@ async def get_picture_of_the_day(
                 "previous": {"localized_descriptions": True},
             },
         ),
-        headers=_cache_control_unless_empty(potd, _potd_cache_control_ttl),
+        headers={
+            **_cache_control_unless_empty(potd, _potd_cache_control_ttl),
+            # The description is localized per Accept-Language, so caches must key on it.
+            "Vary": "Accept-Language",
+        },
     )
 
 
