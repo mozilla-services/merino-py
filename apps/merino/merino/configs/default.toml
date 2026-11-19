@@ -1776,7 +1776,7 @@ export_base_url = "https://dumps.wikimedia.org/other/cirrus_search_index/"
 # MERINO_JOBS__WIKIPEDIA_INDEXER__BLOCKLIST_FILE_URL
 # Blocklist file as CSV. Contains a list of the categories for articles that we want to block.
 # Read by the article blocklist job to build the article blocklist the indexer consumes.
-blocklist_file_url = "https://raw.githubusercontent.com/mozilla/search-terms-sanitization/7ab819c7515c526e6a407b08ba8e78d3bdb7f4e9/non_sensitive/wikipedia-content-moderation/blocklist_cats.csv"
+blocklist_file_url = "https://raw.githubusercontent.com/mozilla/search-terms-sanitization/refs/heads/main/non_sensitive/wikipedia-content-moderation/blocklist_cats.csv"
 
 # MERINO_JOBS__WIKIPEDIA_INDEXER__BLOCKED_TITLES_DESTINATION
 # Object prefix (folders) where each run uploads the titles it blocked.
