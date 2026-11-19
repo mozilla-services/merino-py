@@ -8,10 +8,13 @@ import freezegun
 from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
 
+from merino.configs import settings
 from merino.providers.rss.wikimedia_potd.backends.protocol import PictureOfTheDay
 from merino.providers.rss.wikimedia_potd.provider import WikimediaPictureOfTheDayProvider
 
 POTD_URL = "/api/v1/widgets/rss/picture-of-the-day"
+_TTL = settings.rss_providers.wikimedia_potd.cache_control_ttl_sec
+CACHE_CONTROL = f"public, max-age={_TTL}, s-maxage={_TTL}"
 
 
 @freezegun.freeze_time("2026-06-07")
@@ -26,6 +29,7 @@ def test_picture_of_the_day_returns_the_previous_day_alongside_today(
     response = client.get(POTD_URL)
 
     assert response.status_code == 200
+    assert response.headers["cache-control"] == CACHE_CONTROL
     assert response.json() == {
         "title": "Wikimedia Commons Picture of the Day for June 7",
         "published_date": "2026-06-07",
@@ -114,13 +118,14 @@ def test_picture_of_the_day_returns_null_when_nothing_is_cached(
     potd_provider: WikimediaPictureOfTheDayProvider,
     backend_mock,
 ) -> None:
-    """Serves a null body when no picture has ever been cached, exclusions notwithstanding."""
+    """Serves an uncacheable null body when no picture has ever been cached, exclusions notwithstanding."""
     backend_mock.fetch_potd_from_gcs_bucket.return_value = None
 
     response = client.get(POTD_URL)
 
     assert response.status_code == 200
     assert response.json() is None
+    assert response.headers["cache-control"] == "no-store"
 
 
 def test_picture_of_the_day_returns_null_when_the_provider_fails(
@@ -128,10 +133,11 @@ def test_picture_of_the_day_returns_null_when_the_provider_fails(
     potd_provider: WikimediaPictureOfTheDayProvider,
     mocker: MockerFixture,
 ) -> None:
-    """Serves a null body instead of an error when fetching the picture raises."""
+    """Serves an uncacheable null body instead of an error when fetching the picture raises."""
     mocker.patch.object(potd_provider, "get_picture_of_the_day", side_effect=RuntimeError("boom"))
 
     response = client.get(POTD_URL)
 
     assert response.status_code == 200
     assert response.json() is None
+    assert response.headers["cache-control"] == "no-store"

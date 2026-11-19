@@ -53,6 +53,7 @@ MAX_MATCH_LIMIT = 5
 _matches_cache_control_ttl = settings.widgets.providers.wrexham.matches_cache_control_ttl_sec
 _standings_cache_control_ttl = settings.widgets.providers.wrexham.standings_cache_control_ttl_sec
 _games_particle_ttl = settings.games_providers.particle.cache_ttl
+_potd_cache_control_ttl = settings.rss_providers.wikimedia_potd.cache_control_ttl_sec
 
 _WREXHAM_UNAVAILABLE_MESSAGE = "Wrexham data is temporarily unavailable. Please try again later."
 
@@ -62,6 +63,15 @@ def _cache_control(ttl: int) -> dict[str, str]:
     seconds.
     """
     return {"Cache-Control": f"public, max-age={ttl}, s-maxage={ttl}"}
+
+
+def _cache_control_unless_empty(content: object, ttl: int) -> dict[str, str]:
+    """Return a public Cache-Control header for `content`, or `no-store` when it is None.
+
+    Endpoints that degrade to a null body on failure use this so a transient error is not
+    cached by Fastly and served to every client for the whole TTL.
+    """
+    return {"Cache-Control": "no-store"} if content is None else _cache_control(ttl)
 
 
 def _wrexham_unavailable() -> JSONResponse:
@@ -234,6 +244,7 @@ async def get_picture_of_the_day(
                 "previous": {"localized_descriptions": True},
             },
         ),
+        headers=_cache_control_unless_empty(potd, _potd_cache_control_ttl),
     )
 
 
@@ -256,5 +267,5 @@ async def get_game_particle(
 
     return JSONResponse(
         content=jsonable_encoder(particle_data),
-        headers={"Cache-Control": (f"private, max-age={_games_particle_ttl}")},
+        headers=_cache_control_unless_empty(particle_data, _games_particle_ttl),
     )
