@@ -128,7 +128,7 @@ class Provider:
                     vendor="yahoo",
                     enabled=True,
                     url=HttpUrl(
-                        "https://prod-widgets-yahoo-horoscope.merino.prod.webservices.mozgcp.net/1.10.20261117034726/index.html"
+                        "https://prod-widgets-yahoo-horoscope.merino.prod.webservices.mozgcp.net/1.13.20261119191951/index.html"
                     ),
                 ),
                 FramedWidgetResponse(
@@ -136,7 +136,7 @@ class Provider:
                     vendor="yahoo",
                     enabled=True,
                     url=HttpUrl(
-                        "https://prod-widgets-yahoo-solitaire.merino.prod.webservices.mozgcp.net/1.7.0/index.html"
+                        "https://prod-widgets-yahoo-solitaire.merino.prod.webservices.mozgcp.net/1.9.0/index.html"
                     ),
                 ),
                 FramedWidgetResponse(
@@ -144,7 +144,7 @@ class Provider:
                     vendor="mozilla",
                     enabled=True,
                     url=HttpUrl(
-                        "https://prod-widgets-kayak-travel.merino.prod.webservices.mozgcp.net/1.5.202611171837/index.html"
+                        "https://prod-widgets-kayak-travel.merino.prod.webservices.mozgcp.net/1.6.202611192001/index.html"
                     ),
                 ),
                 FramedWidgetResponse(
@@ -152,7 +152,7 @@ class Provider:
                     vendor="mozilla",
                     enabled=True,
                     url=HttpUrl(
-                        "https://prod-widgets-wrexhamafc.merino.prod.webservices.mozgcp.net/1.2.202611171824/index.html"
+                        "https://prod-widgets-wrexhamafc.merino.prod.webservices.mozgcp.net/1.3.202611192000/index.html"
                     ),
                 ),
             ]
@@ -171,7 +171,7 @@ class Provider:
                     vendor="yahoo",
                     enabled=True,
                     url=HttpUrl(
-                        "https://stage-widgets-yahoo-horoscope.merino.nonprod.webservices.mozgcp.net/1.10.20261117024533/index.html"
+                        "https://stage-widgets-yahoo-horoscope.merino.nonprod.webservices.mozgcp.net/1.13.20261119190859/index.html"
                     ),
                 ),
                 FramedWidgetResponse(
@@ -179,7 +179,7 @@ class Provider:
                     vendor="yahoo",
                     enabled=True,
                     url=HttpUrl(
-                        "https://stage-widgets-yahoo-solitaire.merino.nonprod.webservices.mozgcp.net/1.7.0/index.html"
+                        "https://stage-widgets-yahoo-solitaire.merino.nonprod.webservices.mozgcp.net/1.9.0/index.html"
                     ),
                 ),
                 FramedWidgetResponse(
@@ -187,7 +187,7 @@ class Provider:
                     vendor="mozilla",
                     enabled=True,
                     url=HttpUrl(
-                        "https://stage-widgets-kayak-travel.merino.nonprod.webservices.mozgcp.net/1.5.202611171837/index.html"
+                        "https://stage-widgets-kayak-travel.merino.nonprod.webservices.mozgcp.net/1.6.202611192001/index.html"
                     ),
                 ),
                 FramedWidgetResponse(
@@ -195,7 +195,7 @@ class Provider:
                     vendor="mozilla",
                     enabled=True,
                     url=HttpUrl(
-                        "https://stage-widgets-wrexhamafc.merino.nonprod.webservices.mozgcp.net/1.2.202611171824/index.html"
+                        "https://stage-widgets-wrexhamafc.merino.nonprod.webservices.mozgcp.net/1.3.202611192000/index.html"
                     ),
                 ),
             ]
