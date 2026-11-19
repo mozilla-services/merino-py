@@ -30,6 +30,7 @@ def test_picture_of_the_day_returns_the_previous_day_alongside_today(
 
     assert response.status_code == 200
     assert response.headers["cache-control"] == CACHE_CONTROL
+    assert "Accept-Language" in response.headers["vary"]
     assert response.json() == {
         "title": "Wikimedia Commons Picture of the Day for June 7",
         "published_date": "2026-06-07",
@@ -126,6 +127,7 @@ def test_picture_of_the_day_returns_null_when_nothing_is_cached(
     assert response.status_code == 200
     assert response.json() is None
     assert response.headers["cache-control"] == "no-store"
+    assert "Accept-Language" in response.headers["vary"]
 
 
 def test_picture_of_the_day_returns_null_when_the_provider_fails(
@@ -141,3 +143,4 @@ def test_picture_of_the_day_returns_null_when_the_provider_fails(
     assert response.status_code == 200
     assert response.json() is None
     assert response.headers["cache-control"] == "no-store"
+    assert "Accept-Language" in response.headers["vary"]
