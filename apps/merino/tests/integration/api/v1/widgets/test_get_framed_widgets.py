@@ -7,10 +7,13 @@
 from fastapi.testclient import TestClient
 from pydantic import HttpUrl
 
+from merino.configs import settings
 from merino.providers.widgets.iframed.provider import Provider as FramedWidgetsProvider
 from merino.providers.widgets.iframed.backends.protocol import FramedWidgetResponse
 
 WIDGETS_URL = "/api/v1/widgets/framed"
+_TTL = settings.widgets.providers.framed.cache_control_ttl_sec
+CACHE_CONTROL = f"public, max-age={_TTL}, s-maxage={_TTL}"
 
 
 def test_returns_widgets(
@@ -34,12 +37,33 @@ def test_returns_widgets(
     response = client.get(WIDGETS_URL)
 
     assert response.status_code == 200
+    assert response.headers["cache-control"] == CACHE_CONTROL
 
     data = response.json()
 
     assert data["date_utc"] is not None
     assert data["locale"] == "en-US"
     assert len(data["widgets"]) == 2
+
+
+def test_no_cache_when_fetch_returns_no_widgets(
+    client: TestClient, framed_widgets_provider: FramedWidgetsProvider
+) -> None:
+    """Cache-control is no-store when fetched widgets are empty."""
+    framed_widgets_provider._cron_enabled = True
+    framed_widgets_provider._inject_particle = True
+
+    framed_widgets_provider.widgets_response = []
+
+    response = client.get(WIDGETS_URL)
+
+    assert response.status_code == 200
+    assert response.headers["cache-control"] == "no-store"
+
+    data = response.json()
+
+    # we should have 1 widget when particle injection is true
+    assert len(data["widgets"]) == 1
 
 
 def test_returns_empty_list_of_widgets_when_provider_disabled(
@@ -49,6 +73,9 @@ def test_returns_empty_list_of_widgets_when_provider_disabled(
     framed_widgets_provider._enabled = False
 
     response = client.get(WIDGETS_URL)
+
+    assert response.status_code == 200
+    assert response.headers["cache-control"] == "no-store"
 
     data = response.json()
 

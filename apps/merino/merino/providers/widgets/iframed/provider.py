@@ -112,11 +112,12 @@ class Provider:
             date_utc=datetime.datetime.now(datetime.timezone.utc), locale=locale, widgets=[]
         )
 
-        # If the provider is not enabled, return response with no widget data.
+        # if the provider is not enabled, return response with no widget data.
         if not self._enabled:
             return response
 
-        # allow enabling the system in stage prior to prod
+        # legacy - ability to return hard-coded widget data when the cron is off
+        # TODO: remove
         if not self._cron_enabled:
             response.widgets = Provider.fake_widget_manifest()
 
