@@ -1486,6 +1486,16 @@ enabled = true
 # Whether or not the cron to monitor GCS buckets is enabled. Disabed by default.
 cron_enabled = false
 
+# MERINO_WIDGETS__PROVIDERS__FRAMED__INJECT_PARTICLE
+# Whether or not to force the Particle widget into the API response.
+# Needs to be true for all environments except testing until Particle is
+# converted to the common framed widget architecture.
+inject_particle = true
+
+# MERINO_WIDGETS__PROVIDERS__FRAMED__FETCH_WIDGETS_TIMEOUT
+# The amount of time to wait for all async widget fetch tasks to complete.
+fetch_widgets_timeout = 60 # 1 minute
+
 # MERINO_WIDGETS__PROVIDERS__FRAMED__CRON_INTERVAL_SEC
 # How often to the cron runs to potentially check for new framed widget
 # releases. Runs more frequently than the resync_interval_sec to account for
@@ -1512,9 +1522,6 @@ cdn_hostname_wrexhamafc = ""
 cdn_hostname_yahoo_horoscope = ""
 # MERINO_WIDGETS__PROVIDERS__FRAMED__CDN_HOSTNAME_YAHOO_SOLITAIRE
 cdn_hostname_yahoo_solitaire = ""
-# GCP project name where the GCS buckets live.
-gcp_project = ""
-
 
 [default.curated_recommendations.gcs]
 # MERINO__CURATED_RECOMMENDATIONS__GCS__BUCKET_NAME

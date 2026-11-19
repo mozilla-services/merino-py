@@ -633,6 +633,32 @@ providers/widgets/framed:
       The "api/v1/widgets/framed/" API endpoint.
     alert_policy: []
 
+  providers.widgets.framed.stale:
+    description: |
+      A counter incremented when a framed widget's GCS lookup fails or times out
+      and the previously fetched (cached) release URL is served instead.
+    type: counter
+    labels:
+      - name: widget
+        description: |
+          The id of the framed widget served from the cache.
+    scope: |
+      The framed widgets backend refresh cron.
+    alert_policy: []
+
+  providers.widgets.framed.query.timeout:
+    description: |
+      A counter incremented when a framed widget's GCS lookup does not finish
+      within `fetch_widgets_timeout` and is cancelled.
+    type: counter
+    labels:
+      - name: widget
+        description: |
+          The id of the framed widget.
+    scope: |
+      The framed widgets backend refresh cron.
+    alert_policy: []
+
 utils/icon_processor:
   icon_processor.requests:
     description: |

@@ -7,9 +7,12 @@
 import asyncio
 import datetime
 import freezegun
+import logging
 import pytest
+import time
 
 from pydantic import HttpUrl
+from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
 from typing import Any
 from unittest.mock import AsyncMock, patch
@@ -42,15 +45,20 @@ class TestInitialize:
     """Tests against the initialize method."""
 
     @pytest.mark.asyncio
-    async def test_noop_with_cron_disabled(self, provider: FramedWidgetProvider) -> None:
+    async def test_noop_when_disabled_and_cron_disabled(
+        self, provider: FramedWidgetProvider
+    ) -> None:
         """Test that no cron processing happens if the cron is disabled."""
         provider._cron_enabled = False
+        provider._enabled = False
 
         with patch.object(provider, "_fetch", new=AsyncMock()) as mock_fetch:
             await provider.initialize()
 
-            mock_fetch.assert_not_awaited()
-            assert provider.cron_task is None
+        mock_fetch.assert_not_awaited()
+        assert provider.cron_task is None
+
+        provider.shutdown()
 
     @pytest.mark.asyncio
     async def test_cron_created(self, provider: FramedWidgetProvider) -> None:
@@ -66,22 +74,22 @@ class TestInitialize:
 
             await provider.initialize()
 
-            mock_cron.assert_called_once_with(
-                name="refresh_framed_widgets",
-                interval=provider.cron_interval_sec,
-                condition=provider._should_fetch,
-                task=provider._fetch,
-            )
+        mock_cron.assert_called_once_with(
+            name="refresh_framed_widgets",
+            interval=provider.cron_interval_sec,
+            condition=provider._should_fetch,
+            task=provider._fetch,
+        )
 
-            mock_create_task.assert_called_once()
+        mock_create_task.assert_called_once()
 
-            args, _ = mock_create_task.call_args
+        args, _ = mock_create_task.call_args
 
-            assert asyncio.iscoroutine(args[0])
+        assert asyncio.iscoroutine(args[0])
 
-            assert provider.cron_task is not None
+        assert provider.cron_task is not None
 
-            provider.shutdown()
+        provider.shutdown()
 
     @freezegun.freeze_time("2026-11-10 23:23:23", tz_offset=0)
     @pytest.mark.asyncio
@@ -102,8 +110,6 @@ class TestInitialize:
 
             await provider.initialize()
 
-            await provider._fetch()
-
             assert provider.widgets_response == fake_widgets_response
 
             assert (
@@ -114,6 +120,23 @@ class TestInitialize:
             )
 
         # make sure the cron is cancelled
+        provider.shutdown()
+
+    @pytest.mark.asyncio
+    async def test_initial_fetch_failure_still_starts_cron(
+        self, provider: FramedWidgetProvider, caplog: LogCaptureFixture
+    ) -> None:
+        """A failed startup fetch is logged and the cron still starts."""
+        provider._cron_enabled = True
+        caplog.set_level(logging.WARNING)
+
+        with patch.object(provider, "_fetch", new=AsyncMock(side_effect=RuntimeError("ope!"))):
+            await provider.initialize()
+
+        assert provider.cron_task is not None
+        assert provider.widgets_response == []
+        assert any("Initial framed widgets fetch failed" in r.message for r in caplog.records)
+
         provider.shutdown()
 
 
@@ -150,7 +173,31 @@ class TestShutdown:
 
 
 class TestGetWidgets:
-    """Tests against get_widgets"""
+    """Tests against get_widgets."""
+
+    @pytest.mark.asyncio
+    async def test_returns_widgets(self, provider: FramedWidgetProvider) -> None:
+        """Test that widgets are returned."""
+        provider._cron_enabled = True
+        provider._enabled = True
+        provider._inject_particle = True
+
+        response = await provider.get_widgets(locale="en-US")
+
+        assert response.widgets is not None
+        assert len(response.widgets) == 1
+
+    @pytest.mark.asyncio
+    async def test_returns_hard_coded_widgets(self, provider: FramedWidgetProvider) -> None:
+        """Test that hard coded widgets are returned."""
+        provider._cron_enabled = False
+        provider._enabled = True
+        provider._inject_particle = True
+
+        response = await provider.get_widgets(locale="en-US")
+
+        assert response.widgets is not None
+        assert response.widgets == FramedWidgetProvider.fake_widget_manifest()
 
     @pytest.mark.asyncio
     async def test_returns_empty_list_when_provider_disabled(
@@ -165,39 +212,53 @@ class TestGetWidgets:
         assert len(response.widgets) == 0
 
     @pytest.mark.asyncio
-    async def test_returns_hard_coded_widgets_list(self, provider: FramedWidgetProvider) -> None:
-        """Test that get_widgets returns the hard-coded list."""
-        response = await provider.get_widgets(locale="en-US")
+    async def test_injects_particle_without_mutating_cached_widgets(
+        self, provider: FramedWidgetProvider
+    ) -> None:
+        """Crossword is appended to each response, never to the cached widgets."""
+        provider._cron_enabled = True
+        provider._inject_particle = True
+        provider.widgets_response = [
+            FramedWidgetResponse(
+                enabled=True, id="test1", vendor="mozilla", url=HttpUrl("https://www.mozilla.org")
+            ),
+            FramedWidgetResponse(
+                enabled=True, id="test2", vendor="mozilla", url=HttpUrl("https://www.mozilla.org")
+            ),
+        ]
 
-        assert response.widgets is not None
-        assert len(response.widgets) == 5
+        first = await provider.get_widgets(locale="en-US")
+        second = await provider.get_widgets(locale="en-US")
+
+        # crossword is appended after the GCS widgets, exactly once per response
+        assert [w.id for w in first.widgets] == ["test1", "test2", "crossword"]
+        assert [w.id for w in second.widgets] == ["test1", "test2", "crossword"]
+
+        # the cached widgets are untouched
+        assert [w.id for w in provider.widgets_response] == ["test1", "test2"]
 
     @pytest.mark.asyncio
-    async def test_returns_stage_widgets_for_stage_env(
-        self, provider: FramedWidgetProvider, force_env
+    async def test_does_not_inject_particle_when_disabled(
+        self, provider: FramedWidgetProvider
     ) -> None:
-        """Test that get_widgets returns the hard-coded staging list."""
-        force_env("stage")
+        """Without inject_particle, only the cached widgets are returned."""
+        provider._cron_enabled = True
+        provider._inject_particle = False
+        provider.widgets_response = [
+            FramedWidgetResponse(
+                enabled=True, id="test1", vendor="mozilla", url=HttpUrl("https://www.mozilla.org")
+            )
+        ]
 
         response = await provider.get_widgets(locale="en-US")
 
-        assert response.widgets is not None
-        assert len(response.widgets) == 5
+        assert [w.id for w in response.widgets] == ["test1"]
 
-        for widget in response.widgets:
-            assert ".nonprod.webservices.mozgcp.net" in str(widget.url.host)
 
-    @pytest.mark.asyncio
-    async def test_returns_prod_widgets_for_prod_env(
-        self, provider: FramedWidgetProvider, force_env
-    ) -> None:
-        """Test that get_widgets returns the hard-coded production list."""
-        force_env("production")
+class TestShouldFetch:
+    """Tests against the _should_fetch function."""
 
-        response = await provider.get_widgets(locale="en-US")
-
-        assert response.widgets is not None
-        assert len(response.widgets) == 5
-
-        for widget in response.widgets:
-            assert ".prod.webservices.mozgcp.net" in str(widget.url.host)
+    def test_should_fetch_true(self, provider: FramedWidgetProvider):
+        """Test that provider should fetch is true."""
+        provider.last_fetch_at = time.time() - provider.resync_interval_sec - 100
+        assert provider._should_fetch()

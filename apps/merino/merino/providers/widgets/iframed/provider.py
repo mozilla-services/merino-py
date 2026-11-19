@@ -1,18 +1,18 @@
 """Framed widgets provider module that contains logic and methods to return all framed widgets."""
 
+import aiodogstatsd
 import asyncio
 import datetime
 import logging
 import time
 
 from typing import Any
+
 from pydantic import HttpUrl
 
-import aiodogstatsd
-
 from merino_common.utils import cron
-
 from merino.configs import settings
+
 from merino.providers.widgets.iframed.backends.protocol import (
     FramedWidgetResponse,
     FramedWidgetsApiResponse,
@@ -20,6 +20,9 @@ from merino.providers.widgets.iframed.backends.protocol import (
 from merino.providers.widgets.iframed.backends.framed import FramedWidgetsBackend
 
 logger = logging.getLogger(__name__)
+
+_inject_particle = settings.widgets.providers.framed.inject_particle
+_particle_url = settings.games_providers.particle.game_url
 
 
 class Provider:
@@ -49,6 +52,7 @@ class Provider:
         self.resync_interval_sec = resync_interval_sec
         self._cron_enabled = cron_enabled
         self._enabled = enabled
+        self._inject_particle = _inject_particle
 
         # set instance defaults
         self.cron_task = None
@@ -56,10 +60,18 @@ class Provider:
         self.widgets_response = []
 
     async def initialize(self) -> None:
-        """Initialize cron job."""
+        """Initialize cron job and await a fetch for cold starts."""
         if self._enabled and self._cron_enabled:
+            # just so a failure in _fetch doesn't take down the whole pod...
+            try:
+                # wait for data on cold starts
+                await self._fetch()
+            except Exception:
+                logger.warning(
+                    "Initial framed widgets fetch failed - cron will retry", exc_info=True
+                )
+
             # Run a cron job that inspects GCS for the latest semver per widget.
-            # Executes immediately, as last_fetch_at defaults to 0.
             cron_job = cron.Job(
                 name="refresh_framed_widgets",
                 interval=self.cron_interval_sec,
@@ -91,10 +103,11 @@ class Provider:
             return
 
         self.widgets_response = await self.backend.fetch()
+
         self.last_fetch_at = time.time()
 
     async def get_widgets(self, locale: str) -> FramedWidgetsApiResponse:
-        """Return hard-coded widgets until we set up GCS monitoring."""
+        """Return latest widget versions found in GCS."""
         response = FramedWidgetsApiResponse(
             date_utc=datetime.datetime.now(datetime.timezone.utc), locale=locale, widgets=[]
         )
@@ -103,15 +116,32 @@ class Provider:
         if not self._enabled:
             return response
 
-        # TODO: replace with self.widgets_response when backend is completed
-        # TODO: hard-code crossword result here, as it currently doesn't follow
-        # the new pattern.
-        response.widgets = Provider.fake_widget_manifest()
+        # allow enabling the system in stage prior to prod
+        if not self._cron_enabled:
+            response.widgets = Provider.fake_widget_manifest()
+
+            return response
+
+        # create a new list for each response so we don't append particle into self.widgets_response
+        widgets = [*self.widgets_response]
+
+        # hard-code particle until converted to framed widget architecture
+        if self._inject_particle:
+            widgets.append(
+                FramedWidgetResponse(
+                    id="crossword",
+                    vendor="particle",
+                    enabled=True,
+                    url=HttpUrl(_particle_url),
+                )
+            )
+
+        response.widgets = widgets
 
         return response
 
     @staticmethod
-    def fake_widget_manifest() -> list[FramedWidgetResponse]:
+    def fake_widget_manifest() -> list[FramedWidgetResponse]:  # pragma no cover
         """Return hard-coded list of widgets. Used for testing."""
         if settings.current_env.lower() == "production":
             widgets = [

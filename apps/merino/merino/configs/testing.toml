@@ -179,3 +179,7 @@ retry_wait_jitter_seconds = 0.02
 # Tests use near-zero backoff so retry paths execute quickly.
 retry_wait_initial_seconds = 0.0
 retry_wait_jitter_seconds = 0.0
+
+[testing.widgets.providers.framed]
+cron_enabled = true
+inject_particle = false

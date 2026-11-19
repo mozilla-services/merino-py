@@ -12,14 +12,13 @@ from merino.providers.widgets.iframed.provider import Provider as FramedWidgetsP
 from merino.providers.widgets.iframed.backends.framed import FramedWidgetsBackend
 from merino.providers.widgets.wrexham.provider import WrexhamProvider
 from merino.providers.widgets.wrexham.store import WrexhamStore
-from merino.utils.gcs import initialize_storage_client
 from merino.utils.metrics import get_metrics_client
+from merino.utils.storage import get_storage_client
 from merino_common.utils.http_client import create_http_client
 
 _wrexham_provider: WrexhamProvider | None = None
 _wrexham_cache_ttls = settings.widgets.providers.wrexham.cache_ttls
 
-_framed_widgets_gcp_project = settings.widgets.providers.framed.gcp_project
 _framed_widgets_provider: FramedWidgetsProvider | None = None
 _framed_widgets_provider_cron_enabled = settings.widgets.providers.framed.cron_enabled
 _framed_widgets_provider_enabled = settings.widgets.providers.framed.enabled
@@ -83,21 +82,10 @@ async def init_framed_widget_provider() -> None:
     cron_enabled = _framed_widgets_provider_cron_enabled
 
     if cron_enabled:
-        try:
-            backend = FramedWidgetsBackend(
-                metrics_client=get_metrics_client(),
-                gcs_client=initialize_storage_client(
-                    destination_gcp_project=_framed_widgets_gcp_project
-                ),
-            )
-        except Exception as e:
-            logger.warning(
-                "Failed to create GCS client for framed widgets, disabling cron.",
-                extra={"error_message": str(e)},
-            )
-
-            # disable the cron if GCS isn't available
-            cron_enabled = False
+        backend = FramedWidgetsBackend(
+            metrics_client=get_metrics_client(),
+            gcs_client=get_storage_client(),
+        )
 
     _framed_widgets_provider = FramedWidgetsProvider(
         backend=backend,
