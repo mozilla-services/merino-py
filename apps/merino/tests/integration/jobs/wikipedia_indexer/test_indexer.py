@@ -24,9 +24,9 @@ EPOCH_FROZEN_TIME = int(
 
 
 @pytest.fixture
-def category_blocklist() -> set:
-    """Return category blocklist."""
-    return {"meme", "nsfw", "Anger"}
+def article_blocklist() -> set:
+    """Return the Wikidata QIDs of blocked articles."""
+    return {"Q2", "Q3", "Q4"}
 
 
 @pytest.fixture
@@ -58,11 +58,11 @@ def es_adapter(mocker):
 
 
 @pytest.fixture
-def indexer(file_manager, es_adapter, category_blocklist, title_blocklist):
+def indexer(file_manager, es_adapter, article_blocklist, title_blocklist):
     """Return a mock indexer instance"""
     return Indexer(
         "v1",
-        category_blocklist,
+        article_blocklist,
         title_blocklist,
         file_manager,
         es_adapter,
@@ -83,14 +83,14 @@ def indexer(file_manager, es_adapter, category_blocklist, title_blocklist):
 def test_get_index_name(
     file_manager,
     es_adapter,
-    category_blocklist,
+    article_blocklist,
     title_blocklist,
     file_name,
     version,
     expected,
 ):
     """Test filename to index name parsing."""
-    indexer = Indexer(version, category_blocklist, title_blocklist, file_manager, es_adapter)
+    indexer = Indexer(version, article_blocklist, title_blocklist, file_manager, es_adapter)
 
     index_name = indexer._get_index_name(file_name)
     assert index_name == expected
@@ -108,7 +108,7 @@ def test_get_index_name(
 def test_create_index(
     file_manager,
     es_adapter,
-    category_blocklist,
+    article_blocklist,
     title_blocklist,
     index_exists,
     create_return,
@@ -120,20 +120,20 @@ def test_create_index(
     es_adapter.create_index.return_value = create_return.get("acknowledged", False)
 
     index_name = "enwiki-123-v1"
-    indexer = Indexer("v1", category_blocklist, title_blocklist, file_manager, es_adapter)
+    indexer = Indexer("v1", article_blocklist, title_blocklist, file_manager, es_adapter)
 
     assert expected_return == indexer._create_index(index_name)
     assert expected_create_called == es_adapter.create_index.called
 
 
 def test_index_from_export_no_exports_available(
-    file_manager, es_adapter, category_blocklist, title_blocklist
+    file_manager, es_adapter, article_blocklist, title_blocklist
 ):
     """Test that RuntimeError is emitted."""
     file_manager.get_latest_gcs.return_value = None
     file_manager.language = "en"
     es_adapter.index_exists.return_value = False
-    indexer = Indexer("v1", category_blocklist, title_blocklist, file_manager, es_adapter)
+    indexer = Indexer("v1", article_blocklist, title_blocklist, file_manager, es_adapter)
     with pytest.raises(RuntimeError) as exc_info:
         indexer.index_from_export(100, "fake_alias")
 
@@ -143,14 +143,14 @@ def test_index_from_export_no_exports_available(
 def test_index_from_export_fail_on_existing_index(
     file_manager,
     es_adapter,
-    category_blocklist,
+    article_blocklist,
     title_blocklist,
 ):
     """Test that Exception is emitted."""
     file_manager.get_latest_gcs.return_value = SNAPSHOT
     es_adapter.index_exists.return_value = False
     es_adapter.create_index.return_value = False
-    indexer = Indexer("v1", category_blocklist, title_blocklist, file_manager, es_adapter)
+    indexer = Indexer("v1", article_blocklist, title_blocklist, file_manager, es_adapter)
     with pytest.raises(Exception) as exc_info:
         indexer.index_from_export(100, "fake_alias")
 
@@ -197,7 +197,7 @@ def test_index_from_export_fail_on_existing_index(
 def test_flip_alias(
     file_manager,
     es_adapter,
-    category_blocklist,
+    article_blocklist,
     title_blocklist,
     new_index_name,
     alias_name,
@@ -208,7 +208,7 @@ def test_flip_alias(
     es_adapter.alias_exists.return_value = len(existing_indices) > 0
     es_adapter.get_indices_for_alias.return_value = existing_indices
 
-    indexer = Indexer("v1", category_blocklist, title_blocklist, file_manager, es_adapter)
+    indexer = Indexer("v1", article_blocklist, title_blocklist, file_manager, es_adapter)
     indexer._flip_alias_to_latest(new_index_name, alias_name)
 
     assert es_adapter.update_aliases.called
@@ -344,7 +344,7 @@ def test_index_from_export_demotes_superseded_indices_to_backup_policy(
 def test_backup_lifecycle_policies_are_language_scoped(
     file_manager,
     es_adapter,
-    category_blocklist,
+    article_blocklist,
     title_blocklist,
     language,
 ):
@@ -353,7 +353,7 @@ def test_backup_lifecycle_policies_are_language_scoped(
     es_adapter.get_indices_for_alias.return_value = [f"{language}wiki-1-v1-2"]
     es_adapter.get_index_lifecycle_policies.return_value = {f"{language}wiki-1-v1-1": None}
 
-    indexer = Indexer("v1", category_blocklist, title_blocklist, file_manager, es_adapter)
+    indexer = Indexer("v1", article_blocklist, title_blocklist, file_manager, es_adapter)
     indexer._apply_backup_lifecycle_policies(f"{language}wiki-v1")
 
     es_adapter.get_index_lifecycle_policies.assert_called_once_with(index=f"{language}wiki-*-v1-*")
@@ -362,12 +362,14 @@ def test_backup_lifecycle_policies_are_language_scoped(
     )
 
 
-def test_index_from_export_with_category_blocklist_content_filter(
+def test_index_from_export_with_article_blocklist_content_filter(
     indexer,
     file_manager,
     es_adapter,
 ):
-    """Test content moderation removes blocked categories from category blocklist."""
+    """Test content moderation removes articles whose QID is in the article blocklist,
+    whatever their categories.
+    """
     file_manager.get_latest_gcs.return_value = SNAPSHOT
 
     def check_bulk_side_effect(operations):
@@ -396,7 +398,8 @@ def test_index_from_export_with_category_blocklist_content_filter(
         "popularity_score": 0.0003,
         "create_timestamp": "2001-06-10T22:29:58Z",
         "page_id": 1000,
-        "category": ["fiction"],
+        "category": ["meme"],
+        "wikibase_item": "Q1",
     }
     operation_filtered_out = {"index": {"_type": "doc", "_id": "1001"}}
     document_filtered_out = {
@@ -406,7 +409,8 @@ def test_index_from_export_with_category_blocklist_content_filter(
         "popularity_score": 0.0003,
         "create_timestamp": "2001-06-10T22:29:58Z",
         "page_id": 1000,
-        "category": ["meme"],
+        "category": ["fiction"],
+        "wikibase_item": "Q2",
     }
 
     inputs = [
@@ -484,6 +488,111 @@ def test_index_from_export_with_title_blocklist_content_filter(
     indexer.index_from_export(1, "enwiki")
 
     es_adapter.bulk.assert_called_once()
+
+
+def test_index_from_export_records_titles_blocked_by_article_blocklist(
+    indexer,
+    file_manager,
+    es_adapter,
+):
+    """Test that only documents dropped for their QID have their title recorded,
+    including redirects carrying a blocked QID.
+    """
+    file_manager.get_latest_gcs.return_value = SNAPSHOT
+    es_adapter.bulk.return_value = {"acknowledged": True, "errors": False, "items": [{}]}
+    es_adapter.index_exists.return_value = False
+    es_adapter.create_index.return_value = True
+    es_adapter.alias_exists.return_value = False
+
+    documents = [
+        # Indexed.
+        {"title": "Paris", "page_type": "primary", "wikibase_item": "Q1"},
+        # Dropped for their QID, so recorded.
+        {"title": "Hercule Poirot", "page_type": "primary", "wikibase_item": "Q2"},
+        {"title": "Poirot", "page_type": "redirect", "wikibase_item": "Q2"},
+        # Dropped for other reasons, so not recorded.
+        {"title": "Paris, France", "page_type": "redirect"},
+        {"title": "Bad Things", "page_type": "primary", "wikibase_item": "Q5"},
+    ]
+    inputs = []
+    for i, document in enumerate(documents):
+        inputs.append(json.dumps({"index": {"_type": "doc", "_id": str(i)}}))
+        inputs.append(json.dumps({**document, "page_id": i, "category": []}))
+    file_manager.stream_from_gcs.return_value = (input for input in inputs)
+
+    indexer.index_from_export(1, "enwiki")
+
+    assert indexer.blocked_titles == ["Hercule Poirot", "Poirot"]
+
+
+def test_collect_blocked_titles_records_titles_without_indexing(
+    indexer,
+    file_manager,
+    es_adapter,
+):
+    """Test that collecting blocked titles records the same titles as indexing would,
+    without making any Elasticsearch call.
+    """
+    file_manager.get_latest_gcs.return_value = SNAPSHOT
+    documents = [
+        {"title": "Paris", "page_type": "primary", "wikibase_item": "Q1"},
+        {"title": "Hercule Poirot", "page_type": "primary", "wikibase_item": "Q2"},
+        {"title": "Poirot", "page_type": "redirect", "wikibase_item": "Q2"},
+        {"title": "Paris, France", "page_type": "redirect"},
+        {"title": "Bad Things", "page_type": "primary", "wikibase_item": "Q5"},
+    ]
+    inputs = []
+    for i, document in enumerate(documents):
+        inputs.append(json.dumps({"index": {"_type": "doc", "_id": str(i)}}))
+        inputs.append(json.dumps({**document, "page_id": i, "category": []}))
+    file_manager.stream_from_gcs.return_value = (input for input in inputs)
+    indexer.blocked_titles = ["Left over from an earlier run"]
+
+    indexer.collect_blocked_titles(len(documents))
+
+    assert indexer.blocked_titles == ["Hercule Poirot", "Poirot"]
+    file_manager.stream_from_gcs.assert_called_once_with(SNAPSHOT)
+    assert es_adapter.method_calls == []
+
+
+def test_collect_blocked_titles_raises_without_export(indexer, file_manager, es_adapter):
+    """Test that collecting blocked titles fails when no export is available on GCS."""
+    file_manager.get_latest_gcs.return_value = None
+
+    with pytest.raises(RuntimeError, match="No exports available on GCS for en"):
+        indexer.collect_blocked_titles(1)
+
+    file_manager.stream_from_gcs.assert_not_called()
+
+
+def test_index_from_export_resets_blocked_titles_between_runs(
+    indexer,
+    file_manager,
+    es_adapter,
+):
+    """Test that a reused Indexer only reports the titles blocked by its latest run."""
+    file_manager.get_latest_gcs.return_value = SNAPSHOT
+    es_adapter.bulk.return_value = {"acknowledged": True, "errors": False, "items": [{}]}
+    es_adapter.index_exists.return_value = False
+    es_adapter.create_index.return_value = True
+    es_adapter.alias_exists.return_value = False
+
+    def export(title: str, qid: str) -> list[str]:
+        """Return the lines of an export holding a single document."""
+        return [
+            json.dumps({"index": {"_type": "doc", "_id": "1"}}),
+            json.dumps({"title": title, "page_id": 1, "category": [], "wikibase_item": qid}),
+        ]
+
+    file_manager.stream_from_gcs.side_effect = [
+        iter(export("Hercule Poirot", "Q2")),
+        iter(export("Paris", "Q3")),
+    ]
+
+    indexer.index_from_export(1, "enwiki")
+    indexer.index_from_export(1, "enwiki")
+
+    assert indexer.blocked_titles == ["Paris"]
 
 
 def test_index_from_export_filters_redirects(
@@ -644,14 +753,14 @@ def test_index_from_export_deletes_only_the_build_index_when_the_build_fails(
 
 @pytest.mark.parametrize("language", ["en", "fr", "de", "it", "pl"])
 def test_build_index_is_created_with_the_backup_policy(
-    file_manager, es_adapter, category_blocklist, title_blocklist, language
+    file_manager, es_adapter, article_blocklist, title_blocklist, language
 ):
     """Verify the build index uses the published index settings, except for the
     expiring policy, so it expires via ILM if a killed run never deletes it.
     """
     file_manager.language = language
     es_adapter.index_exists.return_value = False
-    indexer = Indexer("v1", category_blocklist, title_blocklist, file_manager, es_adapter)
+    indexer = Indexer("v1", article_blocklist, title_blocklist, file_manager, es_adapter)
 
     indexer._create_index("temp-index")
 
@@ -932,7 +1041,7 @@ def clock(mocker) -> FakeClock:
 
 
 def test_wait_for_followers_polls_until_every_shard_catches_up(
-    file_manager, es_adapter, category_blocklist, title_blocklist, clock
+    file_manager, es_adapter, article_blocklist, title_blocklist, clock
 ):
     """Test that the wait continues until all followers retain past the leader's
     global checkpoint on every shard, judging only the primary copy.
@@ -948,7 +1057,7 @@ def test_wait_for_followers_polls_until_every_shard_catches_up(
     es_adapter.get_number_of_shards.return_value = 2
     indexer = Indexer(
         "v1",
-        category_blocklist,
+        article_blocklist,
         title_blocklist,
         file_manager,
         es_adapter,
@@ -963,7 +1072,7 @@ def test_wait_for_followers_polls_until_every_shard_catches_up(
 
 
 def test_wait_for_followers_waits_for_a_lease_on_every_shard(
-    file_manager, es_adapter, category_blocklist, title_blocklist, clock
+    file_manager, es_adapter, article_blocklist, title_blocklist, clock
 ):
     """Test that a follower holding a caught-up lease on one shard, but no lease yet on
     another, is still waited on, rather than judged only where it holds a lease.
@@ -977,7 +1086,7 @@ def test_wait_for_followers_waits_for_a_lease_on_every_shard(
     es_adapter.get_number_of_shards.return_value = 2
     indexer = Indexer(
         "v1",
-        category_blocklist,
+        article_blocklist,
         title_blocklist,
         file_manager,
         es_adapter,
@@ -992,7 +1101,7 @@ def test_wait_for_followers_waits_for_a_lease_on_every_shard(
 
 
 def test_wait_for_followers_names_followers_missing_a_shard_lease_on_timeout(
-    file_manager, es_adapter, category_blocklist, title_blocklist, clock
+    file_manager, es_adapter, article_blocklist, title_blocklist, clock
 ):
     """Test that a follower which never acquires a lease on a shard fails the wait,
     and is named as lagging.
@@ -1004,7 +1113,7 @@ def test_wait_for_followers_names_followers_missing_a_shard_lease_on_timeout(
     es_adapter.get_number_of_shards.return_value = 2
     indexer = Indexer(
         "v1",
-        category_blocklist,
+        article_blocklist,
         title_blocklist,
         file_manager,
         es_adapter,
@@ -1018,13 +1127,13 @@ def test_wait_for_followers_names_followers_missing_a_shard_lease_on_timeout(
 
 
 def test_wait_for_followers_times_out(
-    file_manager, es_adapter, category_blocklist, title_blocklist, clock
+    file_manager, es_adapter, article_blocklist, title_blocklist, clock
 ):
     """Test that a follower that never catches up fails the wait."""
     es_adapter.get_shard_stats.return_value = {"0": [_shard(99, 100, 10)]}
     indexer = Indexer(
         "v1",
-        category_blocklist,
+        article_blocklist,
         title_blocklist,
         file_manager,
         es_adapter,
@@ -1040,7 +1149,7 @@ def test_wait_for_followers_times_out(
 
 
 def test_wait_for_followers_waits_while_a_primary_is_missing(
-    file_manager, es_adapter, category_blocklist, title_blocklist, clock
+    file_manager, es_adapter, article_blocklist, title_blocklist, clock
 ):
     """Test that a shard with no started primary counts as lagging, rather than failing
     the run, until its primary is back.
@@ -1051,7 +1160,7 @@ def test_wait_for_followers_waits_while_a_primary_is_missing(
     ]
     indexer = Indexer(
         "v1",
-        category_blocklist,
+        article_blocklist,
         title_blocklist,
         file_manager,
         es_adapter,
@@ -1065,13 +1174,13 @@ def test_wait_for_followers_waits_while_a_primary_is_missing(
 
 
 def test_wait_for_followers_names_shards_without_a_primary_on_timeout(
-    file_manager, es_adapter, category_blocklist, title_blocklist, clock
+    file_manager, es_adapter, article_blocklist, title_blocklist, clock
 ):
     """Test that a primary that never comes back fails the wait, naming its shard."""
     es_adapter.get_shard_stats.return_value = {"0": [_shard(42, 43, primary=False)]}
     indexer = Indexer(
         "v1",
-        category_blocklist,
+        article_blocklist,
         title_blocklist,
         file_manager,
         es_adapter,
@@ -1085,7 +1194,7 @@ def test_wait_for_followers_names_shards_without_a_primary_on_timeout(
 
 
 def test_wait_for_followers_waits_while_a_shard_has_no_started_copies(
-    file_manager, es_adapter, category_blocklist, title_blocklist, clock
+    file_manager, es_adapter, article_blocklist, title_blocklist, clock
 ):
     """Test that a shard missing from the stats counts as lagging, even when every
     reported shard is in sync, until a copy of it is started again.
@@ -1098,7 +1207,7 @@ def test_wait_for_followers_waits_while_a_shard_has_no_started_copies(
     ]
     indexer = Indexer(
         "v1",
-        category_blocklist,
+        article_blocklist,
         title_blocklist,
         file_manager,
         es_adapter,
@@ -1113,14 +1222,14 @@ def test_wait_for_followers_waits_while_a_shard_has_no_started_copies(
 
 
 def test_wait_for_followers_names_shards_without_started_copies_on_timeout(
-    file_manager, es_adapter, category_blocklist, title_blocklist, clock
+    file_manager, es_adapter, article_blocklist, title_blocklist, clock
 ):
     """Test that a shard that never comes back fails the wait, naming the shard."""
     es_adapter.get_number_of_shards.return_value = 2
     es_adapter.get_shard_stats.return_value = {"0": [_shard(99, 100)]}
     indexer = Indexer(
         "v1",
-        category_blocklist,
+        article_blocklist,
         title_blocklist,
         file_manager,
         es_adapter,
@@ -1139,13 +1248,13 @@ def test_wait_for_followers_names_shards_without_started_copies_on_timeout(
     ids=["shorter-than-discovery", "zero-timeout"],
 )
 def test_init_rejects_a_sync_timeout_shorter_than_the_discovery_period(
-    file_manager, es_adapter, category_blocklist, title_blocklist, timeout, discovery_period
+    file_manager, es_adapter, article_blocklist, title_blocklist, timeout, discovery_period
 ):
     """Test that a timeout that could never be met is rejected up front."""
     with pytest.raises(ValueError, match="must be at least follower_discovery_period"):
         Indexer(
             "v1",
-            category_blocklist,
+            article_blocklist,
             title_blocklist,
             file_manager,
             es_adapter,
@@ -1156,7 +1265,7 @@ def test_init_rejects_a_sync_timeout_shorter_than_the_discovery_period(
 
 @freezegun.freeze_time(FROZEN_TIME)
 def test_index_from_export_keeps_the_unpublished_index_when_followers_time_out(
-    file_manager, es_adapter, category_blocklist, title_blocklist
+    file_manager, es_adapter, article_blocklist, title_blocklist
 ):
     """Test that the alias is left alone when followers never catch up, and the new
     index stays on the backup policy for ILM to expire rather than being deleted.
@@ -1174,7 +1283,7 @@ def test_index_from_export_keeps_the_unpublished_index_when_followers_time_out(
     file_manager.stream_from_gcs.return_value = (input for input in inputs)
     indexer = Indexer(
         "v1",
-        category_blocklist,
+        article_blocklist,
         title_blocklist,
         file_manager,
         es_adapter,
@@ -1194,7 +1303,7 @@ def test_index_from_export_keeps_the_unpublished_index_when_followers_time_out(
 
 
 def test_wait_for_followers_waits_out_the_discovery_period_without_followers(
-    file_manager, es_adapter, category_blocklist, title_blocklist, clock
+    file_manager, es_adapter, article_blocklist, title_blocklist, clock
 ):
     """Test that an index without followers is only declared follower-free once
     auto-follow has had the discovery period to pick it up.
@@ -1202,7 +1311,7 @@ def test_wait_for_followers_waits_out_the_discovery_period_without_followers(
     es_adapter.get_shard_stats.return_value = {"0": [_shard(99)]}
     indexer = Indexer(
         "v1",
-        category_blocklist,
+        article_blocklist,
         title_blocklist,
         file_manager,
         es_adapter,
@@ -1216,7 +1325,7 @@ def test_wait_for_followers_waits_out_the_discovery_period_without_followers(
 
 
 def test_wait_for_followers_waits_on_followers_found_during_discovery(
-    file_manager, es_adapter, category_blocklist, title_blocklist, clock
+    file_manager, es_adapter, article_blocklist, title_blocklist, clock
 ):
     """Test that a follower that appears partway through discovery is waited on, even
     after an earlier follower is already in sync.
@@ -1229,7 +1338,7 @@ def test_wait_for_followers_waits_on_followers_found_during_discovery(
     ]
     indexer = Indexer(
         "v1",
-        category_blocklist,
+        article_blocklist,
         title_blocklist,
         file_manager,
         es_adapter,
@@ -1325,7 +1434,7 @@ def test_index_from_export_builds_under_temp_name_and_clones(
 
 
 def test_wait_for_followers_logs_each_follower_once_when_discovered(
-    file_manager, es_adapter, category_blocklist, title_blocklist, clock, caplog
+    file_manager, es_adapter, article_blocklist, title_blocklist, clock, caplog
 ):
     """Test that each follower is logged once, on first sighting, with the seconds
     since the clone so that auto-follow pickup time can be measured.
@@ -1337,7 +1446,7 @@ def test_wait_for_followers_logs_each_follower_once_when_discovered(
     ]
     indexer = Indexer(
         "v1",
-        category_blocklist,
+        article_blocklist,
         title_blocklist,
         file_manager,
         es_adapter,
