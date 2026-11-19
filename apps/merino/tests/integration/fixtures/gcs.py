@@ -4,6 +4,9 @@ import logging
 from typing import Generator
 
 import pytest
+import pytest_asyncio
+
+from gcloud.aio.storage import Storage
 from google.auth.credentials import AnonymousCredentials
 from google.cloud.storage import Client, Bucket
 from testcontainers.core.container import DockerContainer
@@ -56,6 +59,18 @@ def gcs_storage_client(gcs_storage_container) -> Client:
     yield client
 
     client.close()
+
+
+@pytest_asyncio.fixture
+async def async_storage(gcs_storage_container):
+    """Return an async gcloud.aio Storage client and clean up after testing.
+
+    Note: STORAGE_EMULATOR_HOST is set by the gcs_storage_container fixture, which causes
+    Storage() to skip authentication and route all requests to the local fake-gcs-server.
+    """
+    client = Storage()
+    yield client
+    await client.close()
 
 
 @pytest.fixture(scope="function")

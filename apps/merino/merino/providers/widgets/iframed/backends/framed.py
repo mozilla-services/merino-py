@@ -7,7 +7,7 @@ import semver
 
 from pydantic import HttpUrl
 
-from google.cloud.storage import Client
+from gcloud.aio.storage import Bucket, Storage
 
 from merino.configs import settings
 from merino.providers.widgets.iframed.backends.protocol import (
@@ -20,7 +20,6 @@ from merino.utils import task_runner
 logger = logging.getLogger(__name__)
 
 _fetch_widgets_timeout = settings.widgets.providers.framed.fetch_widgets_timeout
-_gcs_list_blobs_timeout = settings.widgets.providers.framed.gcs_list_blobs_timeout
 
 _ASYNC_TASK_NAME_PREFIX = "widgets.framed."
 
@@ -28,14 +27,14 @@ _ASYNC_TASK_NAME_PREFIX = "widgets.framed."
 class FramedWidgetsBackend:
     """Backend for fetching the latest release URLs for all framed widgets."""
 
-    gcs_client: Client
+    gcs_client: Storage
     cached_widgets: dict[str, FramedWidgetResponse]
     metrics_client: aiodogstatsd.Client
     widgets_manifest: list[FramedWidgetGCS]
 
     def __init__(
         self,
-        gcs_client: Client,
+        gcs_client: Storage,
         metrics_client: aiodogstatsd.Client,
     ) -> None:
         """Initialize the backend."""
@@ -124,7 +123,7 @@ class FramedWidgetsBackend:
 
     async def _get_latest_semver_from_gcs(self, bucket_name: str) -> str:
         """Return latest semver release from the given GCS bucket_name."""
-        gcs_folders = await asyncio.to_thread(self._get_bucket_folders, bucket_name=bucket_name)
+        gcs_folders = await self._get_bucket_folders(bucket_name=bucket_name)
 
         highest_semver = FramedWidgetsBackend.get_highest_semver(gcs_folders)
 
@@ -134,20 +133,19 @@ class FramedWidgetsBackend:
 
         return highest_semver
 
-    def _get_bucket_folders(self, bucket_name: str) -> set[str]:
+    async def _get_bucket_folders(self, bucket_name: str) -> set[str]:
         """Retrieve all folders (blobs with a trailing "/") in the given GCS bucket."""
-        blobs = self.gcs_client.list_blobs(
-            bucket_or_name=bucket_name, delimiter="/", timeout=_gcs_list_blobs_timeout
-        )
+        bucket = Bucket(storage=self.gcs_client, name=bucket_name)
+        blobs = await bucket.list_blobs(delimiter="/")
 
-        # we have to iterate here to populate the `prefixes` list below
-        for _ in blobs:
-            pass
-
-        # trying to satisfy mypy - google library has no type hints
-        prefixes: set[str] = blobs.prefixes
-
-        return prefixes
+        # list_blobs returns all the files "left" of the given delimiter, even if
+        # they don't end with the delimiter - keeping the list restricted to only
+        # "root" files and "folders" (GCS doesn't really have folders) as we don't
+        # want to return any files within folders. that being said, as we only
+        # want folders here, we filter out the result set to items ending with "/".
+        #
+        # and one more "blob" for good measure.
+        return {blob for blob in blobs if blob.endswith("/")}
 
     @staticmethod
     def get_highest_semver(releases: set[str]) -> str | None:

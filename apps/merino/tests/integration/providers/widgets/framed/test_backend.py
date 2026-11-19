@@ -4,11 +4,11 @@
 
 """Integration tests for the Framed Widgets backend."""
 
-import asyncio
 import pytest
 
 from pydantic import HttpUrl
 
+from gcloud.aio.storage import Storage
 from google.cloud.storage import Bucket, Client
 from unittest.mock import MagicMock
 from typing import Generator
@@ -57,9 +57,9 @@ def fixture_framed_bucket(gcs_storage_client: Client) -> Generator[Bucket, None,
 
 
 @pytest.fixture(name="backend")
-def fixture_backend(gcs_storage_client: Client, framed_bucket: Bucket) -> FramedWidgetsBackend:
+def fixture_backend(async_storage: Storage, framed_bucket: Bucket) -> FramedWidgetsBackend:
     """Return a backend wired to the fake GCS server."""
-    backend = FramedWidgetsBackend(gcs_client=gcs_storage_client, metrics_client=MagicMock())
+    backend = FramedWidgetsBackend(gcs_client=async_storage, metrics_client=MagicMock())
     backend.widgets_manifest = [
         FramedWidgetGCS(
             bucket_name=BUCKET_NAME,
@@ -169,7 +169,7 @@ class TestGetBucketFolders:
         expected_folders = RELEASES + FOLDERS_TO_IGNORE
 
         # get the folders from the GCS bucket
-        folders = await asyncio.to_thread(backend._get_bucket_folders, bucket_name=BUCKET_NAME)
+        folders = await backend._get_bucket_folders(bucket_name=BUCKET_NAME)
 
         # make sure we have the right number of folders
         assert len(folders) == len(expected_folders)

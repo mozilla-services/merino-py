@@ -10,8 +10,6 @@ import time
 
 import orjson
 import pytest
-import pytest_asyncio
-from gcloud.aio.storage import Storage
 from pydantic import BaseModel
 
 from merino.utils.synced_gcs_blob_v2 import (
@@ -38,18 +36,6 @@ def gcs_bucket(gcs_storage_client):
     bucket = gcs_storage_client.create_bucket(BUCKET_NAME)
     yield bucket
     bucket.delete(force=True)
-
-
-@pytest_asyncio.fixture
-async def async_storage():
-    """Return an async gcloud.aio Storage client and clean up after testing.
-
-    Note: STORAGE_EMULATOR_HOST is set by the gcs_storage_container fixture, which causes
-    Storage() to skip authentication and route all requests to the local fake-gcs-server.
-    """
-    client = Storage()
-    yield client
-    await client.close()
 
 
 def _upload(gcs_bucket, payload: dict) -> None:

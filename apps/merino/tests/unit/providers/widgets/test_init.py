@@ -171,38 +171,6 @@ class TestFramedWidgetsProvider:
             mock_get_metrics_client.assert_called()
 
     @pytest.mark.asyncio
-    async def test_init_providers_when_gcs_client_fails(
-        self, caplog: pytest.LogCaptureFixture
-    ) -> None:
-        """Disable the cron, but still create every provider, when the GCS client fails."""
-        with (
-            patch("merino.providers.widgets._framed_widgets_provider_cron_enabled", True),
-            patch(
-                "merino.providers.widgets.initialize_storage_client",
-                side_effect=Exception("no credentials"),
-            ),
-        ):
-            await init_providers()
-
-        provider = get_framed_widgets_provider()
-
-        # The framed provider still exists, with no backend and no cron task.
-        assert provider.backend is None
-        assert provider.cron_task is None
-
-        # The other providers were not affected by the GCS failure.
-        assert isinstance(get_travel_provider(), TravelProvider)
-        assert isinstance(get_wrexham_provider(), WrexhamProvider)
-
-        # The failure was logged with the error in `extra`.
-        records = [r for r in caplog.records if "Failed to create GCS client" in r.message]
-        assert len(records) == 1
-        assert records[0].levelname == "WARNING"
-        assert records[0].__dict__["error_message"] == "no credentials"
-
-        await shutdown_providers()
-
-    @pytest.mark.asyncio
     async def test_get_framed_widgets_provider_initialized(self) -> None:
         """Verify get_framed_widgets_provider returns class instance after init_providers call."""
         await init_providers()

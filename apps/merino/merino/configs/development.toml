@@ -131,5 +131,3 @@ cdn_hostname_wrexhamafc = "local-widgets-wrexhamafc.merino.nonprod.webservices.m
 cdn_hostname_yahoo_horoscope = "local-widgets-yahoo-horoscope.merino.nonprod.webservices.mozgcp.net"
 # MERINO_WIDGETS__PROVIDERS__FRAMED__CDN_HOSTNAME_YAHOO_SOLITAIRE
 cdn_hostname_yahoo_solitaire = "local-widgets-yahoo-solitaire.merino.nonprod.webservices.mozgcp.net"
-# GCP project name where the GCS buckets live.
-gcp_project = "moz-fx-merino-local-5050"

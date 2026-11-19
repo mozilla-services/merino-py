@@ -14,7 +14,10 @@ from pytest import LogCaptureFixture
 from unittest.mock import AsyncMock, MagicMock, patch
 from typing import Any
 
-from merino.providers.widgets.iframed.backends.framed import _ASYNC_TASK_NAME_PREFIX, FramedWidgetsBackend
+from merino.providers.widgets.iframed.backends.framed import (
+    _ASYNC_TASK_NAME_PREFIX,
+    FramedWidgetsBackend,
+)
 from merino.providers.widgets.iframed.backends.protocol import (
     FramedWidgetGCS,
     FramedWidgetResponse,
@@ -180,10 +183,12 @@ class TestFetch:
             "providers.widgets.framed.stale", tags={"widget": "test2"}
         )
 
+
 class TestMetricsTimeoutHandler:
     """Test the metrics_timeout_handler function."""
 
     def test_metrics_timeout_handler(self, backend: FramedWidgetsBackend, statsd_mock):
+        """Test that the handler calls metrics with the expected values."""
         task = MagicMock(spec=asyncio.Task)
         task.get_name.return_value = f"{_ASYNC_TASK_NAME_PREFIX}test2"
         backend.metrics_timeout_handler([task])
@@ -294,7 +299,7 @@ class TestGetLatestSemverFromGcs:
     async def test_returns_highest_semver(self, backend: FramedWidgetsBackend) -> None:
         """Test the happy path."""
         with (
-            patch.object(backend, "_get_bucket_folders", new=MagicMock()) as mock_get_folders,
+            patch.object(backend, "_get_bucket_folders", new=AsyncMock()) as mock_get_folders,
             patch.object(FramedWidgetsBackend, "get_highest_semver") as mock_get_highest_semver,
         ):
             mock_get_highest_semver.return_value = "1.6.2"
@@ -302,13 +307,13 @@ class TestGetLatestSemverFromGcs:
             result = await backend._get_latest_semver_from_gcs("bucket-name-doesnt-matter")
 
             assert result == "1.6.2"
-            mock_get_folders.assert_called_once()
+            mock_get_folders.assert_awaited_once()
 
     @pytest.mark.asyncio
     async def test_raises_when_no_semver_found(self, backend: FramedWidgetsBackend) -> None:
         """Test the function raises when no semver was found."""
         with (
-            patch.object(backend, "_get_bucket_folders", new=MagicMock()) as mock_get_folders,
+            patch.object(backend, "_get_bucket_folders", new=AsyncMock()) as mock_get_folders,
             patch.object(FramedWidgetsBackend, "get_highest_semver") as mock_get_highest_semver,
         ):
             mock_get_highest_semver.return_value = None
@@ -316,7 +321,7 @@ class TestGetLatestSemverFromGcs:
             with pytest.raises(ValueError):
                 await backend._get_latest_semver_from_gcs("bucket-name-doesnt-matter")
 
-            mock_get_folders.assert_called_once()
+            mock_get_folders.assert_awaited_once()
 
 
 class TestBuildPublicUrl:
