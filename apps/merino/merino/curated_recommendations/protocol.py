@@ -118,6 +118,15 @@ class ExperimentName(str, Enum):
     INFERRED_LOCAL_EXPERIMENT_V4 = "new-tab-automated-personalization-v4"
     # Experiment to provide server scores for local reranking across all sections.
     COSINE_RANKING_EXPERIMENT = "newtab-cosine-ranking"
+    # Experiment to pin the top-ranked Editors' Pick story into Popular Today
+    EDITORS_PICK_EXPERIMENT = "new-tab-editors-pick-tile"
+
+
+class EditorsPickBranch(str, Enum):
+    """Treatment branches for the Editors' Pick experiment. Both get the same feed."""
+
+    BADGED_EDITORS_PICK_TILE = "badged-editors-pick-tile"
+    EDITORS_PICK_TILE = "editors-pick-tile"
 
 
 class DailyBriefingBranch(str, Enum):
