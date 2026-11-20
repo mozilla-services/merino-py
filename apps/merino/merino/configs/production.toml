@@ -213,8 +213,7 @@ enabled = true
 [production.widgets.providers.framed]
 # MERINO_WIDGETS__PROVIDERS__FRAMED__CRON_ENABLED
 # Whether or not the cron to monitor GCS buckets is enabled.
-# False until we test on stage.
-cron_enabled = false
+cron_enabled = true
 
 # MERINO_WIDGETS__PROVIDERS__FRAMED__BUCKET_NAME_KAYAK_TRAVEL
 bucket_name_kayak_travel = "merino-widgets-kayak-travel-public-prod"
