@@ -1510,7 +1510,11 @@ cron_interval_sec = 60 # 1 minutes
 
 # MERINO_WIDGETS__PROVIDERS__FRAMED__RESYNC_INTERVAL_SEC
 # How often to check for new releases of framed widgets.
-resync_interval_sec = 900 # 15 minutes
+resync_interval_sec = 600 # 10 minutes
+
+# MERINO_WIDGETS__PROVIDERS__FRAMED__CACHE_CONTROL_TTL_SEC
+# How long Fastly and browsers can cache responses widgets/framed endpoint.
+cache_control_ttl_sec = 600 # 10 minutes
 
 # MERINO_WIDGETS__PROVIDERS__FRAMED__BUCKET_NAME_KAYAK_TRAVEL
 bucket_name_kayak_travel = ""
