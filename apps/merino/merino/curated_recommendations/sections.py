@@ -54,6 +54,7 @@ from merino.curated_recommendations.protocol import (
     SectionConfiguration,
     ExperimentName,
     DailyBriefingBranch,
+    EditorsPickBranch,
     ProcessedInterests,
     Layout,
 )
@@ -87,6 +88,7 @@ DOUBLE_ROW_TOP_STORIES_COUNT = 9
 TOP_STORIES_SECTION_EXTRA_COUNT = 5  # Extra top stories pulled from later sections
 HEADLINES_SECTION_KEY = "headlines"
 DAILY_BRIEFING_SECTION_KEY = "daily-briefing"
+EDITORS_PICKS_SECTION_KEY = "editors-picks-2"
 # Require enough recommendations to fill the layout plus a single fallback item
 SECTION_FALLBACK_BUFFER = 1
 MAX_SECTIONS_PER_RESPONSE = 20
@@ -371,6 +373,16 @@ def is_daily_briefing_experiment(request: CuratedRecommendationsRequest) -> bool
         request, experiment_name, DailyBriefingBranch.BRIEFING_WITH_POPULAR.value
     ) or is_enrolled_in_experiment(
         request, experiment_name, DailyBriefingBranch.BRIEFING_WITHOUT_POPULAR.value
+    )
+
+
+def is_editors_pick_experiment(request: CuratedRecommendationsRequest) -> bool:
+    """Return True if the request is in either Editors' Pick treatment branch."""
+    return any(
+        is_enrolled_in_experiment(
+            request, ExperimentName.EDITORS_PICK_EXPERIMENT.value, branch.value
+        )
+        for branch in EditorsPickBranch
     )
 
 
@@ -786,6 +798,30 @@ def get_top_story_list(
     return top_stories
 
 
+def insert_editors_pick(
+    top_stories: list[CuratedRecommendation],
+    ranked_items: list[CuratedRecommendation],
+) -> list[CuratedRecommendation]:
+    """Place the top-ranked Editors' Pick story at receivedRank 1 of Popular Today.
+
+    The client identifies the pick as the receivedRank 1 story with sourceSectionId
+    EDITORS_PICKS_SECTION_KEY, so this position is part of the contract with Firefox.
+    The list keeps its original length. Returns top_stories unchanged if there's no pick.
+    """
+    pick = next(
+        (rec for rec in ranked_items if rec.source_section_id == EDITORS_PICKS_SECTION_KEY),
+        None,
+    )
+    if pick is None:
+        return top_stories
+
+    rest = [rec for rec in top_stories if rec.corpusItemId != pick.corpusItemId]
+    result = (rest[:1] + [pick] + rest[1:])[: len(top_stories)]
+    for idx, rec in enumerate(result):
+        rec.receivedRank = idx
+    return result
+
+
 async def get_sections(
     request: CuratedRecommendationsRequest,
     surface_id: SurfaceId,
@@ -948,6 +984,8 @@ async def get_sections(
         surface_id=surface_id,
         article_balancer_config=get_top_stories_article_balancer_config(surface_id),
     )
+    if is_editors_pick_experiment(request):
+        top_stories = insert_editors_pick(top_stories, all_ranked_corpus_recommendations)
     top_stories = [
         rec.model_copy(update={"sourceSectionId": rec.source_section_id}) for rec in top_stories
     ]
