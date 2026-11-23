@@ -6,7 +6,8 @@ from enum import StrEnum
 class RuntimeFeature(StrEnum):
     """Feature groups controlled by the runtime mode."""
 
-    REGULAR_API = "regular_api"
+    SUGGEST = "suggest"
+    CURATED_RECOMMENDATIONS = "curated_recommendations"
     WIDGETS = "widgets"
 
 
@@ -15,14 +16,18 @@ class RuntimeMode(StrEnum):
 
     ALL = "ALL"
     REGULAR = "REGULAR"
+    SUGGEST = "SUGGEST"
     WIDGET = "WIDGET"
 
 
 _ALLOWED_RUNTIME_MODES = ", ".join(mode.value for mode in RuntimeMode)
 
 _RUNTIME_MODE_FEATURES: dict[RuntimeMode, frozenset[RuntimeFeature]] = {
-    RuntimeMode.ALL: frozenset({RuntimeFeature.REGULAR_API, RuntimeFeature.WIDGETS}),
-    RuntimeMode.REGULAR: frozenset({RuntimeFeature.REGULAR_API}),
+    RuntimeMode.ALL: frozenset(RuntimeFeature),
+    RuntimeMode.REGULAR: frozenset(
+        {RuntimeFeature.SUGGEST, RuntimeFeature.CURATED_RECOMMENDATIONS}
+    ),
+    RuntimeMode.SUGGEST: frozenset({RuntimeFeature.SUGGEST}),
     RuntimeMode.WIDGET: frozenset({RuntimeFeature.WIDGETS}),
 }
 

@@ -28,14 +28,51 @@ def _route_paths(app: FastAPI) -> set[str]:
     return set(app.openapi().get("paths", {}).keys())
 
 
-def test_runtime_mode_predicates() -> None:
-    """Runtime modes enable the intended feature groups."""
-    assert mode_enables(RuntimeMode.ALL, RuntimeFeature.REGULAR_API)
-    assert mode_enables(RuntimeMode.ALL, RuntimeFeature.WIDGETS)
-    assert mode_enables(RuntimeMode.REGULAR, RuntimeFeature.REGULAR_API)
-    assert mode_enables(RuntimeMode.WIDGET, RuntimeFeature.WIDGETS)
-    assert not mode_enables(RuntimeMode.WIDGET, RuntimeFeature.REGULAR_API)
-    assert not mode_enables(RuntimeMode.REGULAR, RuntimeFeature.WIDGETS)
+_CURATED_RECOMMENDATIONS_PATHS = frozenset(
+    {
+        "/api/v1/curated-recommendations",
+        "/api/v1/curated-recommendations/legacy-115-129",
+        "/api/v1/curated-recommendations/legacy-114",
+    }
+)
+_WIDGET_PATHS = frozenset(
+    {
+        "/api/v1/widgets/wrexham/matches",
+        "/api/v1/widgets/wrexham/standings",
+        "/api/v1/widgets/framed",
+        "/api/v1/widgets/travel",
+        "/api/v1/widgets/rss/picture-of-the-day",
+        "/api/v1/widgets/games/particle",
+    }
+)
+
+
+@pytest.mark.parametrize(
+    ("mode", "expected_features"),
+    [
+        (
+            RuntimeMode.ALL,
+            {
+                RuntimeFeature.SUGGEST,
+                RuntimeFeature.CURATED_RECOMMENDATIONS,
+                RuntimeFeature.WIDGETS,
+            },
+        ),
+        (
+            RuntimeMode.REGULAR,
+            {RuntimeFeature.SUGGEST, RuntimeFeature.CURATED_RECOMMENDATIONS},
+        ),
+        (RuntimeMode.SUGGEST, {RuntimeFeature.SUGGEST}),
+        (RuntimeMode.WIDGET, {RuntimeFeature.WIDGETS}),
+    ],
+    ids=lambda value: value.value if isinstance(value, RuntimeMode) else None,
+)
+def test_runtime_mode_predicates(
+    mode: RuntimeMode, expected_features: set[RuntimeFeature]
+) -> None:
+    """Each runtime mode enables its listed features and no others."""
+    for feature in RuntimeFeature:
+        assert mode_enables(mode, feature) is (feature in expected_features)
 
 
 def test_runtime_mode_coercion_rejects_unknown_mode() -> None:
@@ -66,6 +103,7 @@ def test_invalid_configured_runtime_mode_fails_startup() -> None:
     assert "runtime.mode" in result.stderr
     assert "ALL" in result.stderr
     assert "REGULAR" in result.stderr
+    assert "SUGGEST" in result.stderr
     assert "WIDGET" in result.stderr
 
 
@@ -95,6 +133,7 @@ def test_configured_runtime_mode_passes_startup_validation(mode: RuntimeMode) ->
             {
                 "/__heartbeat__",
                 "/api/v1/suggest",
+                *_CURATED_RECOMMENDATIONS_PATHS,
                 "/api/v1/widgets/wrexham/matches",
                 "/api/v1/widgets/framed",
                 "/api/v1/widgets/rss/picture-of-the-day",
@@ -104,16 +143,27 @@ def test_configured_runtime_mode_passes_startup_validation(mode: RuntimeMode) ->
         ),
         (
             RuntimeMode.REGULAR,
-            {"/__heartbeat__", "/api/v1/suggest"},
+            {"/__heartbeat__", "/api/v1/suggest", *_CURATED_RECOMMENDATIONS_PATHS},
             {
                 "/api/v1/rss/picture-of-the-day",
                 "/api/v1/games/particle",
-                "/api/v1/widgets/wrexham/matches",
-                "/api/v1/widgets/framed",
-                "/api/v1/widgets/travel",
-                "/api/v1/widgets/rss/picture-of-the-day",
-                "/api/v1/widgets/games/particle",
+                *_WIDGET_PATHS,
             },
+        ),
+        (
+            RuntimeMode.SUGGEST,
+            {
+                "/",
+                "/__version__",
+                "/__error__",
+                "/__lbheartbeat__",
+                "/__heartbeat__",
+                "/api/v1/suggest",
+                "/api/v1/providers",
+                "/api/v1/manifest",
+                "/api/v1/weather/hourly-forecasts",
+            },
+            {*_CURATED_RECOMMENDATIONS_PATHS, *_WIDGET_PATHS},
         ),
         (
             RuntimeMode.WIDGET,
@@ -125,7 +175,12 @@ def test_configured_runtime_mode_passes_startup_validation(mode: RuntimeMode) ->
                 "/api/v1/widgets/rss/picture-of-the-day",
                 "/api/v1/widgets/games/particle",
             },
-            {"/api/v1/suggest", "/api/v1/rss/picture-of-the-day", "/api/v1/games/particle"},
+            {
+                "/api/v1/suggest",
+                *_CURATED_RECOMMENDATIONS_PATHS,
+                "/api/v1/rss/picture-of-the-day",
+                "/api/v1/games/particle",
+            },
         ),
     ],
 )
@@ -144,6 +199,7 @@ def test_create_app_registers_routes_by_mode(
     [
         (RuntimeMode.ALL, ["suggest", "providers", "widgets"]),
         (RuntimeMode.REGULAR, ["suggest", "providers"]),
+        (RuntimeMode.SUGGEST, ["suggest", "providers"]),
         (RuntimeMode.WIDGET, ["widgets"]),
     ],
 )
@@ -156,7 +212,7 @@ def test_create_app_registers_openapi_tags_by_mode(
     assert tags == expected_tags
 
 
-@pytest.mark.parametrize("mode", [RuntimeMode.ALL, RuntimeMode.REGULAR, RuntimeMode.WIDGET])
+@pytest.mark.parametrize("mode", list(RuntimeMode))
 def test_create_app_registers_same_middleware_by_mode(mode: RuntimeMode) -> None:
     """Runtime modes keep the existing middleware stack unchanged."""
     middleware_names = [
@@ -175,8 +231,15 @@ def test_create_app_registers_same_middleware_by_mode(mode: RuntimeMode) -> None
     ]
 
 
-def test_regular_mode_serves_regular_api(mocker: MockerFixture) -> None:
-    """Regular mode serves the regular API routes."""
+@pytest.mark.parametrize(
+    ("mode", "curated_enabled"),
+    [(RuntimeMode.REGULAR, True), (RuntimeMode.SUGGEST, False)],
+    ids=["REGULAR", "SUGGEST"],
+)
+def test_suggest_modes_serve_suggest_api(
+    mocker: MockerFixture, mode: RuntimeMode, curated_enabled: bool
+) -> None:
+    """REGULAR and SUGGEST serve the suggest API; only REGULAR starts curated recommendations."""
     import merino.main as main
     from merino.providers.suggest import get_providers as get_suggest_providers
     from tests.integration.api.v1.fake_providers import FakeProviderFactory
@@ -187,7 +250,10 @@ def test_regular_mode_serves_regular_api(mocker: MockerFixture) -> None:
     async def close_metrics_client() -> None:
         pass
 
-    async def start_regular(cleanup_callbacks) -> None:
+    async def start_suggest(cleanup_callbacks) -> None:
+        pass
+
+    async def start_manifest() -> None:
         pass
 
     def start_governance(cleanup_callbacks) -> None:
@@ -201,12 +267,15 @@ def test_regular_mode_serves_regular_api(mocker: MockerFixture) -> None:
     mocker.patch.object(main, "configure_sentry")
     mocker.patch.object(main, "configure_metrics", side_effect=configure_metrics)
     mocker.patch.object(main, "_close_metrics_client", side_effect=close_metrics_client)
-    regular_start = mocker.patch.object(main, "_start_regular_services", side_effect=start_regular)
-    mocker.patch.object(main, "_start_rss_services")
-    mocker.patch.object(main, "_start_games_services")
+    suggest_start = mocker.patch.object(main, "_start_suggest_services", side_effect=start_suggest)
+    manifest_start = mocker.patch.object(
+        main, "_start_manifest_service", side_effect=start_manifest
+    )
+    curated_start = mocker.patch.object(main, "_start_curated_recommendations_services")
+    widget_start = mocker.patch.object(main, "_start_widget_services")
     governance_start = mocker.patch.object(main, "_start_governance", side_effect=start_governance)
 
-    app = create_app(RuntimeMode.REGULAR)
+    app = create_app(mode)
     app.dependency_overrides[get_suggest_providers] = get_fake_providers
 
     with TestClient(app) as client:
@@ -214,13 +283,19 @@ def test_regular_mode_serves_regular_api(mocker: MockerFixture) -> None:
         response = client.get("/api/v1/suggest", params={"q": "nonsponsored"})
         assert response.status_code == 200
         assert response.json()["suggestions"][0]["full_keyword"] == "nonsponsored"
+        assert client.get("/api/v1/widgets/wrexham/matches").status_code == 404
+        if not curated_enabled:
+            assert client.post("/api/v1/curated-recommendations").status_code == 404
 
-    regular_start.assert_awaited_once()
+    suggest_start.assert_awaited_once()
+    manifest_start.assert_awaited_once()
+    assert curated_start.called is curated_enabled
+    widget_start.assert_not_called()
     governance_start.assert_called_once()
 
 
 def test_widget_mode_serves_only_widgets(mocker: MockerFixture) -> None:
-    """Widget mode serves the widget API but not the regular suggest API."""
+    """Widget mode serves the widget API but not the suggest or curated recommendations APIs."""
     import merino.main as main
     from merino.providers.widgets import get_wrexham_provider
     from merino.providers.widgets.wrexham.provider import WrexhamProvider
@@ -243,7 +318,9 @@ def test_widget_mode_serves_only_widgets(mocker: MockerFixture) -> None:
     mocker.patch.object(main, "configure_metrics", side_effect=configure_metrics)
     mocker.patch.object(main, "_close_metrics_client", side_effect=close_metrics_client)
     # _start_widget_services runs for real so widget startup/shutdown is exercised.
-    regular_start = mocker.patch.object(main, "_start_regular_services")
+    suggest_start = mocker.patch.object(main, "_start_suggest_services")
+    manifest_start = mocker.patch.object(main, "_start_manifest_service")
+    curated_start = mocker.patch.object(main, "_start_curated_recommendations_services")
     mocker.patch.object(main, "_start_rss_services")
     mocker.patch.object(main, "_start_games_services")
     governance_start = mocker.patch.object(main, "_start_governance")
@@ -255,8 +332,11 @@ def test_widget_mode_serves_only_widgets(mocker: MockerFixture) -> None:
         assert client.get("/__heartbeat__").status_code == 200
         assert client.get("/api/v1/widgets/wrexham/matches").status_code == 200
         assert client.get("/api/v1/suggest", params={"q": "nonsponsored"}).status_code == 404
+        assert client.post("/api/v1/curated-recommendations").status_code == 404
 
-    regular_start.assert_not_called()
+    suggest_start.assert_not_called()
+    manifest_start.assert_not_called()
+    curated_start.assert_not_called()
     governance_start.assert_called_once()
 
 
@@ -285,7 +365,9 @@ async def test_cleanup_callbacks_ignore_non_awaitable_return_values() -> None:
                 "logging_start",
                 "sentry_start",
                 "metrics_start",
-                "regular_start",
+                "suggest_start",
+                "manifest_start",
+                "curated_start",
                 "rss_start",
                 "games_start",
                 "widget_start",
@@ -293,7 +375,7 @@ async def test_cleanup_callbacks_ignore_non_awaitable_return_values() -> None:
                 "governance_shutdown",
                 "widget_shutdown",
                 "rss_shutdown",
-                "regular_shutdown",
+                "suggest_shutdown",
                 "metrics_shutdown",
             ],
         ),
@@ -303,10 +385,26 @@ async def test_cleanup_callbacks_ignore_non_awaitable_return_values() -> None:
                 "logging_start",
                 "sentry_start",
                 "metrics_start",
-                "regular_start",
+                "suggest_start",
+                "manifest_start",
+                "curated_start",
                 "governance_start",
                 "governance_shutdown",
-                "regular_shutdown",
+                "suggest_shutdown",
+                "metrics_shutdown",
+            ],
+        ),
+        (
+            RuntimeMode.SUGGEST,
+            [
+                "logging_start",
+                "sentry_start",
+                "metrics_start",
+                "suggest_start",
+                "manifest_start",
+                "governance_start",
+                "governance_shutdown",
+                "suggest_shutdown",
                 "metrics_shutdown",
             ],
         ),
@@ -350,9 +448,12 @@ def test_lifespan_starts_and_stops_services_by_mode(
     async def close_metrics_client() -> None:
         events.append("metrics_shutdown")
 
-    async def start_regular(cleanup_callbacks) -> None:
-        events.append("regular_start")
-        cleanup_callbacks.append(record("regular_shutdown"))
+    async def start_suggest(cleanup_callbacks) -> None:
+        events.append("suggest_start")
+        cleanup_callbacks.append(record("suggest_shutdown"))
+
+    async def start_manifest() -> None:
+        events.append("manifest_start")
 
     def start_governance(cleanup_callbacks) -> None:
         events.append("governance_start")
@@ -373,7 +474,11 @@ def test_lifespan_starts_and_stops_services_by_mode(
     mocker.patch.object(main, "configure_sentry", side_effect=record("sentry_start"))
     mocker.patch.object(main, "configure_metrics", side_effect=configure_metrics)
     mocker.patch.object(main, "_close_metrics_client", side_effect=close_metrics_client)
-    mocker.patch.object(main, "_start_regular_services", side_effect=start_regular)
+    mocker.patch.object(main, "_start_suggest_services", side_effect=start_suggest)
+    mocker.patch.object(main, "_start_manifest_service", side_effect=start_manifest)
+    mocker.patch.object(
+        main, "_start_curated_recommendations_services", side_effect=record("curated_start")
+    )
     mocker.patch.object(main, "_start_governance", side_effect=start_governance)
     mocker.patch.object(main, "_start_widget_services", side_effect=start_widgets)
     mocker.patch.object(main, "_start_rss_services", side_effect=start_rss)

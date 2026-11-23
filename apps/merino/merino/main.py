@@ -48,7 +48,7 @@ tags_metadata = [
         "description": "APIs serving Firefox New Tab widgets.",
     },
 ]
-_REGULAR_API_TAG_NAMES = frozenset({"suggest", "providers"})
+_SUGGEST_TAG_NAMES = frozenset({"suggest", "providers"})
 _WIDGETS_TAG_NAMES = frozenset({"widgets"})
 
 logger = logging.getLogger(__name__)
@@ -82,9 +82,13 @@ def create_lifespan(mode: RuntimeMode | str):
     """Build startup and shutdown work for a runtime mode.
 
     To wire a new service into the main app:
-    add a RuntimeFeature, opt it into the right RuntimeMode values, start it here,
-    include its router in _include_routers, add its OpenAPI tag metadata, and regenerate
-    the committed OpenAPI schema (`moon run merino:openapi-export`).
+
+    1. Add a RuntimeFeature and add it to the matching RuntimeMode entries in merino.runtime.
+    2. Start the service here.
+    3. Include the service's router in _include_routers.
+    4. Add its OpenAPI tag metadata.
+    5. Regenerate the committed OpenAPI schema (`moon run merino:openapi-export`).
+
     Dockerflow and the API docs stay enabled for every mode.
     """
     runtime_mode = coerce_runtime_mode(mode)
@@ -110,8 +114,22 @@ def create_lifespan(mode: RuntimeMode | str):
             await configure_metrics()
             cleanup_callbacks.append(_close_metrics_client)
 
-            if mode_enables(runtime_mode, RuntimeFeature.REGULAR_API):
-                await _start_regular_services(cleanup_callbacks)
+            suggest_enabled = mode_enables(runtime_mode, RuntimeFeature.SUGGEST)
+            curated_enabled = mode_enables(runtime_mode, RuntimeFeature.CURATED_RECOMMENDATIONS)
+
+            if suggest_enabled:
+                await _start_suggest_services(cleanup_callbacks)
+
+            # The manifest provider backs /manifest and the icons in curated recommendations.
+            # Start it only one time, since each init_provider call schedules another resync cron.
+            if suggest_enabled or curated_enabled:
+                await _start_manifest_service()
+
+            # curated_recommendations.init_provider() calls get_manifest_provider(), which raises a
+            # ValueError until the manifest provider starts, and therefore this block runs after
+            # _start_manifest_service().
+            if curated_enabled:
+                _start_curated_recommendations_services()
 
             if mode_enables(runtime_mode, RuntimeFeature.WIDGETS):
                 await _start_rss_services(cleanup_callbacks)
@@ -129,11 +147,14 @@ def create_lifespan(mode: RuntimeMode | str):
     return runtime_lifespan
 
 
-async def _start_regular_services(cleanup_callbacks: list[CleanupCallback]) -> None:
-    """Initialize regular Merino services and register cleanup callbacks."""
-    from merino import curated_recommendations
+async def _start_suggest_services(cleanup_callbacks: list[CleanupCallback]) -> None:
+    """Initialize the Suggest providers and the search terms message handler.
+
+    LoggingMiddleware submits search terms to the message handler only for suggest requests,
+    so the handler starts with the `SUGGEST` feature.
+    """
     from merino.message_handlers import search_terms
-    from merino.providers import manifest, suggest
+    from merino.providers import suggest
 
     await suggest.init_providers()
     cleanup_callbacks.append(suggest.shutdown_providers)
@@ -142,7 +163,17 @@ async def _start_regular_services(cleanup_callbacks: list[CleanupCallback]) -> N
         await search_terms.start()
         cleanup_callbacks.append(search_terms.stop)
 
+
+async def _start_manifest_service() -> None:
+    """Initialize the manifest provider. It has no shutdown work."""
+    from merino.providers import manifest
+
     await manifest.init_provider()
+
+
+def _start_curated_recommendations_services() -> None:
+    """Initialize the curated recommendations provider. It has no shutdown work."""
+    from merino import curated_recommendations
 
     curated_recommendations.init_provider()
 
@@ -216,8 +247,8 @@ def _get_tags_metadata(mode: RuntimeMode) -> list[dict[str, str]]:
     """Return OpenAPI tag metadata for enabled feature groups."""
     enabled_tag_names: set[str] = set()
 
-    if mode_enables(mode, RuntimeFeature.REGULAR_API):
-        enabled_tag_names.update(_REGULAR_API_TAG_NAMES)
+    if mode_enables(mode, RuntimeFeature.SUGGEST):
+        enabled_tag_names.update(_SUGGEST_TAG_NAMES)
 
     if mode_enables(mode, RuntimeFeature.WIDGETS):
         enabled_tag_names.update(_WIDGETS_TAG_NAMES)
@@ -246,10 +277,15 @@ def _include_routers(app: FastAPI, mode: RuntimeMode) -> None:
     app.include_router(dockerflow.router)
     app.include_router(docs.router)
 
-    if mode_enables(mode, RuntimeFeature.REGULAR_API):
+    if mode_enables(mode, RuntimeFeature.SUGGEST):
         from merino.web import api_v1
 
         app.include_router(api_v1.router, prefix="/api/v1")
+
+    if mode_enables(mode, RuntimeFeature.CURATED_RECOMMENDATIONS):
+        from merino.web import api_v1_curated_recommendations
+
+        app.include_router(api_v1_curated_recommendations.router, prefix="/api/v1")
 
     if mode_enables(mode, RuntimeFeature.WIDGETS):
         from merino.web import api_v1_widgets

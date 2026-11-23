@@ -7,7 +7,7 @@ A web service that powers Firefox Suggest and the NewTab page. It's one of the m
 The main domain components are as follows:
 
 - **Suggest API**, located in @apps/merino/merino/providers/suggest/, the backend of the `api/v1/suggest` endpoint defined in @apps/merino/merino/web/api_v1.py.
-- **Curated Recommendations API**, located in @apps/merino/merino/curated_recommendations/, the backend of the `api/v1/curated_recommendations/*` endpoints defined in @apps/merino/merino/web/api_v1.py.
+- **Curated Recommendations API**, located in @apps/merino/merino/curated_recommendations/, the backend of the `api/v1/curated_recommendations/*` endpoints defined in @apps/merino/merino/web/api_v1_curated_recommendations.py.
 - **Games API**, located in @apps/merino/merino/providers/games, the backend of the `api/v1/widgets/games/*` endpoints defined in @apps/merino/merino/web/api_v1_widgets.py. The deprecated `api/v1/games/*` paths are no longer served by Merino or included in its API docs, but the load balancer still accepts them and rewrites them to `api/v1/widgets/games/*` for older Firefox versions.
 - **Image Manifest API**, located in @apps/merino/merino/providers/manifest, the backend of the `api/v1/manifest` endpoint defined in @apps/merino/merino/web/api_v1.py.
 - **RSS API**, located in @apps/merino/merino/providers/rss, the backend of the `api/v1/widgets/rss/*` endpoints defined in @apps/merino/merino/web/api_v1_widgets.py. The deprecated `api/v1/rss/*` paths are no longer served by Merino or included in its API docs, but the load balancer still accepts them and rewrites them to `api/v1/widgets/rss/*` for older Firefox versions.
