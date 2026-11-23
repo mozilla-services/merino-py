@@ -50,10 +50,11 @@ HEADER_CHARACTER_MAX = settings.web.api.v1.header_character_max
 DEFAULT_MATCH_LIMIT = 5
 MAX_MATCH_LIMIT = 5
 
-_matches_cache_control_ttl = settings.widgets.providers.wrexham.matches_cache_control_ttl_sec
-_standings_cache_control_ttl = settings.widgets.providers.wrexham.standings_cache_control_ttl_sec
 _games_particle_ttl = settings.games_providers.particle.cache_ttl
+_framed_cache_control_ttl = settings.widgets.providers.framed.cache_control_ttl_sec
+_matches_cache_control_ttl = settings.widgets.providers.wrexham.matches_cache_control_ttl_sec
 _potd_cache_control_ttl = settings.rss_providers.wikimedia_potd.cache_control_ttl_sec
+_standings_cache_control_ttl = settings.widgets.providers.wrexham.standings_cache_control_ttl_sec
 
 _WREXHAM_UNAVAILABLE_MESSAGE = "Wrexham data is temporarily unavailable. Please try again later."
 
@@ -174,7 +175,14 @@ async def get_iframed_widgets(
     with metrics_client.timeit("widgets.framed.request.timing"):
         widgets_response = await provider.get_widgets(locale=locale)
 
-    return JSONResponse(content=jsonable_encoder(widgets_response))
+    # only cache the response if the provider's latest fetch call returned widgets.
+    # once we stop injecting particle, we can use widgets_response.widgets.
+    should_cache = True if provider.widgets_response else None
+
+    return JSONResponse(
+        content=jsonable_encoder(widgets_response),
+        headers=_cache_control_unless_empty(should_cache, _framed_cache_control_ttl),
+    )
 
 
 @router.get(
