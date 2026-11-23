@@ -1996,7 +1996,8 @@
           "new-tab-automated-personalization-local-ranking-2",
           "new-tab-automated-personalization-v3",
           "new-tab-automated-personalization-v4",
-          "newtab-cosine-ranking"
+          "newtab-cosine-ranking",
+          "new-tab-editors-pick-tile"
         ],
         "title": "ExperimentName",
         "description": "List of Nimbus experiment names on New Tab. This list is NOT meant to be exhaustive.\nThis is simply intended to make it easier to reference experiment names in this codebase,\nwhen Merino needs to change behavior depending on the experimentName request parameter."
