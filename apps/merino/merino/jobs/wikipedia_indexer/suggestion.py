@@ -46,7 +46,7 @@ class Scorer:
         )
         page_size = self._score_norm_log2(doc.get("text_bytes", 0), self.PAGE_SIZE_NORM)
         external_links = self._score_norm(
-            len(doc.get("external_links", [])), self.EXTERNAL_LINKS_NORM
+            len(doc.get("external_link", [])), self.EXTERNAL_LINKS_NORM
         )
         heading = self._score_norm(len(doc.get("heading", [])), self.HEADING_NORM)
         redirect = self._score_norm(len(doc.get("redirect", [])), self.REDIRECT_NORM)

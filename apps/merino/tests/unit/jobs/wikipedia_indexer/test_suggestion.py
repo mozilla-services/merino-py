@@ -1,6 +1,20 @@
 """Suggestion building/scoring tests"""
 
-from merino.jobs.wikipedia_indexer.suggestion import Builder
+from merino.jobs.wikipedia_indexer.suggestion import Builder, Scorer
+
+
+def test_scorer_uses_external_link_field():
+    """Test that external links from the CirrusSearch `external_link` field affect the score"""
+    scorer = Scorer(max_docs=7_300_000)
+    base_doc = {
+        "title": "Hercule Poirot",
+        "text_bytes": 1000,
+        "incoming_links": 10,
+        "popularity_score": 0.0003,
+    }
+    links = [f"https://example.com/{i}" for i in range(40)]
+
+    assert scorer.score({**base_doc, "external_link": links}) > scorer.score(base_doc)
 
 
 def test_suggestion_builder():
