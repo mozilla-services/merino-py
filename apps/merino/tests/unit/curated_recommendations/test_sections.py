@@ -46,6 +46,7 @@ from merino.curated_recommendations.protocol import (
     SectionConfiguration,
     ExperimentName,
     DailyBriefingBranch,
+    EditorsPickBranch,
     CuratedRecommendation,
     RankingData,
     CuratedRecommendationsRequest,
@@ -58,6 +59,9 @@ from merino.curated_recommendations.sections import (
     dedupe_experiment_sections,
     exclude_recommendations_from_blocked_sections,
     is_daily_briefing_experiment,
+    is_editors_pick_experiment,
+    insert_editors_pick,
+    EDITORS_PICKS_SECTION_KEY,
     should_show_popular_today_with_daily_briefing,
     update_received_feed_rank,
     get_sections_with_enough_items,
@@ -406,6 +410,39 @@ class TestDailyBriefingExperiment:
         """Test that should_show_popular_today_with_daily_briefing returns True only for briefing-with-popular."""
         req = SimpleNamespace(experimentName=name, experimentBranch=branch, inferredInterests=None)
         assert should_show_popular_today_with_daily_briefing(req) is expected
+
+
+class TestEditorsPickExperiment:
+    """Tests covering is_editors_pick_experiment"""
+
+    @pytest.mark.parametrize(
+        "name,branch,expected",
+        [
+            (
+                ExperimentName.EDITORS_PICK_EXPERIMENT.value,
+                EditorsPickBranch.BADGED_EDITORS_PICK_TILE.value,
+                True,
+            ),
+            (
+                ExperimentName.EDITORS_PICK_EXPERIMENT.value,
+                EditorsPickBranch.EDITORS_PICK_TILE.value,
+                True,
+            ),
+            # forced enrollment
+            (
+                f"optin-{ExperimentName.EDITORS_PICK_EXPERIMENT.value}",
+                EditorsPickBranch.EDITORS_PICK_TILE.value,
+                True,
+            ),
+            (ExperimentName.EDITORS_PICK_EXPERIMENT.value, "control", False),
+            ("other-experiment", EditorsPickBranch.EDITORS_PICK_TILE.value, False),
+            (None, None, False),
+        ],
+    )
+    def test_is_editors_pick_experiment(self, name, branch, expected):
+        """Test that is_editors_pick_experiment returns True for either treatment branch."""
+        req = SimpleNamespace(experimentName=name, experimentBranch=branch, inferredInterests=None)
+        assert is_editors_pick_experiment(req) is expected
 
 
 class TestFilterSectionsByExperiment:
@@ -1140,6 +1177,41 @@ class TestGetTopStoryList:
         )
         result = get_top_story_list(items, top_count=3, extra_count=0)
         assert [i.corpusItemId for i in result] == ["a", "b", "c"]
+
+
+class TestInsertEditorsPick:
+    """Tests for insert_editors_pick."""
+
+    @staticmethod
+    def build_ranked(
+        item_ids: list[str], editors_pick_ids: set[str]
+    ) -> list[CuratedRecommendation]:
+        """Build ranked recommendations, tagging editors_pick_ids as from the editors-picks section."""
+        recs = generate_recommendations(item_ids=item_ids)
+        for rec in recs:
+            rec.source_section_id = (
+                EDITORS_PICKS_SECTION_KEY if rec.corpusItemId in editors_pick_ids else "other"
+            )
+        return recs
+
+    def test_no_pick_leaves_list_unchanged(self):
+        """Without an editors-picks story, top stories are returned as-is."""
+        ranked = self.build_ranked(["a", "b", "c"], editors_pick_ids=set())
+        assert insert_editors_pick(ranked, ranked) == ranked
+
+    def test_inserts_pick_at_index_1(self):
+        """A pick outside Popular Today goes to index 1 and the last story is dropped."""
+        ranked = self.build_ranked(["a", "b", "c", "d", "ep"], editors_pick_ids={"ep"})
+        result = insert_editors_pick(ranked[:4], ranked)
+        assert [rec.corpusItemId for rec in result] == ["a", "ep", "b", "c"]
+        assert [rec.receivedRank for rec in result] == [0, 1, 2, 3]
+
+    def test_moves_pick_already_in_top_stories(self):
+        """A pick already in Popular Today is moved to index 1 without duplicating or dropping stories."""
+        ranked = self.build_ranked(["a", "b", "ep", "c"], editors_pick_ids={"ep"})
+        result = insert_editors_pick(ranked, ranked)
+        assert [rec.corpusItemId for rec in result] == ["a", "ep", "b", "c"]
+        assert [rec.receivedRank for rec in result] == [0, 1, 2, 3]
 
 
 class TestGetTopStoryListWithPinnedFreshRescaler:
@@ -1985,6 +2057,51 @@ class TestGetSectionsServerScores:
             assert [
                 rec["serverScore"] for rec in section.model_dump()["recommendations"]
             ] == scores
+
+
+class TestGetSectionsEditorsPick:
+    """Verify get_sections places the Editors' Pick story in Popular Today for treatment."""
+
+    @pytest.mark.asyncio
+    async def test_editors_pick_at_rank_1(self, mocker):
+        """The editors-picks story is the receivedRank 1 Popular Today story, once."""
+        corpus_sections = [
+            generate_corpus_section(section_id, count=20)
+            for section_id in ("business", "sports", "tech")
+        ] + [
+            generate_corpus_section(
+                EDITORS_PICKS_SECTION_KEY, count=20, create_source=CreateSource.MANUAL
+            )
+        ]
+        sections_backend = MagicMock(spec=SectionsProtocol)
+        sections_backend.fetch = AsyncMock(return_value=corpus_sections)
+        ml_backend = MagicMock(spec=MLRecsBackend)
+        ml_backend.is_valid.return_value = False
+        mocker.patch(
+            "merino.curated_recommendations.rankers.t_sampling.beta.rvs",
+            return_value=0.005678,
+        )
+
+        sections = await get_sections(
+            request=CuratedRecommendationsRequest(
+                locale=Locale.EN_US,
+                feeds=["sections"],
+                experimentName=ExperimentName.EDITORS_PICK_EXPERIMENT.value,
+                experimentBranch=EditorsPickBranch.BADGED_EDITORS_PICK_TILE.value,
+            ),
+            surface_id=SurfaceId.NEW_TAB_EN_US,
+            sections_backend=sections_backend,
+            ml_backend=ml_backend,
+            engagement_backend=_StubEngagementBackend(),
+            prior_backend=ConstantPrior(),
+            lints_interest_backend=_FakeLinTSBackend(),
+        )
+
+        top_stories = sections["top_stories_section"].recommendations
+        pick = top_stories[1]
+        assert pick.sourceSectionId == EDITORS_PICKS_SECTION_KEY
+        assert pick.receivedRank == 1
+        assert [rec.corpusItemId for rec in top_stories].count(pick.corpusItemId) == 1
 
 
 class TestGetSectionsForcedInterests:
