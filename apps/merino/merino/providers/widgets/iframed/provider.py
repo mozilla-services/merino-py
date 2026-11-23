@@ -117,7 +117,7 @@ class Provider:
             return response
 
         # legacy - ability to return hard-coded widget data when the cron is off
-        # TODO: remove
+        # TODO: remove - https://mozilla-hub.atlassian.net/browse/HNT-4232
         if not self._cron_enabled:
             response.widgets = Provider.fake_widget_manifest()
 
