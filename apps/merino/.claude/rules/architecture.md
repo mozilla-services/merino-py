@@ -38,6 +38,17 @@ If provider data seems stale, check if the corresponding job has run:
 
 Merino can be configured to be run in various modes via the configuration `runtime.mode`. Each mode could define its own FastAPI lifespan events (startup & shutdown) via `create_lifespan()` in @apps/merino/merino/main.py.
 
+Each mode enables a set of features, and each feature mounts its routers and starts its services:
+
+| Mode | Features (`RuntimeFeature`) | Routers |
+|---|---|---|
+| `SUGGEST` | `SUGGEST` | `web/api_v1.py` |
+| `REGULAR` | `SUGGEST`, `CURATED_RECOMMENDATIONS` | `web/api_v1.py`, `web/api_v1_curated_recommendations.py` |
+| `WIDGET` | `WIDGETS` | `web/api_v1_widgets.py` |
+| `ALL` | `SUGGEST`, `CURATED_RECOMMENDATIONS`, `WIDGETS` | all three routers |
+
+`create_lifespan` starts the manifest provider when `SUGGEST` or `CURATED_RECOMMENDATIONS` is enabled, since both features use it. It starts the provider only one time, because each `manifest.init_provider()` call schedules another resync cron.
+
 Every runtime mode serves the same committed ALL-mode OpenAPI schema (`/docs`, `/redoc`, `/openapi.json`), because the production gateway routes clients to the right workload. Regenerate it with `moon run merino:openapi-export` after any API change.
 
 ## Middleware Stack (order matters)

@@ -1378,6 +1378,10 @@ SOURCE_TEST_MAPPING_DETAILED: dict[str, dict[str, list[str]]] = {
         "direct": ["apps/merino/tests/integration/api/v1/"],
         "indirect": [],
     },
+    "apps/merino/merino/web/api_v1_curated_recommendations.py": {
+        "direct": ["apps/merino/tests/integration/api/v1/curated_recommendations/"],
+        "indirect": [],
+    },
     "apps/merino/merino/web/models_v1.py": {
         "direct": [],
         "indirect": ["apps/merino/tests/integration/api/v1/"],

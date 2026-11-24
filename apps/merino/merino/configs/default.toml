@@ -30,9 +30,12 @@ suggest_supported_languages = ["en", "fr", "de", "it", "pl"]
 [default.runtime]
 # MERINO_RUNTIME__MODE
 # Boot-time feature profile.
-# Allowed values: ALL, REGULAR, WIDGET.
-# REGULAR serves the main Suggest API, WIDGET serves the New Tab widgets API,
-# and ALL serves both.
+# Allowed values: ALL, REGULAR, SUGGEST, WIDGET.
+# SUGGEST serves /api/v1/suggest, /api/v1/providers, /api/v1/manifest and
+# /api/v1/weather/hourly-forecasts.
+# REGULAR serves SUGGEST plus the New Tab curated recommendations API.
+# WIDGET serves the New Tab widgets API, and ALL serves everything.
+# Every mode also serves the Dockerflow endpoints and the API docs.
 mode = "ALL"
 
 # MERINO_RUNTIME__QUERY_TIMEOUT_SEC

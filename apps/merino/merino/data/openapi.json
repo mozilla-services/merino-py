@@ -309,6 +309,163 @@
         }
       }
     },
+    "/api/v1/manifest": {
+      "get": {
+        "tags": [
+          "manifest"
+        ],
+        "summary": "Get latest website favicons manifest",
+        "description": "Returns the full manifest, plus an ``ETag`` derived from the underlying GCS generation. Clients that cache the manifest should send the ETag back as ``If-None-Match`` on subsequent requests; when the manifest has not changed the server replies with ``304 Not Modified`` and an empty body.",
+        "operationId": "get_manifest_api_v1_manifest_get",
+        "parameters": [
+          {
+            "name": "if-none-match",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-None-Match"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManifestData"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/weather/hourly-forecasts": {
+      "get": {
+        "tags": [
+          "weather"
+        ],
+        "summary": "Get hourly Forecasts",
+        "description": "Query merino for hourly forecast data.\n\n**Args**:\n- `country`: [Optional] ISO 3166-2 country code. E.g.: “US”. If provided,\n    Accuweather provider returns hourly forecasts based on this country. Note: If provided,\n    `city` and `region` must also be provided to successfully return hourly forecasts.\n- `region`: [Optional] Comma separated string of subdivision code(s). This may contain FIPs codes\n    and/or iso codes. If provided, Accuweather provider will try to return hourly forecasts based on this region(s).\n    Note: If provided,`city` and `country` must also be provided to successfully return hourly forecasts.\n- `city`: [Optional] City name. E.g. “New York”. If provided,\n    Accuweather provider returns hourly forecasts based on this city. Note: If provided,\n    `region` and `country` must also be provided to successfully return hourly forecasts.\n- provider: Injected weather provider dependecy used to fetch hourly forecasts data.\n\n**Headers**:\n- `Accept-Language` - The locale preferences expressed in this header in\n  accordance with [RFC 2616 section 14.4][rfc-2616-14-4] will be used to\n  determine suggestions. Merino maintains a list of supported locales. Merino\n  will choose the locale from its list that has the highest `q` (quality) value\n  in the user's `Accept-Language` header. Locales with `q=0` will not be used.\n\n  If no locales match, Merino will not return any suggestions. If the header is\n  not included or empty, Merino will default to the `en-US` locale.\n\n  If the highest quality, compatible language produces no suggestion results,\n  Merino will return an empty list instead of attempting to query other\n  languages.",
+        "operationId": "get_hourly_forecasts_api_v1_weather_hourly_forecasts_get",
+        "parameters": [
+          {
+            "name": "country",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 2,
+                  "maxLength": 2
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Country"
+            }
+          },
+          {
+            "name": "region",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 500
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Region"
+            }
+          },
+          {
+            "name": "city",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 500
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "City"
+            }
+          },
+          {
+            "name": "accept-language",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 100
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Accept-Language"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/HourlyForecast"
+                  },
+                  "title": "Response Get Hourly Forecasts Api V1 Weather Hourly Forecasts Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/curated-recommendations": {
       "post": {
         "summary": "Curated recommendations for New Tab",
@@ -479,163 +636,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/CuratedRecommendationsLegacyFx114Response"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/manifest": {
-      "get": {
-        "tags": [
-          "manifest"
-        ],
-        "summary": "Get latest website favicons manifest",
-        "description": "Returns the full manifest, plus an ``ETag`` derived from the underlying GCS generation. Clients that cache the manifest should send the ETag back as ``If-None-Match`` on subsequent requests; when the manifest has not changed the server replies with ``304 Not Modified`` and an empty body.",
-        "operationId": "get_manifest_api_v1_manifest_get",
-        "parameters": [
-          {
-            "name": "if-none-match",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "If-None-Match"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ManifestData"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/weather/hourly-forecasts": {
-      "get": {
-        "tags": [
-          "weather"
-        ],
-        "summary": "Get hourly Forecasts",
-        "description": "Query merino for hourly forecast data.\n\n**Args**:\n- `country`: [Optional] ISO 3166-2 country code. E.g.: “US”. If provided,\n    Accuweather provider returns hourly forecasts based on this country. Note: If provided,\n    `city` and `region` must also be provided to successfully return hourly forecasts.\n- `region`: [Optional] Comma separated string of subdivision code(s). This may contain FIPs codes\n    and/or iso codes. If provided, Accuweather provider will try to return hourly forecasts based on this region(s).\n    Note: If provided,`city` and `country` must also be provided to successfully return hourly forecasts.\n- `city`: [Optional] City name. E.g. “New York”. If provided,\n    Accuweather provider returns hourly forecasts based on this city. Note: If provided,\n    `region` and `country` must also be provided to successfully return hourly forecasts.\n- provider: Injected weather provider dependecy used to fetch hourly forecasts data.\n\n**Headers**:\n- `Accept-Language` - The locale preferences expressed in this header in\n  accordance with [RFC 2616 section 14.4][rfc-2616-14-4] will be used to\n  determine suggestions. Merino maintains a list of supported locales. Merino\n  will choose the locale from its list that has the highest `q` (quality) value\n  in the user's `Accept-Language` header. Locales with `q=0` will not be used.\n\n  If no locales match, Merino will not return any suggestions. If the header is\n  not included or empty, Merino will default to the `en-US` locale.\n\n  If the highest quality, compatible language produces no suggestion results,\n  Merino will return an empty list instead of attempting to query other\n  languages.",
-        "operationId": "get_hourly_forecasts_api_v1_weather_hourly_forecasts_get",
-        "parameters": [
-          {
-            "name": "country",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "minLength": 2,
-                  "maxLength": 2
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Country"
-            }
-          },
-          {
-            "name": "region",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "maxLength": 500
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Region"
-            }
-          },
-          {
-            "name": "city",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "maxLength": 500
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "City"
-            }
-          },
-          {
-            "name": "accept-language",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "maxLength": 100
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Accept-Language"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/HourlyForecast"
-                  },
-                  "title": "Response Get Hourly Forecasts Api V1 Weather Hourly Forecasts Get"
                 }
               }
             }

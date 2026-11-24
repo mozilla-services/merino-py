@@ -201,40 +201,32 @@ async def test_module_start_stop_manage_singleton(mocker: MockerFixture) -> None
 
 
 @pytest.mark.asyncio
-async def test_start_regular_services_wires_message_handler(mocker: MockerFixture) -> None:
-    """Test that regular startup starts the handler and registers its drain when enabled."""
+async def test_start_suggest_services_wires_message_handler(mocker: MockerFixture) -> None:
+    """Test that suggest startup starts the handler and registers its drain when `message_handler.enabled` is set."""
     import merino.main as main
 
     mocker.patch.object(settings.message_handler, "enabled", True)
     mocker.patch("merino.providers.suggest.init_providers", new=mocker.AsyncMock())
-    mocker.patch("merino.providers.manifest.init_provider", new=mocker.AsyncMock())
-    mocker.patch("merino.providers.rss.init_providers", new=mocker.AsyncMock())
-    mocker.patch("merino.curated_recommendations.init_provider", new=mocker.MagicMock())
-    mocker.patch("merino.providers.games.init_providers", new=mocker.AsyncMock())
     start_mock = mocker.patch.object(search_terms, "start", new=mocker.AsyncMock())
 
     cleanup_callbacks: list = []
-    await main._start_regular_services(cleanup_callbacks)
+    await main._start_suggest_services(cleanup_callbacks)
 
     start_mock.assert_awaited_once()
     assert search_terms.stop in cleanup_callbacks
 
 
 @pytest.mark.asyncio
-async def test_start_regular_services_skips_handler_when_disabled(mocker: MockerFixture) -> None:
+async def test_start_suggest_services_skips_handler_when_disabled(mocker: MockerFixture) -> None:
     """Test that the handler is not started when submission is disabled."""
     import merino.main as main
 
     mocker.patch.object(settings.message_handler, "enabled", False)
     mocker.patch("merino.providers.suggest.init_providers", new=mocker.AsyncMock())
-    mocker.patch("merino.providers.manifest.init_provider", new=mocker.AsyncMock())
-    mocker.patch("merino.providers.rss.init_providers", new=mocker.AsyncMock())
-    mocker.patch("merino.curated_recommendations.init_provider", new=mocker.MagicMock())
-    mocker.patch("merino.providers.games.init_providers", new=mocker.AsyncMock())
     start_mock = mocker.patch.object(search_terms, "start", new=mocker.AsyncMock())
 
     cleanup_callbacks: list = []
-    await main._start_regular_services(cleanup_callbacks)
+    await main._start_suggest_services(cleanup_callbacks)
 
     start_mock.assert_not_awaited()
     assert search_terms.stop not in cleanup_callbacks
