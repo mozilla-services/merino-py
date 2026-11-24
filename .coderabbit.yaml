@@ -1,3 +1,4 @@
+
 # yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
 
 # --- Top level ---------------------------------------------------------------
@@ -30,11 +31,7 @@ reviews:
   path_instructions:
     - path: "**/*"
       instructions: >
-        - Restrict feedback to correctness bugs, security risks, and functionality-breaking problems.
         - Do not comment on style, formatting, naming, or non-critical improvements.
-        - Limit review comments to 3-5 items unless additional merge blockers exist.
-        - Group similar issues into one comment; if a pattern repeats, mention it once at summary level.
-        - If there are no actionable findings, respond with minimal approval and add nothing else.
 
   pre_merge_checks:
     title:
