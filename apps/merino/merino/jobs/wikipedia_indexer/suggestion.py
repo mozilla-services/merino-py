@@ -87,10 +87,12 @@ class Scorer:
         return int(score * self.SCORE_RANGE)
 
     def _score_norm_log2(self, value: int, norm: int) -> float:
-        return log2(2 if value < norm else (value / norm) + 1)
+        """Return log2((value / norm) + 1), capped at 1 once `value` exceeds `norm`."""
+        return log2(2 if value > norm else (value / norm) + 1)
 
     def _score_norm(self, value: int, norm: int) -> float:
-        return log(1 if value < norm else value / norm)
+        """Return value / norm, capped at 1 once `value` exceeds `norm`."""
+        return 1 if value > norm else value / norm
 
 
 class Builder:
