@@ -11,6 +11,7 @@ members = [
     "merino",
     "merino-common",
     "merino-fleece",
+    "merino-hook-eye",
     "merino-load-tests",
     "merino-workspace",
 ]
@@ -1947,6 +1948,29 @@ requires-dist = [
 ]
 
 [[package]]
+name = "merino-hook-eye"
+version = "0.1.0"
+source = { editable = "apps/hook-eye" }
+dependencies = [
+    { name = "dynaconf" },
+    { name = "elasticsearch", extra = ["async"] },
+    { name = "fastapi", extra = ["standard"] },
+    { name = "merino-common" },
+    { name = "opentelemetry-api" },
+    { name = "pydantic" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "dynaconf", specifier = ">=3.2.4,<4" },
+    { name = "elasticsearch", extras = ["async"], specifier = ">=8.5.0,<9" },
+    { name = "fastapi", extras = ["standard"], specifier = ">=0.135.0,<1" },
+    { name = "merino-common", editable = "packages/merino-common" },
+    { name = "opentelemetry-api", specifier = ">=1.42.1,<2" },
+    { name = "pydantic", specifier = ">=2.13.0,<3" },
+]
+
+[[package]]
 name = "merino-load-tests"
 version = "0.1.0"
 source = { virtual = "tools/load-tests" }
@@ -1975,6 +1999,7 @@ dependencies = [
     { name = "merino" },
     { name = "merino-common" },
     { name = "merino-fleece" },
+    { name = "merino-hook-eye" },
 ]
 
 [package.dev-dependencies]
@@ -2011,6 +2036,7 @@ requires-dist = [
     { name = "merino", editable = "apps/merino" },
     { name = "merino-common", editable = "packages/merino-common" },
     { name = "merino-fleece", editable = "apps/fleece" },
+    { name = "merino-hook-eye", editable = "apps/hook-eye" },
 ]
 
 [package.metadata.requires-dev]

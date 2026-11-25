@@ -21,6 +21,7 @@ COPY pyproject.toml uv.lock LICENSE version.json ./
 COPY apps/merino ./apps/merino
 COPY packages/merino-common ./packages/merino-common
 COPY apps/fleece/pyproject.toml ./apps/fleece/pyproject.toml
+COPY apps/hook-eye/pyproject.toml ./apps/hook-eye/pyproject.toml
 COPY tools/load-tests/pyproject.toml ./tools/load-tests/pyproject.toml
 COPY dev ./dev
 

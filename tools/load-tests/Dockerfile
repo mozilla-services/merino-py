@@ -18,6 +18,7 @@ COPY ./pyproject.toml ./uv.lock ./
 COPY ./dev ./dev
 COPY ./apps/merino ./apps/merino
 COPY ./apps/fleece/pyproject.toml ./apps/fleece/pyproject.toml
+COPY ./apps/hook-eye/pyproject.toml ./apps/hook-eye/pyproject.toml
 COPY ./packages/merino-common ./packages/merino-common
 COPY ./tools/load-tests/pyproject.toml ./tools/load-tests/pyproject.toml
 

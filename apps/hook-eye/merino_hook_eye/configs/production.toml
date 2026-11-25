@@ -1,0 +1,13 @@
+# Configurations for production. Configurations defined here will override the
+# counterparts in `default.toml`.
+#
+# Switch to this environment via: MERINO_HOOK_EYE_ENV=production
+# The follower URL and API key are provided per deployment via env vars:
+# MERINO_HOOK_EYE_CCR_FOLLOWER__URL and MERINO_HOOK_EYE_CCR_FOLLOWER__API_KEY.
+
+[production]
+dynaconf_merge = true
+
+[production.logging]
+level = "INFO"
+format = "mozlog"

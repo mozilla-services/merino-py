@@ -8,13 +8,16 @@ FLEECE_PROJECT_DIR := apps/fleece
 FLEECE_PACKAGE_DIR := $(FLEECE_PROJECT_DIR)/merino_fleece
 FLEECE_TEST_DIR := $(FLEECE_PROJECT_DIR)/tests
 FLEECE_WORKER_MAIN := $(FLEECE_PACKAGE_DIR)/sanitize/worker/main.py
+HOOK_EYE_PROJECT_DIR := apps/hook-eye
+HOOK_EYE_PACKAGE_DIR := $(HOOK_EYE_PROJECT_DIR)/merino_hook_eye
+HOOK_EYE_TEST_DIR := $(HOOK_EYE_PROJECT_DIR)/tests
 UNIT_TEST_DIR := $(TEST_DIR)/unit
 INTEGRATION_TEST_DIR := $(TEST_DIR)/integration
 LOAD_TEST_DIR := tools/load-tests
-APP_AND_TEST_DIRS := $(APP_DIR) $(TEST_DIR) $(COMMON_PACKAGE_DIR) $(COMMON_TEST_DIR) $(FLEECE_PACKAGE_DIR) $(FLEECE_TEST_DIR) $(LOAD_TEST_DIR)
+APP_AND_TEST_DIRS := $(APP_DIR) $(TEST_DIR) $(COMMON_PACKAGE_DIR) $(COMMON_TEST_DIR) $(FLEECE_PACKAGE_DIR) $(FLEECE_TEST_DIR) $(HOOK_EYE_PACKAGE_DIR) $(HOOK_EYE_TEST_DIR) $(LOAD_TEST_DIR)
 INSTALL_STAMP := .install.stamp
 UV := $(shell command -v uv 2> /dev/null)
-PROJECT_MANIFESTS := pyproject.toml $(APP_PROJECT_DIR)/pyproject.toml $(FLEECE_PROJECT_DIR)/pyproject.toml $(COMMON_PROJECT_DIR)/pyproject.toml $(LOAD_TEST_DIR)/pyproject.toml
+PROJECT_MANIFESTS := pyproject.toml $(APP_PROJECT_DIR)/pyproject.toml $(FLEECE_PROJECT_DIR)/pyproject.toml $(HOOK_EYE_PROJECT_DIR)/pyproject.toml $(COMMON_PROJECT_DIR)/pyproject.toml $(LOAD_TEST_DIR)/pyproject.toml
 TEST_PROBE := $(TEST_DIR)/utils/test_probe.py
 ALL_TEST_FILES := $(shell PYTHONPATH=$(APP_PROJECT_DIR) $(UV) run python $(TEST_PROBE) 2> /dev/null)
 DIRECT_TEST_FILES := $(shell PYTHONPATH=$(APP_PROJECT_DIR) $(UV) run python $(TEST_PROBE) -q 2> /dev/null)
@@ -61,6 +64,14 @@ dev-fleece: $(INSTALL_STAMP)  ##  Run fleece locally
 .PHONY: dev-fleece-otel
 dev-fleece-otel: $(INSTALL_STAMP)  ##  Run fleece locally with OTEL auto-instrumentation (mimics k8s operator)
 	OTEL_SERVICE_NAME=merino OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318 OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf $(UV) run --package merino-fleece opentelemetry-instrument fastapi run $(FLEECE_PACKAGE_DIR)/main.py --host 0.0.0.0 --port 8001
+
+.PHONY: dev-hook-eye
+dev-hook-eye: $(INSTALL_STAMP)  ##  Run Hook-eye locally against the `ccr` compose profile follower
+	$(UV) run --package merino-hook-eye fastapi dev $(HOOK_EYE_PACKAGE_DIR)/main.py --port 8002
+
+.PHONY: dev-hook-eye-otel
+dev-hook-eye-otel: $(INSTALL_STAMP)  ##  Run Hook-eye locally with OTEL auto-instrumentation (mimics k8s operator)
+	OTEL_SERVICE_NAME=merino-hook-eye OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318 OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf OTEL_METRIC_EXPORT_INTERVAL=15000 $(UV) run --package merino-hook-eye opentelemetry-instrument fastapi run $(HOOK_EYE_PACKAGE_DIR)/main.py --host 0.0.0.0 --port 8002
 
 .PHONY: run
 run: $(INSTALL_STAMP)  ##  Run merino locally

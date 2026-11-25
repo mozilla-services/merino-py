@@ -1,0 +1,138 @@
+version: 1.0
+
+service: Merino-hook-eye
+
+# Every CCR metric below is read from `GET _ccr/stats` on the follower cluster, emitted via
+# OpenTelemetry Metrics (meter "merino-hook-eye") as an observable instrument reporting the
+# most recent successful scrape. A series disappears, rather than repeating a stale value,
+# when its follower index stops being followed or when a scrape fails; alerts should treat a
+# missing series as unhealthy and use "merino.ccr.scrape" to tell the two cases apart.
+#
+# Per-shard metrics are only emitted for follower indices matching
+# `[default.ccr_follower] index_patterns` (by default the wikipedia and sports indices).
+
+scrape:
+  merino.ccr.scrape:
+    description: |
+      A counter recording the number of `GET _ccr/stats` scrapes, labeled by outcome.
+      Incremented once per cron tick. A rising "error" rate means the CCR metrics below are
+      not being reported, so their absence says nothing about the cluster.
+    type: counter
+    labels:
+      - status: |
+          The outcome of the scrape: "success", or "error" when the request failed or the
+          response could not be parsed.
+    scope: |
+      The `_ccr/stats` scrape cron job of "merino-hook-eye".
+    alert_policy: []
+
+auto-follow:
+  merino.ccr.auto_follow.failed_remote_cluster_state_requests:
+    description: |
+      A cumulative counter, reported as Elasticsearch's running total, of the times the
+      auto-follow coordinator failed to retrieve the cluster state of a remote (leader)
+      cluster. A climbing value is a leading indicator of CCR connectivity or discovery
+      problems.
+    type: counter
+    labels: []
+    scope: |
+      `auto_follow_stats.number_of_failed_remote_cluster_state_requests`.
+    alert_policy: []
+
+  merino.ccr.auto_follow.time_since_last_check_ms:
+    description: |
+      A gauge recording the milliseconds since the auto-follow coordinator last checked a
+      remote cluster for new leader indices to follow. It should stay near the coordinator's
+      poll interval; a growing value means new indices (e.g. a fresh wikipedia build) will
+      not be followed.
+    type: gauge
+    labels:
+      - remote_cluster: |
+          The name of the remote (leader) cluster, e.g. "leader".
+    scope: |
+      `auto_follow_stats.auto_followed_clusters[].time_since_last_check_millis`.
+    alert_policy: []
+
+  merino.ccr.auto_follow.failed_follow_indices:
+    description: |
+      A gauge recording the number of leader indices the auto-follow coordinator failed to
+      follow, as counted by the elected master node since it became master. The causes are
+      in the master's logs and in `auto_follow_stats.recent_auto_follow_errors`.
+    type: gauge
+    labels: []
+    scope: |
+      `auto_follow_stats.number_of_failed_follow_indices`.
+    alert_policy: []
+
+follower-shards:
+  merino.ccr.follower_aliases_version:
+    description: |
+      A gauge recording the aliases version of a follower shard. It advances when the leader
+      index's aliases change and the follower replicates them. A value frozen while the leader
+      keeps changing is a symptom of a wedged shard-follow task.
+    type: gauge
+    labels: &shard_labels
+      - remote_cluster: |
+          The name of the remote (leader) cluster.
+      - index: |
+          The name of the follower index, e.g. "enwiki-202611250000" or "sports-en-event".
+      - shard: |
+          The shard number within the index, e.g. "0".
+    scope: |
+      `follow_stats.indices[].shards[].follower_aliases_version`.
+    alert_policy: []
+
+  merino.ccr.follower_settings_version:
+    description: |
+      A gauge recording the settings version of a follower shard. Like the aliases version,
+      a value frozen while the leader's settings change points at a wedged shard-follow task.
+    type: gauge
+    labels: *shard_labels
+    scope: |
+      `follow_stats.indices[].shards[].follower_settings_version`.
+    alert_policy: []
+
+  merino.ccr.time_since_last_read_ms:
+    description: |
+      A gauge recording the milliseconds since a follower shard last sent a read request to
+      its leader shard. A follower polls its leader continuously, so this should stay small;
+      a growing value means the shard has stopped replicating.
+    type: gauge
+    labels: *shard_labels
+    scope: |
+      `follow_stats.indices[].shards[].time_since_last_read_millis`.
+    alert_policy: []
+
+  merino.ccr.failed_read_requests:
+    description: |
+      A cumulative counter, reported as Elasticsearch's running total, of the failed read
+      requests from a follower shard to its leader shard.
+    type: counter
+    labels: *shard_labels
+    scope: |
+      `follow_stats.indices[].shards[].failed_read_requests`.
+    alert_policy: []
+
+  merino.ccr.leader_global_checkpoint:
+    description: |
+      A gauge recording the global checkpoint of the leader shard, as last seen by the
+      follower. Compare with "merino.ccr.follower_global_checkpoint": a positive difference
+      that makes no progress over a window (e.g.
+      `(leader - follower) > 0 and changes(follower[10m]) == 0`) is a replication stall.
+      Most useful for indices written in place, such as sports; wikipedia indices are only
+      aliased once followers have caught up.
+    type: gauge
+    labels: *shard_labels
+    scope: |
+      `follow_stats.indices[].shards[].leader_global_checkpoint`.
+    alert_policy: []
+
+  merino.ccr.follower_global_checkpoint:
+    description: |
+      A gauge recording the global checkpoint of the follower shard. See
+      "merino.ccr.leader_global_checkpoint" for the stall condition.
+    type: gauge
+    labels: *shard_labels
+    scope: |
+      `follow_stats.indices[].shards[].follower_global_checkpoint`.
+    alert_policy: []
