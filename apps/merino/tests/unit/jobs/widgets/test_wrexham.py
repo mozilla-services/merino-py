@@ -438,7 +438,14 @@ async def test_first_live_refresh_logs_each_match_once(
     assert record.message == "Wrexham match changed"
     assert record.__dict__["match_id"] == 2
     assert record.__dict__["first_seen"] is True
-    assert record.__dict__["changed_fields"] == []
+    assert record.__dict__["changes"] == {
+        "status": {"from": None, "to": "Scheduled"},
+        "period": {"from": None, "to": None},
+        "home_score": {"from": None, "to": None},
+        "away_score": {"from": None, "to": None},
+        "home_penalty_score": {"from": None, "to": None},
+        "away_penalty_score": {"from": None, "to": None},
+    }
     assert record.__dict__["status"] == "Scheduled"
     assert record.__dict__["home_score"] is None
 
@@ -461,13 +468,15 @@ async def test_unchanged_matches_are_not_logged_again(
 
 
 @pytest.mark.asyncio
-async def test_match_changes_are_logged_with_the_changed_fields(
+async def test_match_changes_are_logged_with_old_and_new_values(
     ingester: WrexhamIngester,
     backend: Any,
     caplog: LogCaptureFixture,
     filter_caplog: FilterCaplogFixture,
 ) -> None:
-    """Log a match when it changes, with its new values and which fields changed."""
+    """Log a match when it changes, with each changed field's old and new values and the
+    match's current state.
+    """
     caplog.set_level(logging.INFO)
     scheduled = match(2, CHAMPIONSHIP, 20)
     backend.fetch_live_matches.side_effect = live_today(scheduled)
@@ -479,12 +488,12 @@ async def test_match_changes_are_logged_with_the_changed_fields(
     first, change = filter_caplog(caplog.records, MATCH_CHANGES_LOGGER)
     assert first.__dict__["first_seen"] is True
     assert change.__dict__["first_seen"] is False
-    assert change.__dict__["changed_fields"] == [
-        "status",
-        "period",
-        "home_score",
-        "away_score",
-    ]
+    assert change.__dict__["changes"] == {
+        "status": {"from": "Scheduled", "to": "InProgress"},
+        "period": {"from": None, "to": "Regular"},
+        "home_score": {"from": None, "to": 0},
+        "away_score": {"from": None, "to": 0},
+    }
     assert (change.__dict__["status"], change.__dict__["period"], change.__dict__["clock"]) == (
         "InProgress",
         "Regular",

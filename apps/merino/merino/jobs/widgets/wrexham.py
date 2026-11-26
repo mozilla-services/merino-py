@@ -9,7 +9,6 @@ import logging
 import signal
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime, timedelta
-from enum import StrEnum
 from time import monotonic, perf_counter
 
 import typer
@@ -93,11 +92,6 @@ def use_short_names(matches: list[Match], short_names: dict[int, str]) -> list[M
         )
         for match in matches
     ]
-
-
-def _log_value(value: object) -> object:
-    """Return a match field as a plain value for logging, e.g. an enum as its string."""
-    return str(value) if isinstance(value, StrEnum) else value
 
 
 class WrexhamRefreshError(Exception):
@@ -202,24 +196,21 @@ class WrexhamIngester:
 
     def _log_match_changes(self, matches: list[Match]) -> None:
         """Log each live match that's new or whose tracked fields changed since the last live
-        refresh.
-
-        A match is logged in full the first time it's seen, e.g. at the start of a match day or
-        after the job restarts. Matches no longer in the live data are forgotten.
+        refresh, with each changed field's old and new values and the match's current state.
         """
         states: dict[int, MatchState] = {}
         for match in matches:
-            state = {field: getattr(match, field) for field in TRACKED_MATCH_FIELDS}
+            state = match.model_dump(mode="json", include=set(TRACKED_MATCH_FIELDS))
             states[match.id] = state
             previous = self._match_states.get(match.id)
             if previous == state:
                 continue
 
-            changed_fields = (
-                [field for field in TRACKED_MATCH_FIELDS if previous[field] != state[field]]
-                if previous is not None
-                else []
-            )
+            changes = {
+                field: {"from": previous.get(field) if previous else None, "to": state[field]}
+                for field in TRACKED_MATCH_FIELDS
+                if previous is None or previous[field] != state[field]
+            }
             match_changes_logger.info(
                 "Wrexham match changed",
                 extra={
@@ -230,9 +221,9 @@ class WrexhamIngester:
                     "kickoff": match.kickoff.isoformat(),
                     "updated_at": match.updated_at.isoformat(),
                     "first_seen": previous is None,
-                    "changed_fields": changed_fields,
+                    "changes": changes,
                     "clock": match.clock,
-                    **{field: _log_value(value) for field, value in state.items()},
+                    **state,
                 },
             )
         self._match_states = states
