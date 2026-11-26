@@ -153,8 +153,8 @@ def test_snapshot_for_builds_name_and_prefix(gcs_client, gcs_bucket, expected_pr
 
 def test_filemanager_rejects_invalid_language(gcs_client):
     """Raise ValueError for a language the service does not support."""
-    with pytest.raises(ValueError, match="Unsupported language 'es'"):
-        _file_manager(gcs_client, language="es")
+    with pytest.raises(ValueError, match="Unsupported language 'xx'"):
+        _file_manager(gcs_client, language="xx")
 
 
 def test_get_latest_gcs_returns_newest_complete_snapshot(gcs_client):

@@ -1773,6 +1773,14 @@ it_es_alias = "itwiki-{version}"
 # Elasticsearch polish alias value for indexing job.
 pl_es_alias = "plwiki-{version}"
 
+# MERINO_JOBS__WIKIPEDIA_INDEXER__SUPPORTED_LANGUAGES
+# Wikipedia languages the indexer job accepts. Independent of `suggest_supported_languages`,
+# which controls the languages the Wikipedia suggest provider serves.
+supported_languages = [
+    "ca", "cs", "da", "de", "en", "es", "eu", "fi", "fr", "ga", "gl",
+    "hu", "it", "nl", "nn", "no", "pl", "pt", "rm", "sk", "sv",
+]
+
 # MERINO_JOBS__WIKIPEDIA_INDEXER__INDEX_VERSION
 # Index version that will be written.
 index_version = "v1"

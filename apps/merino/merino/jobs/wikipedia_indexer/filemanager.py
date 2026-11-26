@@ -26,7 +26,7 @@ from merino.utils.wikipedia import WIKIMEDIA_REQUEST_HEADERS
 
 logger = logging.getLogger(__name__)
 
-SUPPORTED_LANGUAGES = set(settings.suggest_supported_languages)
+SUPPORTED_LANGUAGES = set(settings.jobs.wikipedia_indexer.supported_languages)
 
 # Dated snapshot directories in the export listing, e.g. "20260816/".
 DATE_DIR_PATTERN = re.compile(r"^(\d{8})/$")

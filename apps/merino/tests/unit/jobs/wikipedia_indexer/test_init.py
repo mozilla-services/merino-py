@@ -256,6 +256,28 @@ def test_index_resolves_the_alias_for_the_requested_language(collaborators):
     )
 
 
+@pytest.mark.parametrize("mode", [RunMode.INDEX_ONLY, RunMode.BOTH], ids=["index-only", "both"])
+def test_index_rejects_a_language_without_index_support(collaborators, mode):
+    """Verify modes that build an index only accept the suggest provider's languages."""
+    with pytest.raises(ValueError, match="Language 'es' can't be indexed"):
+        _index(language="es", mode=mode)
+
+    collaborators["adapter"].assert_not_called()
+    collaborators["load_article_blocklist"].assert_not_called()
+    collaborators["indexer"].assert_not_called()
+
+
+def test_index_blocklist_only_accepts_a_language_without_index_support(collaborators):
+    """Verify `blocklist-only` accepts a language that has no index support."""
+    indexer = collaborators["indexer"].return_value
+
+    _index(language="es", mode=RunMode.BLOCKLIST_ONLY)
+
+    collaborators["file_manager"].assert_called_once_with("bucket/prefix", "a-project", "", "es")
+    indexer.collect_blocked_titles.assert_called_once_with(100)
+    indexer.index_from_export.assert_not_called()
+
+
 def test_copy_export_copies_the_latest_dump(collaborators):
     """Verify the command builds a FileManager pointed at the export URL and copies."""
     copy_export(
