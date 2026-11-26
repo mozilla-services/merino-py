@@ -1,0 +1,35 @@
+[project]
+name = "merino-hook-eye"
+version = "0.1.0"
+authors = [{ name = "Mozilla" }]
+description = "Additional monitoring for Merino, such as Elasticsearch cross-cluster replication health"
+requires-python = "~=3.14.0"
+readme = "README.md"
+dependencies = [
+    "merino-common",
+    "fastapi[standard]>=0.135.0,<1",
+    "dynaconf>=3.2.4,<4",
+    # Kept on the same major version as merino, which reads from the same clusters.
+    "elasticsearch[async]>=8.5.0,<9",
+    "opentelemetry-api>=1.42.1,<2",
+    "pydantic>=2.13.0,<3",
+]
+
+[tool.uv.sources]
+merino-common = { workspace = true }
+
+[tool.uv.build-backend]
+module-name = "merino_hook_eye"
+module-root = ""
+
+[build-system]
+requires = ["uv_build>=0.11.6,<0.12.0"]
+build-backend = "uv_build"
+
+[project.scripts]
+merino-hook-eye = "merino_hook_eye.main:main"
+
+[tool.pytest.ini_options]
+addopts = [ "--import-mode=importlib" ]
+pythonpath = [ "." ]
+asyncio_default_fixture_loop_scope = "function"

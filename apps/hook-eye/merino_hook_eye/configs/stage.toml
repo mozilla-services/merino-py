@@ -1,0 +1,13 @@
+# Configurations for stage. Configurations defined here will override the
+# counterparts in `default.toml`.
+#
+# Switch to this environment via: MERINO_HOOK_EYE_ENV=stage
+# The follower URL and API key are provided per deployment via env vars:
+# MERINO_HOOK_EYE_CCR_FOLLOWER__URL and MERINO_HOOK_EYE_CCR_FOLLOWER__API_KEY.
+
+[stage]
+dynaconf_merge = true
+
+[stage.logging]
+level = "DEBUG"
+format = "mozlog"

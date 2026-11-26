@@ -54,7 +54,8 @@ $ moon run merino:integration-test
 # Run all tests and enforce the coverage gates
 $ moon run :test merino:diff-coverage
 
-# Build Docker images: merino (app:build), fleece (app-fleece:build), load-tests (merino-locust:build)
+# Build Docker images: merino (app:build), fleece (app-fleece:build),
+# hook-eye (app-hook-eye:build), load-tests (merino-locust:build)
 $ moon run merino:docker-build
 ```
 

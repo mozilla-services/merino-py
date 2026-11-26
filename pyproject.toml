@@ -7,6 +7,7 @@ dependencies = [
   "merino",
   "merino-common",
   "merino-fleece",
+  "merino-hook-eye",
 ]
 
 [[tool.uv.index]]
@@ -18,11 +19,13 @@ explicit = true
 merino = { workspace = true }
 merino-common = { workspace = true }
 merino-fleece = { workspace = true }
+merino-hook-eye = { workspace = true }
 
 [tool.uv.workspace]
 members = [
   "apps/merino",
   "apps/fleece",
+  "apps/hook-eye",
   "packages/merino-common",
   "tools/load-tests",
 ]
@@ -135,6 +138,7 @@ testpaths = [
   "apps/merino/tests",
   "packages/merino-common/tests",
   "apps/fleece/tests",
+  "apps/hook-eye/tests",
 ]
 pythonpath = ["apps/merino"]
 asyncio_default_fixture_loop_scope = "function"

@@ -17,6 +17,9 @@ on:
       embroidery:
         description: Whether an Embroidery image was built and uploaded
         value: ${{ jobs.ci.outputs.embroidery }}
+      hook_eye:
+        description: Whether a Hook-Eye image was built and uploaded
+        value: ${{ jobs.ci.outputs.hook_eye }}
       load_tests:
         description: Whether a Locust image was built and uploaded
         value: ${{ jobs.ci.outputs.load_tests }}
@@ -37,6 +40,7 @@ jobs:
       merino: ${{ steps.images.outputs.merino }}
       fleece: ${{ steps.images.outputs.fleece }}
       embroidery: ${{ steps.images.outputs.embroidery }}
+      hook_eye: ${{ steps.images.outputs.hook_eye }}
       load_tests: ${{ steps.images.outputs.load_tests }}
       docs: ${{ steps.docs.outputs.built }}
     steps:
@@ -111,6 +115,7 @@ jobs:
         run: |
           for entry in 'merino app:build merino' 'fleece app-fleece:build merino-fleece' \
             'embroidery app-embroidery:build merino-embroidery' \
+            'hook_eye app-hook-eye:build merino-hook-eye' \
             'load_tests merino-locust:build locust-image'; do
             read -r project image artifact <<< "$entry"
             if docker image inspect "$image" > /dev/null 2>&1; then
@@ -143,6 +148,13 @@ jobs:
           compression-level: 0
           if-no-files-found: error
       - uses: actions/upload-artifact@v6
+        if: steps.images.outputs.hook_eye == 'true'
+        with:
+          name: merino-hook-eye
+          path: workspace/images/merino-hook-eye/image.tar.gz
+          compression-level: 0
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v6
         if: steps.images.outputs.load_tests == 'true'
         with:
           name: locust-image
@@ -166,7 +178,7 @@ jobs:
         run: |
           prefix="${GITHUB_RUN_NUMBER}__$(date +%s)__${REPOSITORY_NAME}__${GITHUB_WORKFLOW}__"
           mkdir -p workspace/unit-test-results workspace/integration-test-results
-          for project in merino merino-common fleece embroidery; do
+          for project in merino merino-common fleece hook-eye embroidery; do
             for suite in unit integration; do
               name="$suite"
               if [ "$project" != merino ]; then name="$project-$suite"; fi

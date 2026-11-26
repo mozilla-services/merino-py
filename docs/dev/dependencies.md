@@ -9,7 +9,7 @@ out [uv][1].
 To install `uv`, run:
 
 ```sh
-$ pipx install uv
+pipx install uv
 ```
 
 Or [install][2] via your preferred method.
@@ -20,7 +20,7 @@ and their versions.
 First, lets make sure you have a virtual environment set up with the right Python version. This service uses Python 3.13.
 
 ```sh
-$ uv venv
+uv venv
 ```
 
 See [more][4] about setting up virtual envs and Python version with uv.
@@ -28,19 +28,19 @@ See [more][4] about setting up virtual envs and Python version with uv.
 Once uv is installed, and a virtual environment is created with the correct Python version, install all the dependencies:
 
 ```sh
-$ uv sync --all-groups --all-packages
+uv sync --all-groups --all-packages
 ```
 
 Add packages to project via uv
 
 ```sh
-$ uv add <package_name>
+uv add <package_name>
 ```
 
 After that you should be to run Merino as follows:
 
 ```sh
-$ uv run fastapi run apps/merino/merino/main.py --reload
+uv run fastapi run apps/merino/merino/main.py --reload
 ```
 
 ## Moving from the Poetry & Pyenv Set up
@@ -110,7 +110,7 @@ operations. Make sure you set a environment variable `STORAGE_EMULATOR_HOST=http
 so that Merino's GCS clients can connect to it. For example,
 
 ```sh
-$ STORAGE_EMULATOR_HOST=http://localhost:4443 make run
+STORAGE_EMULATOR_HOST=http://localhost:4443 make run
 ```
 
 Optionally, you can create a GCS bucket and preload data into it. The preloaded
@@ -166,15 +166,15 @@ To get the default setup working again and keep your data, move `es01` back onto
 basic license:
 
 ```sh
-$ curl -X POST "http://localhost:9200/_license/start_basic?acknowledge=true"
+curl -X POST "http://localhost:9200/_license/start_basic?acknowledge=true"
 ```
 
 A cluster can't start a second trial, so to use CCR again, wipe the volumes and start
 again:
 
 ```sh
-$ make docker-compose-down-v   # deletes all local Elasticsearch data
-$ make docker-compose-up-ccr
+make docker-compose-down-v   # deletes all local Elasticsearch data
+make docker-compose-up-ccr
 ```
 
 #### Cross-cluster replication (CCR)
@@ -205,21 +205,23 @@ indices seeded by `es-setup` are not replicated. Run the indexer against `es01`
 (`http://localhost:9200`) to create a followed index, then inspect the follower:
 
 ```sh
-$ curl "http://localhost:9201/_ccr/stats?pretty"
-$ curl "http://localhost:9201/_cat/indices?v"
+curl "http://localhost:9201/_ccr/stats?pretty"
+curl "http://localhost:9201/_cat/indices?v"
 ```
 
 `make docker-compose-down` and `make docker-compose-down-v` also stop the `ccr`
 profile services. See
 [Cross-cluster replication](../operations/jobs/dynamic-wiki-indexer.md#cross-cluster-replication)
 for how the indexer handles followers.
+To watch replication health metrics against this setup, run the
+[Hook-eye](./hook-eye.md) service.
 
 ### Dev Helpers
 
 The docker-compose setup also includes some services that can help during
 development.
 
-- Redis Commander, http://localhost:8081 - Explore the Redis database started
+- Redis Commander, <http://localhost:8081> - Explore the Redis database started
   above.
 
 [1]: https://docs.astral.sh/uv/

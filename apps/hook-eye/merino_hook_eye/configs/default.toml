@@ -1,0 +1,67 @@
+# Default configurations that may be overridden by the counterparts defined in:
+# `development.toml`, `stage.toml`, `production.toml`, `testing.toml`, or environment variables.
+
+[default]
+
+[default.ccr_follower]
+# Settings for the CCR follower check, which scrapes `GET _ccr/stats` on a follower cluster.
+
+# MERINO_HOOK_EYE_CCR_FOLLOWER__ENABLED
+# Whether to run the check. Disable it where there's no follower, e.g. in the leader region.
+enabled = true
+
+# MERINO_HOOK_EYE_CCR_FOLLOWER__URL
+# URL of the follower cluster. `_ccr/stats` is follower-local, so this is never the leader.
+# Must be `https://` when `api_key` is set, so the key isn't sent in plaintext; `http://` is
+# only accepted without a key, e.g. for local clusters.
+url = "http://localhost:9201"
+
+# MERINO_HOOK_EYE_CCR_FOLLOWER__API_KEY
+# Base64 API key for the follower cluster. It only needs the `monitor` cluster privilege.
+# Provided via env var in stage/production. Empty sends no credentials (local clusters).
+api_key = ""
+
+# MERINO_HOOK_EYE_CCR_FOLLOWER__REQUEST_TIMEOUT_SEC
+# Timeout in seconds for each `_ccr/stats` request. Keep it below `interval_sec` so one slow
+# request can't overlap the next tick.
+request_timeout_sec = 10.0
+
+# MERINO_HOOK_EYE_CCR_FOLLOWER__INTERVAL_SEC
+# Seconds between scrapes of `_ccr/stats`.
+interval_sec = 60
+
+# MERINO_HOOK_EYE_CCR_FOLLOWER__INDEX_PATTERNS
+# fnmatch patterns selecting the follower indices that per-shard metrics are emitted for.
+# Other followed indices are skipped, which bounds label cardinality. These mirror the
+# auto-follow patterns of the wikipedia and sports indices.
+index_patterns = ["*wiki-*", "*sports-*"]
+
+[default.sentry]
+# MERINO_HOOK_EYE_SENTRY__MODE
+# One of "disabled", "release", "debug". When "disabled", no Sentry client is initialized.
+mode = "disabled"
+
+# MERINO_HOOK_EYE_SENTRY__DSN
+# Sentry DSN. Provided via env var in stage/production. Ignored when mode = "disabled".
+dsn = ""
+
+# MERINO_HOOK_EYE_SENTRY__ENV
+# Sentry environment tag. One of "prod", "stage", "dev".
+env = "dev"
+
+# MERINO_HOOK_EYE_SENTRY__TRACES_SAMPLE_RATE
+# Fraction of transactions to capture for performance monitoring, in [0.0, 1.0].
+traces_sample_rate = 0.0
+
+[default.logging]
+# MERINO_HOOK_EYE_LOGGING__FORMAT
+# Either "mozlog" or "pretty".
+format = "mozlog"
+
+# MERINO_HOOK_EYE_LOGGING__LEVEL
+# Any of "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL".
+level = "INFO"
+
+# MERINO_HOOK_EYE_LOGGING__CAN_PROPAGATE
+# Whether the merino-hook-eye loggers should propagate to the root logger.
+can_propagate = false

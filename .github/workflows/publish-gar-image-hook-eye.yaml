@@ -1,0 +1,55 @@
+name: publish-gar-image-hook-eye
+
+on:
+  workflow_call:
+    inputs:
+      image_tag:
+        required: true
+        type: string
+      project_id:
+        required: true
+        type: string
+      workload_identity_pool_project_number:
+        required: true
+        type: string
+    secrets:
+      DOCKER_IMAGE_PATH:
+        required: true
+
+jobs:
+  publish:
+    environment: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Download image artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: merino-hook-eye
+          path: .
+      - name: Load Docker image
+        run: gunzip -c image.tar.gz | docker load
+      # Tag the image with `image_tag` (e.g. "latest") and `sha-<9-character commit SHA>`
+      - name: Tag image for GAR
+        id: tags
+        env:
+          REPO: us-docker.pkg.dev/${{ secrets.DOCKER_IMAGE_PATH }}/merino-hook-eye
+          IMAGE_TAG: ${{ inputs.image_tag }}
+        run: |
+          tags=("$REPO:$IMAGE_TAG" "$REPO:sha-${GITHUB_SHA::9}")
+          for tag in "${tags[@]}"; do
+            docker tag app-hook-eye:build "$tag"
+          done
+          {
+            echo "list<<EOF"
+            printf '%s\n' "${tags[@]}"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+      - name: Push image to GAR
+        uses: mozilla/deploy-actions/docker-push@d57875ce343a114e5287b8033a8590e4d473dffe # v6.10.2
+        with:
+          image_tags: ${{ steps.tags.outputs.list }}
+          workload_identity_pool_project_number: ${{ inputs.workload_identity_pool_project_number }}
+          project_id: ${{ inputs.project_id }}

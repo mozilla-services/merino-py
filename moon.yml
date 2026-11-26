@@ -28,6 +28,7 @@ tasks:
       - /uv.lock
       - /apps/merino/pyproject.toml
       - /apps/fleece/pyproject.toml
+      - /apps/hook-eye/pyproject.toml
       - /packages/merino-common/pyproject.toml
       - /tools/load-tests/pyproject.toml
     toolchains: system

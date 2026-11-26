@@ -12,12 +12,12 @@ package tools used by each language.
 
 ## Which tool should I use?
 
-| Tool | Responsibility | Typical use |
-| --- | --- | --- |
-| Moon | Repository-wide project graph and repeatable tasks | Run lint or tests for one or many projects |
-| `uv` | Python environments, dependencies, workspace packages, and `uv.lock` | Add a Python dependency, sync the environment, or run an ad hoc Python command |
-| Cargo | Rust dependencies, compilation, and tests for future Rust projects | Add a crate or run a crate-specific Cargo command |
-| Make | Local development helpers | Run Merino or Fleece locally, start local services, or run a job |
+| Tool  | Responsibility                                                       | Typical use                                                                    |
+| ----- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| Moon  | Repository-wide project graph and repeatable tasks                   | Run lint or tests for one or many projects                                     |
+| `uv`  | Python environments, dependencies, workspace packages, and `uv.lock` | Add a Python dependency, sync the environment, or run an ad hoc Python command |
+| Cargo | Rust dependencies, compilation, and tests for future Rust projects   | Add a crate or run a crate-specific Cargo command                              |
+| Make  | Local development helpers                                            | Run Merino or Fleece locally, start local services, or run a job               |
 
 Use Moon when the operation is a named repository task or spans projects. Use `uv` or Cargo when
 managing dependencies or doing language-specific investigation. Moon tasks call those native tools
@@ -68,17 +68,19 @@ Python 3.14 is selected by the committed `.python-version` and constrained in th
 
 ## Projects and dependencies
 
-| Project | Directory | Depends on |
-| --- | --- | --- |
-| `workspace` | Repository root | None |
-| `merino` | `apps/merino` | `merino-common` |
-| `fleece` | `apps/fleece` | `merino-common` |
-| `merino-common` | `packages/merino-common` | None |
-| `load-tests` | `tools/load-tests` | `merino`, `merino-common` |
-| `docs` | `docs` | None |
+| Project         | Directory                | Depends on                |
+| --------------- | ------------------------ | ------------------------- |
+| `workspace`     | Repository root          | None                      |
+| `merino`        | `apps/merino`            | `merino-common`           |
+| `fleece`        | `apps/fleece`            | `merino-common`           |
+| `hook-eye`      | `apps/hook-eye`          | `merino-common`           |
+| `merino-common` | `packages/merino-common` | None                      |
+| `load-tests`    | `tools/load-tests`       | `merino`, `merino-common` |
+| `docs`          | `docs`                   | None                      |
 
 The load-test dependency is intentional: its Locust code imports Merino and common internals.
 Fleece and Merino do not depend on each other merely because they communicate at runtime.
+Hook-eye is an independent monitoring service used for observabiltiy tasks that can't be fulfilled by app metrics or otel receivers.
 
 Inspect a project or the complete graph with:
 
@@ -146,24 +148,25 @@ caching and affected-project decisions.
 
 ## Project-scoped tests and coverage
 
-`moon run :test` runs every test suite for Merino, Fleece, and Merino Common. Each project's `test`
+`moon run :test` runs every test suite for Merino, Fleece, Hook-eye, and Merino Common. Each project's `test`
 task runs no command itself; it depends on the project's `unit-test` and `integration-test`. Use
 `moon run :unit-test` for unit suites only. `merino:test` also depends on `merino:coverage`, so it
 ends with the combined Merino coverage report and enforces the 95% gate.
 
 Both suite tasks are defined in `.moon/tasks/python.yml`; projects add their test path and
-`--cov=<package>`. Fleece and Merino Common exclude the inherited `integration-test` because they
-have no integration suite; Moon drops the excluded task from their `test` dependencies. To add one,
-remove the exclusion and add the task's `args` to the project's `moon.yml`.
+`--cov=<package>`. Fleece, Hook-eye, and Merino Common exclude the inherited
+`integration-test` because they have no integration suite; Moon drops the excluded task from their
+`test` dependencies. To add one, remove the exclusion and add the task's `args` to the project's
+`moon.yml`.
 
 Each unit suite runs in a separate process, measures its own Python package and writes these files under
 `workspace/test-results/moon/<project>/`:
 
-| File | Contents |
-| --- | --- |
-| `.coverage.unit` | Raw branch coverage data |
-| `unit__coverage.json` | Coverage report for the project's package |
-| `unit__results.xml` | JUnit results, with the project in the suite name |
+| File                  | Contents                                          |
+| --------------------- | ------------------------------------------------- |
+| `.coverage.unit`      | Raw branch coverage data                          |
+| `unit__coverage.json` | Coverage report for the project's package         |
+| `unit__results.xml`   | JUnit results, with the project in the suite name |
 
 These paths are separate from the existing Make/CI reports. Moon declares all three files as
 outputs, so a cache hit restores the reports as well as the successful task result. Generated
@@ -212,8 +215,8 @@ Use affected selection for quick feedback, for example:
 moon run :unit-test --affected --base origin/main
 ```
 
-A Fleece source change selects Fleece; a common-library change selects all three unit suites.
-Root Python configuration and lockfile changes also select all three. Documentation changes do not
+A Fleece source change selects Fleece; a common-library change selects every Python unit suite.
+Root Python configuration and lockfile changes also select all of them. Documentation changes do not
 select Python tests.
 
 Coverage gates must run **without pytest filters** so they check complete suites. Affected
@@ -248,6 +251,7 @@ images from the repository root:
 ```bash
 moon run merino:docker-build      # app:build
 moon run fleece:docker-build      # app-fleece:build
+moon run hook-eye:docker-build    # app-hook-eye:build
 moon run load-tests:docker-build  # merino-locust:build
 moon run :docker-build
 ```
@@ -258,16 +262,17 @@ the Docker daemon. Docker still reuses its own cached layers.
 
 PR and main CI use Moon's Docker task inputs to select images:
 
-| Changed files | Images built |
-| --- | --- |
-| Fleece code | Fleece |
-| Merino code | Merino and Locust |
-| Embroidery code | Embroidery |
-| Load-test code | Locust |
-| Merino common package | Merino, Fleece, and Locust |
-| Python workspace manifests, `uv.lock`, or CI image build configuration | Merino, Fleece, and Locust |
-| Unrelated `.github/` files | None |
-| Documentation only | None |
+| Changed files                                                          | Images built                         |
+| ---------------------------------------------------------------------- | ------------------------------------ |
+| Fleece code                                                            | Fleece                               |
+| Hook-eye code                                                          | Hook-eye                             |
+| Merino code                                                            | Merino and Locust                    |
+| Embroidery code                                                        | Embroidery                           |
+| Load-test code                                                         | Locust                               |
+| Merino common package                                                  | Merino, Fleece, Hook-eye, and Locust |
+| Python workspace manifests, `uv.lock`, or CI image build configuration | Merino, Fleece, Hook-eye, and Locust |
+| Unrelated `.github/` files                                             | None                                 |
+| Documentation only                                                     | None                                 |
 
 Service Dockerfiles copy their own project, shared code, and required runtime files. They also
 copy every Python workspace manifest so `uv` can resolve the workspace without including unrelated
