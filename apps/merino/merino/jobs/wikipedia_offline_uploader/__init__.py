@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+from pathlib import Path
 from typing import Any
 
 import typer
@@ -98,16 +99,19 @@ days_option = typer.Option(
     help="The number of days to retrieve suggestions for",
 )
 
-relevance_type_option = typer.Option(
-    "frequency",
-    "--relevance-type",
-    help="Retrieve suggestion based on recency or frequency",
-)
-
 access_type_option = typer.Option(
     "all-access",
     "--access-type",
     help="Access type should be one of 'all-access', 'desktop', 'mobile-app', and 'mobile-web'",
+)
+
+blocklist_dir_option = typer.Option(
+    None,
+    "--blocklist-dir",
+    exists=True,
+    file_okay=False,
+    dir_okay=True,
+    help="Directory of `{lang}-latest.csv` blocklists to exclude titles from the suggestions",
 )
 
 wiki_offline_uploader_cmd = typer.Typer(
@@ -132,9 +136,9 @@ def upload(
     score: float = score_option,
     server: str = server_option,
     languages: str = language_option if language_option else "en",
-    relevance_type: str = relevance_type_option if relevance_type_option else "frequency",
     access_type: str = access_type_option if access_type_option else "all-access",
     days: int = days_option,
+    blocklist_dir: Path | None = blocklist_dir_option,
 ):
     """Upload wikipedia suggestions to remote settings."""
     asyncio.run(
@@ -147,9 +151,9 @@ def upload(
             score=score,
             server=server,
             languages=languages,
-            relevance_type=relevance_type,
             access_type=access_type,
             days=days,
+            blocklist_dir=blocklist_dir,
         )
     )
 
@@ -163,9 +167,9 @@ async def _upload(
     score: float,
     server: str,
     languages: str,
-    relevance_type: str,
     access_type: str,
     days: int,
+    blocklist_dir: Path | None = None,
 ):
     rs_client = RemoteSettingsClient(
         auth=auth,
@@ -175,7 +179,7 @@ async def _upload(
         dry_run=dry_run,
     )
 
-    result = await get_wiki_suggestions(languages, relevance_type, access_type, days, score)
+    result = await get_wiki_suggestions(languages, access_type, days, score, blocklist_dir)
 
     for language, suggestions in result.items():
         if not keep_existing_records:

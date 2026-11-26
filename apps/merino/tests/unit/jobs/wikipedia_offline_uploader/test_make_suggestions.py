@@ -6,7 +6,10 @@ import freezegun
 import pytest
 
 from merino.jobs.wikipedia_offline_uploader import get_wiki_suggestions
-from merino.jobs.wikipedia_offline_uploader.top_n_by_frequency import INTERNAL_PAGES
+from merino.jobs.wikipedia_offline_uploader.top_n_by_frequency import (
+    INTERNAL_PAGES,
+    load_language_blocklist,
+)
 from merino.jobs.wikipedia_offline_uploader.make_suggestions import (
     make_keywords,
     scan,
@@ -134,7 +137,7 @@ async def test_get_wiki_suggestions(mocker):
         "merino.jobs.wikipedia_offline_uploader.downloader.requests.get",
         return_value=mock_response,
     )
-    await get_wiki_suggestions("en", "frequency", "all-access", 2, 0.25)
+    await get_wiki_suggestions("en", "all-access", 2, 0.25)
 
     assert mock_fetch.call_count == 2
 
@@ -167,9 +170,24 @@ async def test_get_wiki_suggestions_multi_lang(mocker):
         "merino.jobs.wikipedia_offline_uploader.downloader.requests.get",
         return_value=mock_response,
     )
-    await get_wiki_suggestions("en,fr", "recency", "all-access", 3, 0.25)
+    await get_wiki_suggestions("en,fr", "all-access", 3, 0.25)
 
     assert mock_fetch.call_count == 6
+
+
+@pytest.mark.asyncio
+async def test_get_wiki_suggestions_passes_the_blocklist_dir_to_frequency(mocker, tmp_path):
+    """Test the blocklist directory reaches the frequency ranking of each language."""
+    mocker.patch("merino.jobs.wikipedia_offline_uploader.downloader.fetch_url")
+    mock_top_n = mocker.patch(
+        "merino.jobs.wikipedia_offline_uploader.downloader.get_top_n_frequency",
+        return_value=[],
+    )
+
+    await get_wiki_suggestions("en,fr", "all-access", 1, 0.25, tmp_path)
+
+    assert [c.args[0] for c in mock_top_n.call_args_list] == ["en", "fr"]
+    assert all(c.args[3] == tmp_path for c in mock_top_n.call_args_list)
 
 
 @pytest.mark.parametrize(
@@ -185,3 +203,23 @@ async def test_get_wiki_suggestions_multi_lang(mocker):
 def test_internal_pages(title, expected):
     """Test INTERNAL_PAGES matches namespaced pages but not regular articles."""
     assert bool(INTERNAL_PAGES.search(title)) is expected
+
+
+@pytest.mark.parametrize(
+    ["rows", "expected"],
+    [
+        (None, set()),
+        ([], set()),
+        (
+            ["aGVyY3VsZV9wb2lyb3Q=", "cGFyaXMsX2ZyYW5jZQ=="],
+            {"hercule_poirot", "paris,_france"},
+        ),
+    ],
+    ids=["no_file", "header_only", "decodes_titles"],
+)
+def test_load_language_blocklist(tmp_path, rows, expected):
+    """Test the titles of `{language}-latest.csv` are base64 decoded."""
+    if rows is not None:
+        (tmp_path / "en-latest.csv").write_text("\n".join(["title", *rows]))
+
+    assert load_language_blocklist(tmp_path, "en") == expected

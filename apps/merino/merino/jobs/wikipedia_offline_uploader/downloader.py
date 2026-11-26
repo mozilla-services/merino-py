@@ -5,12 +5,12 @@ import json
 import os
 import tempfile
 from datetime import datetime, timedelta, UTC
+from pathlib import Path
 
 import requests
 
 from merino.jobs.wikipedia_offline_uploader.make_suggestions import make_suggestions
 from merino.jobs.wikipedia_offline_uploader.top_n_by_frequency import get_top_n_frequency
-from merino.jobs.wikipedia_offline_uploader.top_n_by_recency import get_top_n_recency
 from merino.utils.wikipedia import WIKIMEDIA_REQUEST_HEADERS
 
 TOP_N = 7000
@@ -25,7 +25,11 @@ async def fetch_url(url, output_path) -> None:
 
 
 async def get_wiki_suggestions(
-    language: str, relevance_type: str, access_type: str, days: int, score: float
+    language: str,
+    access_type: str,
+    days: int,
+    score: float,
+    blocklist_dir: Path | None = None,
 ):
     """Get Wikipedia page view data and process them into suggestions."""
     results = {}
@@ -53,11 +57,7 @@ async def get_wiki_suggestions(
             for i, e in enumerate(eg.exceptions):
                 print(f"{i}. {e}")
         for language in languages:
-            if relevance_type == "frequency":
-                data = get_top_n_frequency(language, TOP_N + 1000, tmpdir)
-
-            else:
-                data = get_top_n_recency(language, TOP_N + 1000, tmpdir)
+            data = get_top_n_frequency(language, TOP_N + 1000, tmpdir, blocklist_dir)
             suggestions = make_suggestions(language, TOP_N, data, score)
             results[language] = suggestions
     return results

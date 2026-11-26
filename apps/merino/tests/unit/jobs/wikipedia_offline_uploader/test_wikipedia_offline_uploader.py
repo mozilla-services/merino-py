@@ -53,7 +53,6 @@ def do_upload_test(
         "dry_run": False,
         "server": "server",
         "languages": "en,fr",
-        "relevance_type": "frequency",
     }
     upload(
         **common_kwargs,
@@ -144,7 +143,6 @@ def test_delete_records_removes_matching_language(mocker):
         dry_run=False,
         server="server",
         languages="en",
-        relevance_type="frequency",
         keep_existing_records=False,
         score=SCORE,
     )
@@ -153,3 +151,32 @@ def test_delete_records_removes_matching_language(mocker):
         [call("data-wikipedia-en"), call("data-wikipedia-en-0-999")]
     )
     assert mock_rs_client.delete_record.call_count == 2
+
+
+def test_upload_passes_the_blocklist_dir(mocker, tmp_path):
+    """Test the blocklist directory option reaches the suggestions download."""
+    mock_rs_client = mocker.patch(
+        "merino.jobs.wikipedia_offline_uploader.RemoteSettingsClient"
+    ).return_value
+    mock_rs_client.get_records.return_value = []
+    mock_get_wiki_suggestions = mocker.patch(
+        "merino.jobs.wikipedia_offline_uploader.get_wiki_suggestions",
+        new_callable=mocker.AsyncMock,
+        return_value={},
+    )
+
+    upload(
+        auth="auth",
+        bucket="bucket",
+        collection="collection",
+        keep_existing_records=True,
+        dry_run=False,
+        score=SCORE,
+        server="server",
+        languages="en",
+        access_type="all-access",
+        days=90,
+        blocklist_dir=tmp_path,
+    )
+
+    mock_get_wiki_suggestions.assert_called_once_with("en", "all-access", 90, SCORE, tmp_path)
