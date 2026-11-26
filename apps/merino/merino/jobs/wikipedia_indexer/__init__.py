@@ -24,6 +24,9 @@ job_settings = config.jobs.wikipedia_indexer
 # The article blocklist job writes the blocklist the indexer reads, so both share its location.
 article_blocklist_settings = config.jobs.wikipedia_article_blocklist
 
+# Languages the `index` command can build an index for, in the `index-only` and `both` modes.
+INDEXABLE_LANGUAGES: frozenset[str] = frozenset(config.suggest_supported_languages)
+
 
 # Shared options
 gcs_path_option = typer.Option(
@@ -106,6 +109,15 @@ def index(
     ),
 ):
     """Index file from GCS to Elasticsearch and/or upload the blocked titles"""
+    # Building an index needs per-language index settings and an alias, which only the
+    # languages the suggest provider serves have. `FileManager` checks the job's wider list.
+    if mode is not RunMode.BLOCKLIST_ONLY and language not in INDEXABLE_LANGUAGES:
+        raise ValueError(
+            f"Language '{language}' can't be indexed. Indexable languages: "
+            f"{', '.join(sorted(INDEXABLE_LANGUAGES))}. "
+            f"Use `--mode {RunMode.BLOCKLIST_ONLY}` for other languages."
+        )
+
     if not all((article_blocklist_bucket, article_blocklist_prefix, article_blocklist_project)):
         raise ValueError("Article blocklist GCS values must be set")
 
