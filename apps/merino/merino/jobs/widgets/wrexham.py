@@ -24,8 +24,22 @@ from merino_common.utils.http_client import create_http_client
 
 logger = logging.getLogger(__name__)
 
+match_changes_logger = logging.getLogger(f"{__name__}.match_changes")
+
 # Competitions to ingest fixtures and live matches for. Standings are Championship only.
 COMPETITIONS = [CHAMPIONSHIP, FA_CUP]
+
+# Live match fields that are logged when they change.
+TRACKED_MATCH_FIELDS = (
+    "status",
+    "period",
+    "home_score",
+    "away_score",
+    "home_penalty_score",
+    "away_penalty_score",
+)
+
+MatchState = dict[str, object]
 
 # Short name for each 2026-27 EFL Championship team, by global team ID. SportsDataIO only
 # provides short names in the standings, so these are used until the job has fetched them,
@@ -100,6 +114,7 @@ class WrexhamIngester:
     _fixtures_due_at: float
     _standings_due_at: float
     _short_names: dict[int, str]
+    _match_states: dict[int, MatchState]
 
     def __init__(
         self,
@@ -119,6 +134,8 @@ class WrexhamIngester:
         self._standings_due_at = float("-inf")
         # Updated from the standings on each standings refresh.
         self._short_names = dict(TEAM_SHORT_NAMES)
+        # The last logged state of each live match, by match ID.
+        self._match_states = {}
 
     async def refresh_fixtures(self) -> None:
         """Write the season's Wrexham fixtures for each competition.
@@ -167,6 +184,7 @@ class WrexhamIngester:
             matches.extend(await self.backend.fetch_live_matches(competition))
         matches = use_short_names(matches, self._short_names)
         await self.store.write_live_matches(sorted(matches, key=lambda match: match.kickoff))
+        self._log_match_changes(matches)
         logger.info(
             "Refreshed Wrexham live matches",
             extra={
@@ -175,6 +193,40 @@ class WrexhamIngester:
                 "statuses": sorted({match.status for match in matches}),
             },
         )
+
+    def _log_match_changes(self, matches: list[Match]) -> None:
+        """Log each live match that's new or whose tracked fields changed since the last live
+        refresh, with each changed field's old and new values and the match's current state.
+        """
+        states: dict[int, MatchState] = {}
+        for match in matches:
+            state = match.model_dump(mode="json", include=set(TRACKED_MATCH_FIELDS))
+            states[match.id] = state
+            previous = self._match_states.get(match.id)
+            if previous == state:
+                continue
+
+            changes = {
+                field: {"from": previous.get(field) if previous else None, "to": state[field]}
+                for field in TRACKED_MATCH_FIELDS
+                if previous is None or previous[field] != state[field]
+            }
+            match_changes_logger.info(
+                "Wrexham match changed",
+                extra={
+                    "match_id": match.id,
+                    "competition": match.competition.name,
+                    "home_team": match.home_team.name,
+                    "away_team": match.away_team.name,
+                    "kickoff": match.kickoff.isoformat(),
+                    "updated_at": match.updated_at.isoformat(),
+                    "first_seen": previous is None,
+                    "changes": changes,
+                    "clock": match.clock,
+                    **state,
+                },
+            )
+        self._match_states = states
 
     async def refresh_standings(self) -> None:
         """Write the Championship table, and use its short team names for later matches.

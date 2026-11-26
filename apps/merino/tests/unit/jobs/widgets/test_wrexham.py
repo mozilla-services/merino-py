@@ -22,6 +22,7 @@ from merino.providers.widgets.wrexham.protocol import (
     FA_CUP,
     Competition,
     Match,
+    MatchPeriod,
     MatchStatus,
     Standing,
     Team,
@@ -33,6 +34,8 @@ from tests.types import FilterCaplogFixture
 SEASON = 2027
 INTERVAL = timedelta(minutes=10)
 LOGO = HttpUrl("https://test-cdn.mozilla.net/logo.png")
+
+MATCH_CHANGES_LOGGER = "merino.jobs.widgets.wrexham.match_changes"
 
 
 def match(match_id: int, competition: Competition, hour: int) -> Match:
@@ -398,3 +401,162 @@ async def test_failed_standings_refresh_keeps_the_short_names(
 
     [live] = store.write_live_matches.call_args.args
     assert live[0].home_team.name == TEAM_SHORT_NAMES[WREXHAM_ID]
+
+
+def live_today(*matches: Match) -> Any:
+    """Return a `fetch_live_matches` side effect serving `matches` for the Championship."""
+    return lambda competition: list(matches) if competition == CHAMPIONSHIP else []
+
+
+def kicked_off(scheduled: Match) -> Match:
+    """Return `scheduled` a minute after kickoff."""
+    return scheduled.model_copy(
+        update={
+            "status": MatchStatus.InProgress,
+            "period": MatchPeriod.Regular,
+            "clock": "1",
+            "home_score": 0,
+            "away_score": 0,
+        }
+    )
+
+
+@pytest.mark.asyncio
+async def test_first_live_refresh_logs_each_match_once(
+    ingester: WrexhamIngester,
+    backend: Any,
+    caplog: LogCaptureFixture,
+    filter_caplog: FilterCaplogFixture,
+) -> None:
+    """Log each live match in full the first time it's seen."""
+    caplog.set_level(logging.INFO)
+    backend.fetch_live_matches.side_effect = live_today(match(2, CHAMPIONSHIP, 20))
+
+    await ingester.refresh_live_matches()
+
+    [record] = filter_caplog(caplog.records, MATCH_CHANGES_LOGGER)
+    assert record.message == "Wrexham match changed"
+    assert record.__dict__["match_id"] == 2
+    assert record.__dict__["first_seen"] is True
+    assert record.__dict__["changes"] == {
+        "status": {"from": None, "to": "Scheduled"},
+        "period": {"from": None, "to": None},
+        "home_score": {"from": None, "to": None},
+        "away_score": {"from": None, "to": None},
+        "home_penalty_score": {"from": None, "to": None},
+        "away_penalty_score": {"from": None, "to": None},
+    }
+    assert record.__dict__["status"] == "Scheduled"
+    assert record.__dict__["home_score"] is None
+
+
+@pytest.mark.asyncio
+async def test_unchanged_matches_are_not_logged_again(
+    ingester: WrexhamIngester,
+    backend: Any,
+    caplog: LogCaptureFixture,
+    filter_caplog: FilterCaplogFixture,
+) -> None:
+    """Don't log a match again when a live refresh doesn't change it."""
+    caplog.set_level(logging.INFO)
+    backend.fetch_live_matches.side_effect = live_today(match(2, CHAMPIONSHIP, 20))
+
+    await ingester.refresh_live_matches()
+    await ingester.refresh_live_matches()
+
+    assert len(filter_caplog(caplog.records, MATCH_CHANGES_LOGGER)) == 1
+
+
+@pytest.mark.asyncio
+async def test_match_changes_are_logged_with_old_and_new_values(
+    ingester: WrexhamIngester,
+    backend: Any,
+    caplog: LogCaptureFixture,
+    filter_caplog: FilterCaplogFixture,
+) -> None:
+    """Log a match when it changes, with each changed field's old and new values and the
+    match's current state.
+    """
+    caplog.set_level(logging.INFO)
+    scheduled = match(2, CHAMPIONSHIP, 20)
+    backend.fetch_live_matches.side_effect = live_today(scheduled)
+    await ingester.refresh_live_matches()
+
+    backend.fetch_live_matches.side_effect = live_today(kicked_off(scheduled))
+    await ingester.refresh_live_matches()
+
+    first, change = filter_caplog(caplog.records, MATCH_CHANGES_LOGGER)
+    assert first.__dict__["first_seen"] is True
+    assert change.__dict__["first_seen"] is False
+    assert change.__dict__["changes"] == {
+        "status": {"from": "Scheduled", "to": "InProgress"},
+        "period": {"from": None, "to": "Regular"},
+        "home_score": {"from": None, "to": 0},
+        "away_score": {"from": None, "to": 0},
+    }
+    assert (change.__dict__["status"], change.__dict__["period"], change.__dict__["clock"]) == (
+        "InProgress",
+        "Regular",
+        "1",
+    )
+
+
+@pytest.mark.asyncio
+async def test_clock_changes_alone_are_not_logged(
+    ingester: WrexhamIngester,
+    backend: Any,
+    caplog: LogCaptureFixture,
+    filter_caplog: FilterCaplogFixture,
+) -> None:
+    """Don't log a match just because its clock moved on."""
+    caplog.set_level(logging.INFO)
+    live = kicked_off(match(2, CHAMPIONSHIP, 20))
+    backend.fetch_live_matches.side_effect = live_today(live)
+    await ingester.refresh_live_matches()
+
+    backend.fetch_live_matches.side_effect = live_today(live.model_copy(update={"clock": "2"}))
+    await ingester.refresh_live_matches()
+
+    [record] = filter_caplog(caplog.records, MATCH_CHANGES_LOGGER)
+    assert record.__dict__["clock"] == "1"
+
+
+@pytest.mark.asyncio
+async def test_failed_live_write_logs_no_changes(
+    ingester: WrexhamIngester,
+    backend: Any,
+    store: Any,
+    caplog: LogCaptureFixture,
+    filter_caplog: FilterCaplogFixture,
+) -> None:
+    """Only log changes that were written, so the logs match what was served."""
+    caplog.set_level(logging.INFO)
+    backend.fetch_live_matches.side_effect = live_today(match(2, CHAMPIONSHIP, 20))
+    store.write_live_matches.side_effect = RuntimeError("Redis is down")
+
+    with pytest.raises(RuntimeError):
+        await ingester.refresh_live_matches()
+
+    assert filter_caplog(caplog.records, MATCH_CHANGES_LOGGER) == []
+
+
+@pytest.mark.asyncio
+async def test_matches_no_longer_live_are_forgotten(
+    ingester: WrexhamIngester,
+    backend: Any,
+    caplog: LogCaptureFixture,
+    filter_caplog: FilterCaplogFixture,
+) -> None:
+    """Forget matches that leave the live data."""
+    caplog.set_level(logging.INFO)
+    scheduled = match(2, CHAMPIONSHIP, 20)
+    backend.fetch_live_matches.side_effect = live_today(scheduled)
+    await ingester.refresh_live_matches()
+    backend.fetch_live_matches.side_effect = live_today()
+    await ingester.refresh_live_matches()
+
+    backend.fetch_live_matches.side_effect = live_today(scheduled)
+    await ingester.refresh_live_matches()
+
+    records = filter_caplog(caplog.records, MATCH_CHANGES_LOGGER)
+    assert [record.__dict__["first_seen"] for record in records] == [True, True]
