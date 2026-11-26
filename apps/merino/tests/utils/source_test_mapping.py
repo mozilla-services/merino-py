@@ -701,10 +701,6 @@ SOURCE_TEST_MAPPING_DETAILED: dict[str, dict[str, list[str]]] = {
         "direct": [],
         "indirect": [],
     },
-    "apps/merino/merino/jobs/wikipedia_offline_uploader/top_n_by_recency.py": {
-        "direct": [],
-        "indirect": [],
-    },
     "apps/merino/merino/main.py": {
         "direct": [],
         "indirect": [],

@@ -2,7 +2,7 @@
 
 Usage:
 
-    # Generate 7000 Wikipedia suggestions based on frequency or recency.
+    # Generate 7000 Wikipedia suggestions based on frequency.
 
 Note:
     * The keywords are generated based on the title field of the input. All `_`s
@@ -14,12 +14,12 @@ Note:
         * `the`, `an`, and `a`
         * leading numerics such as `2022`
     * Each keyword is only associated with one suggestion. Keywords are assigned
-      to suggestions in an FIFO manner based on the order (frequency or recency)
-      of the associated Wikipedia page
+      to suggestions in an FIFO manner based on the order (frequency) of the
+      associated Wikipedia page
     * Each suggestion should have at least `MIN_KEYWORDS` keywords, otherwise
       that suggestion will be excluded in the output. To produce the expected
       amount suggestions, it's a good idea to provide a little more (+10%) than
-      expected in the upstream producers (i.e. top_n_by_frequency or top_n_by_recency)
+      expected in the upstream producer (i.e. top_n_by_frequency)
     * To avoid having excessive keyword list for long titles, the total number of
       keywords for each suggestion is capped by `MAX_KEYWORDS`
     * Suggestion `id` is hardcoded to `0` for now. We might assign a valid ID to

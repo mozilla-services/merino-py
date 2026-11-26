@@ -3,8 +3,8 @@
 `get_top_n_frequency()` accumulates page views across all daily input JSON files
 in the given temp directory and returns the top N pages sorted by total views
 in descending order. Internal pages and entries listed in
-`page_ignore.csv` / `dynamic_wikipedia_blocklist.csv` are excluded. Fewer than
-N entries may be returned if there aren't enough input pages.
+`page_ignore.csv` / `dynamic_wikipedia_blocklist.csv` / `{language}-latest.csv`
+are excluded. Fewer than N entries may be returned if there aren't enough input pages.
 
 Output shape:
     [
@@ -18,10 +18,16 @@ import base64
 import csv
 import glob
 import json
+import logging
 import os
 from pathlib import Path
 import re
 from collections import Counter
+
+logger = logging.getLogger(__name__)
+
+# A language's blocklist in the blocklist directory.
+LANGUAGE_BLOCKLIST_FILE = "{language}-latest.csv"
 
 # Ignore the internal Wikipedia pages such as "Portal:Current_events",
 # "Special:Search", "Wikipedia:About", "Wikipédia:À_propos", "File:HispanTv.svg" etc.
@@ -49,7 +55,28 @@ def process(page: str, ignored_titles: set[str]):
     return dict(top_pages)
 
 
-def get_top_n_frequency(language, top_n, tempdir) -> list[dict]:
+def load_language_blocklist(blocklist_dir: Path | None, language: str) -> set[str]:
+    """Load the base64 encoded titles of `{language}-latest.csv` in `blocklist_dir`, if any."""
+    if blocklist_dir is None:
+        return set()
+
+    path = blocklist_dir / LANGUAGE_BLOCKLIST_FILE.format(language=language)
+    if not path.is_file():
+        logger.info(
+            "No blocklist file for language", extra={"language": language, "path": str(path)}
+        )
+        return set()
+
+    with open(path) as f:
+        titles = {base64.b64decode(item["title"]).decode("utf-8") for item in csv.DictReader(f)}
+    logger.info(
+        "Loaded blocklist file",
+        extra={"language": language, "path": str(path), "titles": len(titles)},
+    )
+    return titles
+
+
+def get_top_n_frequency(language, top_n, tempdir, blocklist_dir: Path | None = None) -> list[dict]:
     """Extract the top N viewed pages for a given language."""
     resources_dir = Path(__file__).resolve().parent
     with (
@@ -62,6 +89,7 @@ def get_top_n_frequency(language, top_n, tempdir) -> list[dict]:
         ignored |= set(
             base64.b64decode(item["title"]).decode("utf-8") for item in csv.DictReader(g)
         )
+        ignored |= load_language_blocklist(blocklist_dir, language)
 
         top_pages: Counter = Counter()
         inputs = glob.glob(os.path.join(tempdir, f"{language}*.json"))
