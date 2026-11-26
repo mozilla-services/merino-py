@@ -12,6 +12,8 @@ enabled = true
 
 # MERINO_HOOK_EYE_CCR_FOLLOWER__URL
 # URL of the follower cluster. `_ccr/stats` is follower-local, so this is never the leader.
+# Must be `https://` when `api_key` is set, so the key isn't sent in plaintext; `http://` is
+# only accepted without a key, e.g. for local clusters.
 url = "http://localhost:9201"
 
 # MERINO_HOOK_EYE_CCR_FOLLOWER__API_KEY

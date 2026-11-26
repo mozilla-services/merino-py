@@ -1,10 +1,21 @@
 """Configuration for merino-hook-eye."""
 
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from dynaconf import Dynaconf, Validator
 
 _PACKAGE_ROOT = Path(__file__).resolve().parent.parent
+
+
+def _is_https(url: object) -> bool:
+    """Return whether `url` is a string with an `https` scheme."""
+    return isinstance(url, str) and urlsplit(url).scheme.lower() == "https"
+
+
+def _follower_on() -> Validator:
+    """Return a new validator that passes only when the CCR follower check is enabled."""
+    return Validator("ccr_follower.enabled", eq=True)
 
 
 def _build_validators() -> list[Validator]:
@@ -13,16 +24,45 @@ def _build_validators() -> list[Validator]:
     """
     return [
         Validator("ccr_follower.enabled", is_type_of=bool, must_exist=True),
-        Validator("ccr_follower.url", is_type_of=str, len_min=1, must_exist=True),
-        Validator("ccr_follower.api_key", is_type_of=str, must_exist=True),
+        # The other settings are only checked, and only required, when the check runs.
+        Validator(
+            "ccr_follower.url", is_type_of=str, len_min=1, must_exist=True, when=_follower_on()
+        ),
+        Validator("ccr_follower.api_key", is_type_of=str, must_exist=True, when=_follower_on()),
+        # The client sends the API key in the `Authorization` header, so it must not travel over
+        # plaintext HTTP. Keyless `http://` URLs stay allowed for local clusters.
+        Validator(
+            "ccr_follower.url",
+            condition=_is_https,
+            when=_follower_on() & Validator("ccr_follower.api_key", len_min=1),
+            messages={
+                "condition": (
+                    "{name} must use https:// when ccr_follower.api_key is set, but it is"
+                    " {value} in env {env}"
+                )
+            },
+        ),
         Validator(
             "ccr_follower.request_timeout_sec",
             is_type_of=(int, float),
             gt=0,
             must_exist=True,
+            when=_follower_on(),
         ),
-        Validator("ccr_follower.interval_sec", is_type_of=(int, float), gt=0, must_exist=True),
-        Validator("ccr_follower.index_patterns", is_type_of=list, len_min=1, must_exist=True),
+        Validator(
+            "ccr_follower.interval_sec",
+            is_type_of=(int, float),
+            gt=0,
+            must_exist=True,
+            when=_follower_on(),
+        ),
+        Validator(
+            "ccr_follower.index_patterns",
+            is_type_of=list,
+            len_min=1,
+            must_exist=True,
+            when=_follower_on(),
+        ),
         Validator(
             "logging.format",
             is_in=["mozlog", "pretty"],

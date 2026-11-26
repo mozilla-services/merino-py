@@ -50,7 +50,7 @@ Grafana at <http://localhost:3000>), run `make dev-hook-eye-otel`. Without it, t
 OpenTelemetry instruments are no-ops.
 
 Point at a different follower with `MERINO_HOOK_EYE_CCR_FOLLOWER__URL` and
-`MERINO_HOOK_EYE_CCR_FOLLOWER__API_KEY`, or turn the check off with
+`MERINO_HOOK_EYE_CCR_FOLLOWER__API_KEY` (an API key requires an `https://` URL), or turn the check off with
 `MERINO_HOOK_EYE_CCR_FOLLOWER__ENABLED=false`. Settings live in
 [merino_hook_eye/configs](./merino_hook_eye/configs) and are selected by `MERINO_HOOK_EYE_ENV`.
 

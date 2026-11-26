@@ -93,7 +93,10 @@ All in the `[ccr_follower]` section:
 | Scrape interval, seconds             | `MERINO_HOOK_EYE_CCR_FOLLOWER__INTERVAL_SEC`        | `60` (`15` in development) |
 | Follower indices to report per shard | `MERINO_HOOK_EYE_CCR_FOLLOWER__INDEX_PATTERNS`      | `["*wiki-*", "*sports-*"]` |
 
-The follower URL and API key are set per deployment in stage and production. Only follower
+The follower URL and API key are set per deployment in stage and production. When an API key
+is set, the URL must be `https://`, or hook-eye fails validation at startup, since the key is
+sent in the `Authorization` header. `http://` is only accepted without a key, as with the
+local follower. Only follower
 indices matching `index_patterns` get per-shard series, which bounds label cardinality.
 
 ### End-to-end test locally
@@ -279,7 +282,10 @@ Each check is a subpackage of `merino_hook_eye`, like `merino_hook_eye/ccr/`. To
    covers it in `/__heartbeat__`.
 4. Register `start` in `CHECKS` in `merino_hook_eye/app.py`, keyed by the check's name. Give
    the check a `[default.<name>]` section in `default.toml` holding `enabled` and all its
-   other settings, with validators, and override them in per-environment files as needed.
+   other settings, and override them in per-environment files as needed. Validate `enabled`
+   unconditionally and the other settings only `when` the check is enabled, as
+   `merino_hook_eye/configs/__init__.py` does for `ccr_follower`, so a deployment that turns
+   the check off doesn't need valid values for it.
 5. Document its metrics under a new group in `apps/hook-eye/metrics.yaml`, with a
    `merino.<check>.` prefix.
 6. Add unit tests under `apps/hook-eye/tests/unit/<check>/`, and a section to this page on
